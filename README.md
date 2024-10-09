@@ -9,7 +9,7 @@ Yes millions of options are lovely, but actually what's wrong with sensible defa
 }
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./obj` holds any incremental build files (usually object files).
-### Features supported so far
+## Features supported so far
 - Build, Run and Clean actions
 
 - Preprocessor definitions
@@ -42,7 +42,8 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 - Debug and Release configurations (work in progress)
 ```
 "cfg.debug": { ... },
+"cfg.release": { ... },
 ```
 
-### It just works
-Slab a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard Microsoft? No Visual Studio needed.
+## It just works
+Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard Microsoft? No Visual Studio needed.

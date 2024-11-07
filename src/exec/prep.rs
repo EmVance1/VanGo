@@ -3,7 +3,23 @@ use crate::fetch::FileInfo;
 use super::BuildInfo;
 
 
-pub fn assert_out_dirs(root: &Path, sdir: &str, odir: &str) {
+pub fn assert_out_dirs(sdir: &str, odir: &str) {
+    if !std::fs::exists("./bin/").unwrap() {
+        std::fs::create_dir("./bin/").unwrap();
+        std::fs::create_dir("./bin/debug/").unwrap();
+        std::fs::create_dir("./bin/release/").unwrap();
+    } else {
+        if !std::fs::exists("./bin/debug").unwrap() {
+            std::fs::create_dir("./bin/debug/").unwrap();
+        }
+        if !std::fs::exists("./bin/release").unwrap() {
+            std::fs::create_dir("./bin/release/").unwrap();
+        }
+    }
+    assert_out_dirs_rec(&PathBuf::from(sdir), sdir, odir);
+}
+
+pub fn assert_out_dirs_rec(root: &Path, sdir: &str, odir: &str) {
     let obj = root.to_string_lossy().replace(sdir, odir);
     if !std::fs::exists(&obj).unwrap() {
         std::fs::create_dir(obj).unwrap();
@@ -11,17 +27,17 @@ pub fn assert_out_dirs(root: &Path, sdir: &str, odir: &str) {
     for e in std::fs::read_dir(root).ok().unwrap() {
         let e = e.ok().unwrap();
         if e.path().is_dir() {
-            assert_out_dirs(&e.path(), sdir, odir);
+            assert_out_dirs_rec(&e.path(), sdir, odir);
         }
     }
 }
 
 pub fn precompile_header(header: &Path, info: &BuildInfo) -> String {
     let head = header.to_string_lossy().to_string();
-    let head_with_dir = format!("{}{}", info.sdir, header.to_string_lossy().to_string());
-    let cppf = format!("{}{}", info.sdir, head.replace(".h", ".cpp"));
-    let objt = format!("{}{}", info.odir, head.replace(".h", ".obj"));
-    let cmpd = format!("{}{}.pch", info.odir, head.replace(&info.sdir, &info.odir));
+    let head_with_dir = format!("{}{}", info.src_dir, header.to_string_lossy().to_string());
+    let cppf = format!("{}{}", info.src_dir, head.replace(".h", ".cpp"));
+    let objt = format!("{}{}", info.out_dir, head.replace(".h", ".obj"));
+    let cmpd = format!("{}{}.pch", info.out_dir, head.replace(&info.src_dir, &info.out_dir));
     let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 

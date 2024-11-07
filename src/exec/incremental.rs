@@ -22,7 +22,7 @@ impl<'a> IncrementalBuild<'a> {
             IncrementalBuild::NoBuild
         } else {
             IncrementalBuild::BuildSelective(src_changes.into_iter().map(|c| {
-                (c, FileInfo::from_path(&PathBuf::from(c.repr.replace(&info.sdir, &info.odir).replace(".cpp", ".obj"))))
+                (c, FileInfo::from_path(&PathBuf::from(c.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj"))))
             }).collect())
         }
     }

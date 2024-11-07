@@ -10,8 +10,8 @@ use incremental::IncrementalBuild;
 pub struct BuildInfo {
     pub cppstd: String,
     pub config: Config,
-    pub sdir: String,
-    pub odir: String,
+    pub src_dir: String,
+    pub out_dir: String,
     pub defines: Vec<String>,
     pub sources: Vec<FileInfo>,
     pub headers: Vec<FileInfo>,
@@ -23,23 +23,9 @@ pub struct BuildInfo {
     pub outfile: FileInfo,
 }
 
-const DEFAULT_LIBS: &[&str] = &[
-    "kernel32.lib",
-    "user32.lib",
-    "winspool.lib",
-    "comdlg32.lib",
-    "advapi32.lib",
-    "shell32.lib",
-    "ole32.lib",
-    "oleaut32.lib",
-    "uuid.lib",
-    "odbc32.lib",
-    "odbccp32.lib",
-];
-
 pub fn run_build(info: BuildInfo) -> Result<(), ()> {
     println!("[mscmp:  info] starting build for \"{}\":", info.outfile.repr);
-    prep::assert_out_dirs(&PathBuf::from(&info.sdir), &info.sdir, &info.odir);
+    prep::assert_out_dirs(&info.src_dir, &info.out_dir);
     let pch = if let Some(pch) = &info.pch {
         Some(prep::precompile_header(&PathBuf::from(pch), &info))
     } else {
@@ -62,7 +48,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
         }
         IncrementalBuild::BuildAll => {
             for src in &info.sources {
-                let obj = src.repr.replace(&info.sdir, &info.odir).replace(".cpp", ".obj");
+                let obj = src.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj");
                 println!("[mscmp:  info] compiling: {}", src.repr);
                 let output = compile_cmd(&src.repr, &obj, &info, &pch).output().unwrap();
                 std::io::stdout().write_all(&output.stdout).unwrap();
@@ -72,7 +58,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
         }
     }
 
-    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.odir), ".obj").unwrap();
+    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.out_dir), ".obj").unwrap();
     println!("[mscmp:  info]   linking: {}", info.outfile.repr);
     if info.outfile.repr.ends_with(".lib") {
         let mut cmd = Command::new("lib");
@@ -112,13 +98,14 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
     }
 }
 
-pub fn run_app(outfile: FileInfo, runargs: Vec<String>) {
+pub fn run_app(outfile: FileInfo,  runargs: Vec<String>) {
     println!("[mscmp:  info] running application \"{}\"...", outfile.repr);
     let mut cmd = Command::new(format!("./{}", outfile.repr));
-    cmd.args(runargs);
-    std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
+    cmd.args(runargs)
+        .current_dir(std::env::current_dir().unwrap())
+        .status()
+        .unwrap();
 }
-
 
 
 fn compile_cmd(src: &str, obj: &str, info: &BuildInfo, pch: &Option<String>) -> Command {
@@ -143,9 +130,25 @@ fn compile_cmd(src: &str, obj: &str, info: &BuildInfo, pch: &Option<String>) -> 
     cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
     if let Some(outfile) = pch {
         cmd.arg(format!("/Yu{}", outfile));
-        let cmpd = format!("{}/{}.pch", info.odir, outfile);
+        let cmpd = format!("{}/{}.pch", info.out_dir, outfile);
         cmd.arg(format!("/Fp{}", cmpd));
     }
     cmd
 }
+
+
+
+const DEFAULT_LIBS: &[&str] = &[
+    "kernel32.lib",
+    "user32.lib",
+    "winspool.lib",
+    "comdlg32.lib",
+    "advapi32.lib",
+    "shell32.lib",
+    "ole32.lib",
+    "oleaut32.lib",
+    "uuid.lib",
+    "odbc32.lib",
+    "odbccp32.lib",
+];
 

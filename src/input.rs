@@ -55,13 +55,20 @@ pub enum Config {
 impl Config {
     // pub fn is_debug  (&self) -> bool { *self == Config::Debug }
     pub fn is_release(&self) -> bool { *self == Config::Release }
+
+    pub fn as_arg(&self) -> String {
+        match self {
+            Self::Debug   => "DEBUG".to_string(),
+            Self::Release => "RELEASE".to_string(),
+        }
+    }
 }
 
 impl Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Debug   => write!(f, "DEBUG"),
-            Self::Release => write!(f, "RELEASE"),
+            Self::Debug   => write!(f, "debug"),
+            Self::Release => write!(f, "release"),
         }
     }
 }

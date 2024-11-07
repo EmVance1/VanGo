@@ -8,14 +8,10 @@ Yes millions of options are lovely, but actually what's wrong with sensible defa
     "dependencies": []
 }
 ```
-The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./obj` holds any incremental build files (usually object files).
+The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 ## Features supported so far
 - Build, Run and Clean actions
 
-- Preprocessor definitions
-```
-"defines": [ "MACRO" ],
-```
 - Specify header-only and binary libraries with a lib.json, supports multiple configurations...
 ```
 {
@@ -29,11 +25,14 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 ```
 (see example `lib.json` for more)
 
-- ...and plug and play at will in main project. Libraries can be placed in PROJECT_ROOT/lib or specified otherwise
+- ...and plug and play at will in main project. Libraries can be placed in `./lib` or specified otherwise
 ```
 "dependencies": [ "SFML.static", "../Rusty" ],
 ```
-
+- Preprocessor definitions
+```
+"defines": [ "MACRO" ],
+```
 - Precompiled headers were never easier
 ```
 "pch": "pch.h",

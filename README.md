@@ -29,6 +29,10 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 ```
 "dependencies": [ "SFML.static", "../Rusty" ],
 ```
+- Incremental building based on recent file changes
+
+- Source code dependencies are automatically built recursively in the case of updates
+
 - Preprocessor definitions
 ```
 "defines": [ "MACRO" ],
@@ -37,10 +41,6 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 ```
 "pch": "pch.h",
 ```
-- Incremental building based on recent file changes
-
-- Source code dependencies are automatically built recursively in the case of updates
-
 - Executable/Library output deduction using main.cpp/lib.cpp entry points
 
 - Debug and Release configurations (work in progress)

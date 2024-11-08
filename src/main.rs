@@ -2,20 +2,25 @@ mod input;
 mod repr;
 mod fetch;
 mod exec;
+mod error;
+#[macro_use]
+mod log;
 
+use std::io::Write;
 use std::path::PathBuf;
-use input::Config;
 use repr::*;
 use fetch::FileInfo;
 use exec::BuildInfo;
+use error::Error;
 
 
-fn action_clean(build: BuildDef) -> Result<(), String> {
+
+fn action_clean(build: BuildDef) -> Result<(), Error> {
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
     let kind = fetch::get_project_kind(&sources)?;
     let outpath = PathBuf::from(&format!("{}.{}", build.project, kind.ext()));
     let outfile = FileInfo::from_path(&outpath);
-    println!("[mscmp:  info] cleaning build files for \"{}\"", outfile.repr);
+    log_info!("cleaning build files for \"{}\"", outfile.repr);
     std::process::Command::new("rm").args(["-f", "-r", "bin/*"]).status().unwrap();
     std::process::Command::new("rm").args(["-f", &format!("{}.ilk", build.project)]).status().unwrap();
     std::process::Command::new("rm").args(["-f", &format!("{}.pdb", build.project)]).status().unwrap();
@@ -23,11 +28,11 @@ fn action_clean(build: BuildDef) -> Result<(), String> {
     Ok(())
 }
 
-fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, String> {
+fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, Error> {
     let mut defines = build.defines;
     defines.push(config.as_arg());
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
-    let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, u32_from_cppstd(&build.cppstd))?;
+    let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, &build.cppstd)?;
     defines.extend(deps.defines);
     let oplevel = if config.is_release() { "/O2".to_string() } else { "/Od".to_string() };
     let kind = fetch::get_project_kind(&sources)?;
@@ -48,25 +53,36 @@ fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, String> {
         oplevel,
         outfile: outfile.clone(),
     };
-    if exec::run_build(info).is_ok() {
-        Ok(outfile)
+    if let Err(e) = exec::run_build(info) {
+        Err(e)
     } else {
-        Err("[mscmp: error] build failed".to_string())
+        Ok(outfile)
     }
 }
 
 
+macro_rules! exit_with {
+    () => { { eprintln!(); std::process::exit(1); } };
+    ($($arg:tt)*) => { {
+        log_error!($($arg)*);
+        std::process::exit(1);
+    } };
+}
+
+
 fn main() {
-    let cmd = input::get_input().unwrap_or_else(|e| { eprintln!("{}", e); std::process::exit(1) });
+    let cmd = input::get_input().unwrap_or_else(|e| exit_with!("{}", e));
     let bfile = std::fs::read_to_string("build.json")
-        .unwrap_or_else(|_| { eprintln!("[mscmp: error] build.json was not found"); std::process::exit(1) });
+        .map_err(|_| Error::FileNotFound("build.json".to_string()))
+        .unwrap_or_else(|e| exit_with!("{}", e));
     let build: BuildDef = serde_json::from_str(&bfile)
-        .unwrap_or_else(|e| { eprintln!("[mscmp: error] parse json error: {}", e); std::process::exit(1) });
+        .map_err(|e| Error::JsonParse(e))
+        .unwrap_or_else(|e| exit_with!("{}", e));
 
     if cmd.action == input::Action::Clean {
-        action_clean(build).unwrap_or_else(|e| { eprintln!("{}", e); std::process::exit(1); });
+        action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
     } else if cmd.action.build() {
-        let outfile = action_build(build, cmd.config).unwrap_or_else(|e| { eprintln!("{}", e); std::process::exit(1); });
+        let outfile = action_build(build, cmd.config).unwrap_or_else(|e| exit_with!("{}", e));
         if cmd.action.run() {
             exec::run_app(outfile, cmd.args)
         }

@@ -2,7 +2,7 @@ mod incremental;
 mod prep;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{input::Config, fetch::FileInfo};
+use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
 use incremental::IncrementalBuild;
 
 
@@ -23,8 +23,8 @@ pub struct BuildInfo {
     pub outfile: FileInfo,
 }
 
-pub fn run_build(info: BuildInfo) -> Result<(), ()> {
-    println!("[mscmp:  info] starting build for \"{}\":", info.outfile.repr);
+pub fn run_build(info: BuildInfo) -> Result<(), Error> {
+    log_info!("starting build for \"{}\":", info.outfile.repr);
     prep::assert_out_dirs(&info.src_dir, &info.out_dir);
     let pch = if let Some(pch) = &info.pch {
         Some(prep::precompile_header(&PathBuf::from(pch), &info))
@@ -34,32 +34,32 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
 
     match IncrementalBuild::calc(&info) {
         IncrementalBuild::NoBuild => {
-            println!("[mscmp:  info] build up to date for \"{}\"", info.outfile.repr);
+            log_info!("build up to date for \"{}\"", info.outfile.repr);
             return Ok(())
         }
         IncrementalBuild::BuildSelective(elems) => {
             for (src, obj) in elems {
-                println!("[mscmp:  info] compiling: {}", src.repr);
+                log_info!("compiling: {}", src.repr);
                 let output = compile_cmd(&src.repr, &obj.repr, &info, &pch).output().unwrap();
                 std::io::stdout().write_all(&output.stdout).unwrap();
                 println!();
-                if !output.status.success() { return Err(()) }
+                if !output.status.success() { return Err(Error::CompilerFail(src.repr.clone())) }
             }
         }
         IncrementalBuild::BuildAll => {
             for src in &info.sources {
                 let obj = src.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj");
-                println!("[mscmp:  info] compiling: {}", src.repr);
+                log_info!("compiling: {}", src.repr);
                 let output = compile_cmd(&src.repr, &obj, &info, &pch).output().unwrap();
                 std::io::stdout().write_all(&output.stdout).unwrap();
                 println!();
-                if !output.status.success() { return Err(()) }
+                if !output.status.success() { return Err(Error::CompilerFail(src.repr.clone())) }
             }
         }
     }
 
     let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.out_dir), ".obj").unwrap();
-    println!("[mscmp:  info]   linking: {}", info.outfile.repr);
+    log_info!("linking: {}", info.outfile.repr);
     if info.outfile.repr.ends_with(".lib") {
         let mut cmd = Command::new("lib");
         cmd.args(all_objs.into_iter().map(|fi| fi.repr));
@@ -74,7 +74,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
         let output = cmd.output().unwrap();
         std::io::stdout().write_all(&output.stdout).unwrap();
         println!();
-        if !output.status.success() { Err(()) } else { Ok(()) }
+        if !output.status.success() { Err(Error::LinkerFail(info.outfile.repr)) } else { Ok(()) }
     } else {
         let mut cmd = Command::new("link");
         cmd.args(all_objs.into_iter().map(|fi| fi.repr));
@@ -94,12 +94,17 @@ pub fn run_build(info: BuildInfo) -> Result<(), ()> {
         let output = cmd.output().unwrap();
         std::io::stdout().write_all(&output.stdout).unwrap();
         println!();
-        if !output.status.success() { Err(()) } else { Ok(()) }
+        if !output.status.success() {
+            Err(Error::LinkerFail(info.outfile.repr))
+        } else {
+            log_info!("successfully built project {}", info.outfile.repr);
+            Ok(())
+        }
     }
 }
 
 pub fn run_app(outfile: FileInfo,  runargs: Vec<String>) {
-    println!("[mscmp:  info] running application \"{}\"...", outfile.repr);
+    log_info!("running application \"{}\"...", outfile.repr);
     let mut cmd = Command::new(format!("./{}", outfile.repr));
     cmd.args(runargs)
         .current_dir(std::env::current_dir().unwrap())

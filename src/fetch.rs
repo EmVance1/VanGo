@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
-use crate::{input::Config, repr::{Dependencies, ProjKind}, u32_from_cppstd, BuildDef, LibDef};
+use crate::{error::Error, repr::{Dependencies, ProjKind, Config}, BuildDef, LibDef};
+use crate::log_info;
+use std::io::Write;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,7 +61,7 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     Some(res)
 }
 
-pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, String> {
+pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, Error> {
     for s in srcs {
         if s.file_name() == "main.cpp" {
             return Ok(ProjKind::App)
@@ -67,11 +69,11 @@ pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, String> {
             return Ok(ProjKind::Lib)
         }
     }
-    Err("[mscmp: error] no program entry point 'main.cpp' or 'lib.cpp' found".to_string())
+    Err(Error::MissingEntryPoint)
 }
 
 
-pub fn get_dependencies(incs: Vec<String>, deps: Vec<String>, config: Config, cpp: u32) -> Result<Dependencies, String> {
+pub fn get_dependencies(incs: Vec<String>, deps: Vec<String>, config: Config, cpp: &str) -> Result<Dependencies, Error> {
     let mut incdirs = Vec::new();
     let mut headers = Vec::new();
     let mut libdirs = Vec::new();
@@ -103,7 +105,7 @@ pub fn get_dependencies(incs: Vec<String>, deps: Vec<String>, config: Config, cp
             defines.extend(libinfo.defines);
         } else if let Ok(build) = std::fs::read_to_string(format!("{}/build.json", name)) {
             let lib: BuildDef = serde_json::from_str(&build).unwrap();
-            println!("[mscmp:  info] building project dependency: {}", lib.project);
+            log_info!("building project dependency: {}", lib.project);
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(name).unwrap();
             std::process::Command::new("mscmp")
@@ -137,10 +139,10 @@ pub struct LibInfo {
     pub defines: Vec<String>,
 }
 
-fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: u32) -> Result<LibInfo, String> {
-    let libdef: LibDef = serde_json::from_str(src).map_err(|e| format!("[mscmp: error] parse json error: {}", e))?;
-    if u32_from_cppstd(&libdef.minstd) > cpp {
-        return Err(format!("[mscmp: error] library '{}' c++ version not compatible with current project", libdef.library))
+fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: &str) -> Result<LibInfo, Error> {
+    let libdef: LibDef = serde_json::from_str(src).map_err(|e| Error::JsonParse(e))?;
+    if u32_from_cppstd(&libdef.minstd) > u32_from_cppstd(cpp) {
+        return Err(Error::IncompatibleCpp(libdef.library))
     }
     if let Some(cfg) = cfg {
         for (n, c) in libdef.configs {
@@ -153,7 +155,7 @@ fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: u32) -> Resul
                 })
             }
         }
-        Err(format!("[mscmp: error] config '{}' is not available for library: {}", cfg, libdef.library))
+        Err(Error::ConfigUnavailable(libdef.library, cfg.to_string()))
     } else {
         if let Some(defconf) = libdef.all {
             return Ok(LibInfo {
@@ -163,7 +165,21 @@ fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: u32) -> Resul
                 libdir: if config.is_release() { defconf.binary_release } else { defconf.binary_debug }
             })
         }
-        Err(format!("[mscmp: error] no default config available for library: {}", libdef.library))
+        Err(Error::ConfigUnavailable(libdef.library, "default".to_string()))
+    }
+}
+
+
+pub fn u32_from_cppstd(cpp: &str) -> u32 {
+    let cpp: u32 = cpp.to_ascii_lowercase()
+        .strip_prefix("c++")
+        .unwrap()
+        .parse()
+        .unwrap();
+    if cpp < 50 {
+        100 + cpp
+    } else {
+        cpp
     }
 }
 

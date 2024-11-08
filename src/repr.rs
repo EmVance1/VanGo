@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::fmt::Display;
 use crate::fetch::FileInfo;
 
 
@@ -39,6 +40,33 @@ pub struct BuildDef {
     pub pch: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Config {
+    Debug,
+    Release,
+}
+
+impl Config {
+    // pub fn is_debug  (&self) -> bool { *self == Config::Debug }
+    pub fn is_release(&self) -> bool { *self == Config::Release }
+
+    pub fn as_arg(&self) -> String {
+        match self {
+            Self::Debug   => "DEBUG".to_string(),
+            Self::Release => "RELEASE".to_string(),
+        }
+    }
+}
+
+impl Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Debug   => write!(f, "debug"),
+            Self::Release => write!(f, "release"),
+        }
+    }
+}
+
 
 
 #[derive(Debug, Clone, Deserialize)]
@@ -71,18 +99,4 @@ pub struct Dependencies {
     pub links: Vec<String>,
     pub defines: Vec<String>,
 }
-
-pub fn u32_from_cppstd(cpp: &str) -> u32 {
-    let cpp: u32 = cpp.to_ascii_lowercase()
-        .strip_prefix("c++")
-        .unwrap()
-        .parse()
-        .unwrap();
-    if cpp < 50 {
-        100 + cpp
-    } else {
-        cpp
-    }
-}
-
 

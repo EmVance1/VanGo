@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use crate::repr::Config;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,33 +43,5 @@ pub enum Action {
 impl Action {
     pub fn build(&self) -> bool { *self != Action::Clean }
     pub fn run(&self)   -> bool { *self == Action::Run }
-}
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Config {
-    Debug,
-    Release,
-}
-
-impl Config {
-    // pub fn is_debug  (&self) -> bool { *self == Config::Debug }
-    pub fn is_release(&self) -> bool { *self == Config::Release }
-
-    pub fn as_arg(&self) -> String {
-        match self {
-            Self::Debug   => "DEBUG".to_string(),
-            Self::Release => "RELEASE".to_string(),
-        }
-    }
-}
-
-impl Display for Config {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Debug   => write!(f, "debug"),
-            Self::Release => write!(f, "release"),
-        }
-    }
 }
 

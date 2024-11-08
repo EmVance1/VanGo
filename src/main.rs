@@ -71,7 +71,8 @@ macro_rules! exit_with {
 
 
 fn main() {
-    let cmd = input::get_input().unwrap_or_else(|e| exit_with!("{}", e));
+    let args: Vec<_> = std::env::args().collect();
+    let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
     let bfile = std::fs::read_to_string("build.json")
         .map_err(|_| Error::FileNotFound("build.json".to_string()))
         .unwrap_or_else(|e| exit_with!("{}", e));

@@ -40,7 +40,10 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         IncrementalBuild::BuildSelective(elems) => {
             for (src, obj) in elems {
                 log_info!("compiling: {}", src.repr);
-                let output = compile_cmd(&src.repr, &obj.repr, &info, &pch).output().unwrap();
+                let output = std::process::Command::new("cl")
+                    .args(compile_cmd(&src.repr, &obj.repr, &info, &pch))
+                    .output()
+                    .unwrap();
                 std::io::stdout().write_all(&output.stdout).unwrap();
                 println!();
                 if !output.status.success() { return Err(Error::CompilerFail(src.repr.clone())) }
@@ -50,7 +53,10 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
             for src in &info.sources {
                 let obj = src.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj");
                 log_info!("compiling: {}", src.repr);
-                let output = compile_cmd(&src.repr, &obj, &info, &pch).output().unwrap();
+                let output = std::process::Command::new("cl")
+                    .args(compile_cmd(&src.repr, &obj, &info, &pch))
+                    .output()
+                    .unwrap();
                 std::io::stdout().write_all(&output.stdout).unwrap();
                 println!();
                 if !output.status.success() { return Err(Error::CompilerFail(src.repr.clone())) }
@@ -86,7 +92,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
             "/DEBUG".to_string(),
             "/MACHINE:X64".to_string(),
             "/SUBSYSTEM:CONSOLE".to_string(),
-//            format!("/{}", info.config),
+//            format!("/{}", info.config.as_arg()),
 //            "/DYNAMICBASE".to_string(),
 //            "/OPT:REF".to_string(),
 //            "/LTCG".to_string(),
@@ -113,9 +119,8 @@ pub fn run_app(outfile: FileInfo,  runargs: Vec<String>) {
 }
 
 
-fn compile_cmd(src: &str, obj: &str, info: &BuildInfo, pch: &Option<String>) -> Command {
-    let mut cmd = Command::new("cl");
-    cmd.args([
+fn compile_cmd(src: &str, obj: &str, info: &BuildInfo, pch: &Option<String>) -> Vec<String> {
+    let mut args = vec![
         src.to_string(),
         "/c".to_string(),
         "/EHsc".to_string(),
@@ -125,20 +130,20 @@ fn compile_cmd(src: &str, obj: &str, info: &BuildInfo, pch: &Option<String>) -> 
         format!("/std:{}", info.cppstd),
         format!("/Fo:{}", obj),
         info.oplevel.clone(),
-    ]);
+    ];
     if info.config.is_release() {
-        cmd.arg("/MD".to_string());
+        args.push("/MD".to_string());
     } else {
-        cmd.arg("/MDd".to_string());
+        args.push("/MDd".to_string());
     }
-    cmd.args(info.incdirs.iter().map(|i| format!("/I{}", i)));
-    cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
+    args.extend(info.incdirs.iter().map(|i| format!("/I{}", i)));
+    args.extend(info.defines.iter().map(|d| format!("/D{}", d)));
     if let Some(outfile) = pch {
-        cmd.arg(format!("/Yu{}", outfile));
+        args.push(format!("/Yu{}", outfile));
         let cmpd = format!("{}/{}.pch", info.out_dir, outfile);
-        cmd.arg(format!("/Fp{}", cmpd));
+        args.push(format!("/Fp{}", cmpd));
     }
-    cmd
+    args
 }
 
 
@@ -156,4 +161,34 @@ const DEFAULT_LIBS: &[&str] = &[
     "odbc32.lib",
     "odbccp32.lib",
 ];
+
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    pub fn test_compile_cmd() {
+        /*
+        let src = "src/main.cpp";
+        let obj = "bin/obj/main.obj";
+        let info = BuildInfo{
+            cppstd: "c++20".to_string(),
+            config: Config::Debug,
+            src_dir: "src/".to_string(),
+            out_dir: format!("bin/debug/obj/"),
+            defines: vec![],
+            sources: Vec<FileInfo>,
+            headers: vec![],
+            incdirs: vec![ "src/".to_string() ],
+            libdirs: vec![],
+            links: vec![],
+            pch: None,
+            oplevel: "/Od".to_string(),
+            outfile: FileInfo,
+        };
+
+        let args = compile_cmd(src, obj, &info, &None);
+        */
+    }
+}
 

@@ -1,7 +1,14 @@
-use std::path::{Path, PathBuf};
-use crate::{error::Error, repr::{Dependencies, ProjKind, Config}, BuildDef, LibDef};
-use crate::log_info;
-use std::io::Write;
+use std::{
+    path::{Path, PathBuf},
+    io::Write,
+};
+use crate::{
+    BuildDef,
+    LibDef,
+    repr::{Dependencies, ProjKind, Config},
+    error::Error,
+    log_info,
+};
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -86,11 +93,8 @@ pub fn get_dependencies(incs: Vec<String>, deps: Vec<String>, config: Config, cp
     }
 
     for dep in deps {
-        let (name, cfg) = if let Some((n, c)) = get_cfg(&dep) {
-            (n, Some(c))
-        } else {
-            (dep.as_str(), None)
-        };
+        let (name, cfg) = get_cfg(&dep);
+
         if let Ok(build) = std::fs::read_to_string(format!("lib/{}/lib.json", name)) {
             let libinfo = get_lib_info(&build, cfg, config, cpp)?;
             incdirs.push(format!("lib/{}/{}", name, libinfo.incdir));
@@ -141,8 +145,8 @@ pub struct LibInfo {
 
 fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: &str) -> Result<LibInfo, Error> {
     let libdef: LibDef = serde_json::from_str(src).map_err(|e| Error::JsonParse(e))?;
-    if u32_from_cppstd(&libdef.minstd) > u32_from_cppstd(cpp) {
-        return Err(Error::IncompatibleCpp(libdef.library))
+    if u32_from_cppstd(&libdef.minstd)? > u32_from_cppstd(cpp)? {
+        return Err(Error::IncompatibleCppStd(libdef.library))
     }
     if let Some(cfg) = cfg {
         for (n, c) in libdef.configs {
@@ -170,29 +174,63 @@ fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: &str) -> Resu
 }
 
 
-pub fn u32_from_cppstd(cpp: &str) -> u32 {
-    let cpp: u32 = cpp.to_ascii_lowercase()
+pub fn u32_from_cppstd(cpp: &str) -> Result<u32, Error> {
+    let num: u32 = cpp.to_ascii_lowercase()
         .strip_prefix("c++")
-        .unwrap()
+        .ok_or(Error::InvalidCppStd(cpp.to_string()))?
         .parse()
-        .unwrap();
-    if cpp < 50 {
-        100 + cpp
+        .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
+    if !matches!(num, 98|3|11|14|17|20|23) {
+        Err(Error::InvalidCppStd(cpp.to_string()))
+    } else if num < 50 {
+        Ok(100 + num)
     } else {
-        cpp
+        Ok(num)
     }
 }
 
 
-fn get_cfg(s: &str) -> Option<(&str, &str)> {
+fn get_cfg(s: &str) -> (&str, Option<&str>) {
     for (i, c) in s.chars().rev().enumerate() {
         if c == '/' || c == '\\' {
-            return None
+            return (s, None)
         } else if c == '.' {
             let l = s.len();
-            return Some((&s[..(l-i-1)], &s[(l-i)..]))
+            return (&s[..(l-i-1)], Some(&s[(l-i)..]))
         }
     }
-    None
+    (s, None)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_u32_from_cppstd() {
+        assert_eq!(u32_from_cppstd("c++98").unwrap(), 98);
+        assert_eq!(u32_from_cppstd("c++03").unwrap(), 103);
+        assert_eq!(u32_from_cppstd("c++11").unwrap(), 111);
+        assert_eq!(u32_from_cppstd("c++14").unwrap(), 114);
+        assert_eq!(u32_from_cppstd("c++17").unwrap(), 117);
+        assert_eq!(u32_from_cppstd("c++20").unwrap(), 120);
+        assert_eq!(u32_from_cppstd("c++23").unwrap(), 123);
+
+        assert!(u32_from_cppstd("c++24").is_err());
+        assert!(u32_from_cppstd("c++").is_err());
+        assert!(u32_from_cppstd("c23").is_err());
+        assert!(u32_from_cppstd("3").is_err());
+    }
+
+    #[test]
+    pub fn test_get_cfg() {
+        assert_eq!(get_cfg("SFML"),             ("SFML", None));
+        assert_eq!(get_cfg("SFML.static"),      ("SFML", Some("static")));
+        assert_eq!(get_cfg("SF.ML.static"),     ("SF.ML", Some("static")));
+        assert_eq!(get_cfg("../Rusty"),         ("../Rusty", None));
+        assert_eq!(get_cfg("../Rusty.static"),  ("../Rusty", Some("static")));
+        assert_eq!(get_cfg("../Ru.sty.static"), ("../Ru.sty", Some("static")));
+    }
 }
 

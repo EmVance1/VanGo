@@ -1,28 +1,19 @@
-use std::path::PathBuf;
 use crate::fetch::FileInfo;
 use super::BuildInfo;
 
 
-#[derive(Debug, PartialEq)]
-pub enum IncrementalBuild<'a> {
-    BuildAll,
-    BuildSelective(Vec<(&'a FileInfo, FileInfo)>),
-    NoBuild,
-}
-
-impl<'a> IncrementalBuild<'a> {
-    pub fn calc(info: &'a BuildInfo) -> Self {
-        if !info.outfile.exists() { return IncrementalBuild::BuildAll; }
-        if !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
-            return IncrementalBuild::BuildAll;
-        }
-
+pub fn get_outdated(info: &BuildInfo) -> Option<Vec<(&str, String)>> {
+    if !info.outfile.exists() || !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
+        Some(info.sources.iter().map(|c| {
+            (c.repr.as_str(), c.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj"))
+        }).collect())
+    } else {
         let src_changes = get_recent_changes(&info.sources, info.outfile.modified().unwrap());
         if src_changes.is_empty() { 
-            IncrementalBuild::NoBuild
+            None
         } else {
-            IncrementalBuild::BuildSelective(src_changes.into_iter().map(|c| {
-                (c, FileInfo::from_path(&PathBuf::from(c.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj"))))
+            Some(src_changes.into_iter().map(|c| {
+                (c.repr.as_str(), c.repr.replace(&info.src_dir, &info.out_dir).replace(".cpp", ".obj"))
             }).collect())
         }
     }

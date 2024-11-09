@@ -144,7 +144,7 @@ pub struct LibInfo {
 }
 
 fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: &str) -> Result<LibInfo, Error> {
-    let libdef: LibDef = serde_json::from_str(src).map_err(|e| Error::JsonParse(e))?;
+    let libdef: LibDef = serde_json::from_str(src).map_err(Error::JsonParse)?;
     if u32_from_cppstd(&libdef.minstd)? > u32_from_cppstd(cpp)? {
         return Err(Error::IncompatibleCppStd(libdef.library))
     }

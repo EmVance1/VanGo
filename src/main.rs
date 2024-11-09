@@ -34,9 +34,8 @@ fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, Error> {
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
     let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, &build.cppstd)?;
     defines.extend(deps.defines);
-    let oplevel = if config.is_release() { "/O2".to_string() } else { "/Od".to_string() };
     let kind = fetch::get_project_kind(&sources)?;
-    let outpath = PathBuf::from(&format!("bin/{}/{}.{}", config.to_string(), build.project, kind.ext()));
+    let outpath = PathBuf::from(&format!("bin/{}/{}.{}", config, build.project, kind.ext()));
     let outfile = FileInfo::from_path(&outpath);
     let info = BuildInfo{
         cppstd: build.cppstd,
@@ -50,7 +49,6 @@ fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, Error> {
         libdirs: deps.libdirs,
         links: deps.links,
         pch: build.pch,
-        oplevel,
         outfile: outfile.clone(),
     };
     if let Err(e) = exec::run_build(info) {
@@ -77,7 +75,7 @@ fn main() {
         .map_err(|_| Error::FileNotFound("build.json".to_string()))
         .unwrap_or_else(|e| exit_with!("{}", e));
     let build: BuildDef = serde_json::from_str(&bfile)
-        .map_err(|e| Error::JsonParse(e))
+        .map_err(Error::JsonParse)
         .unwrap_or_else(|e| exit_with!("{}", e));
 
     if cmd.action == input::Action::Clean {

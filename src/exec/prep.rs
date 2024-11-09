@@ -32,12 +32,11 @@ pub fn assert_out_dirs_rec(root: &Path, sdir: &str, odir: &str) {
     }
 }
 
-pub fn precompile_header(header: &Path, info: &BuildInfo) -> String {
-    let head = header.to_string_lossy().to_string();
-    let head_with_dir = format!("{}{}", info.src_dir, header.to_string_lossy().to_string());
-    let cppf = format!("{}{}", info.src_dir, head.replace(".h", ".cpp"));
-    let objt = format!("{}{}", info.out_dir, head.replace(".h", ".obj"));
-    let cmpd = format!("{}{}.pch", info.out_dir, head.replace(&info.src_dir, &info.out_dir));
+pub fn precompile_header(header: &str, info: &BuildInfo) {
+    let head_with_dir = format!("{}{}", info.src_dir, header);
+    let cppf = format!("{}{}", info.src_dir, header.replace(".h", ".cpp"));
+    let objt = format!("{}{}", info.out_dir, header.replace(".h", ".obj"));
+    let cmpd = format!("{}{}.pch", info.out_dir, header.replace(&info.src_dir, &info.out_dir));
     let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
@@ -47,27 +46,24 @@ pub fn precompile_header(header: &Path, info: &BuildInfo) -> String {
             cppf.clone(),
             "/c".to_string(),
             "/EHsc".to_string(),
-            format!("/Yc{}", head),
+            format!("/Yc{}", header),
             format!("/Fp{}", cmpd),
+            format!("/std:{}", info.cppstd),
+            format!("/Fo:{}", objt),
 //            "/Gy".to_string(),
 //            "/GL".to_string(),
 //            "/Oi".to_string(),
-            format!("/std:{}", info.cppstd),
-            format!("/Fo:{}", objt),
-            info.oplevel.clone(),
         ]);
-        if info.config.is_release() {
-            cmd.arg("/MD".to_string());
-        } else {
-            cmd.arg("/MDd".to_string());
-        }
         cmd.args(info.incdirs.iter().map(|i| format!("/I{}", i)));
         cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
-        println!("[mscmp:  info] compiling precompiled header: {}", head);
+        if info.config.is_release() {
+            cmd.args(["/MD", "/O2"]);
+        } else {
+            cmd.args(["/MDd", "/Od"]);
+        }
+        println!("[mscmp:  info] compiling precompiled header: {}", header);
         std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
         println!();
     }
-
-    head
 }
 

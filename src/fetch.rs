@@ -3,9 +3,7 @@ use std::{
     io::Write,
 };
 use crate::{
-    BuildDef,
-    LibDef,
-    repr::{Dependencies, ProjKind, Config},
+    BuildDef, LibDef, ProjKind, Config,
     error::Error,
     log_info,
 };
@@ -77,6 +75,16 @@ pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, Error> {
         }
     }
     Err(Error::MissingEntryPoint)
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Dependencies {
+    pub incdirs: Vec<String>,
+    pub headers: Vec<FileInfo>,
+    pub libdirs: Vec<String>,
+    pub links: Vec<String>,
+    pub defines: Vec<String>,
 }
 
 

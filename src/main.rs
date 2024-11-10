@@ -6,8 +6,10 @@ mod error;
 #[macro_use]
 mod log;
 
-use std::io::Write;
-use std::path::PathBuf;
+use std::{
+    io::Write,
+    path::PathBuf,
+};
 use repr::*;
 use fetch::FileInfo;
 use exec::BuildInfo;
@@ -19,16 +21,15 @@ fn action_clean(build: BuildDef) -> Result<(), Error> {
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
     let kind = fetch::get_project_kind(&sources)?;
     let outpath = PathBuf::from(&format!("{}.{}", build.project, kind.ext()));
-    let outfile = FileInfo::from_path(&outpath);
-    log_info!("cleaning build files for \"{}\"", outfile.repr);
+    log_info!("cleaning build files for \"{}\"", outpath.to_str().unwrap());
     std::process::Command::new("rm").args(["-f", "-r", "bin/*"]).status().unwrap();
     std::process::Command::new("rm").args(["-f", &format!("{}.ilk", build.project)]).status().unwrap();
     std::process::Command::new("rm").args(["-f", &format!("{}.pdb", build.project)]).status().unwrap();
-    std::process::Command::new("rm").args(["-f", &outfile.repr]).status().unwrap();
+    std::process::Command::new("rm").args(["-f", &outpath.to_str().unwrap()]).status().unwrap();
     Ok(())
 }
 
-fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, Error> {
+fn action_build(build: BuildDef, config: Config) -> Result<PathBuf, Error> {
     let mut defines = build.defines;
     defines.push(config.as_arg());
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
@@ -54,7 +55,7 @@ fn action_build(build: BuildDef, config: Config) -> Result<FileInfo, Error> {
     if let Err(e) = exec::run_build(info) {
         Err(e)
     } else {
-        Ok(outfile)
+        Ok(outpath)
     }
 }
 

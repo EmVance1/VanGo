@@ -77,6 +77,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         let mut cmd = Command::new("lib");
         cmd.args(all_objs.into_iter().map(|o| o.repr));
         cmd.args(&info.links);
+        cmd.args(DEFAULT_LIBS);
         cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l)));
         cmd.args([
             format!("/OUT:{}", info.outfile.repr),
@@ -96,13 +97,12 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l)));
         cmd.args([
             format!("/OUT:{}", info.outfile.repr),
-            "/DEBUG".to_string(),
             "/MACHINE:X64".to_string(),
             "/SUBSYSTEM:CONSOLE".to_string(),
-//            format!("/{}", info.config.as_arg()),
-//            "/DYNAMICBASE".to_string(),
-//            "/OPT:REF".to_string(),
 //            "/LTCG".to_string(),
+//            "/DEBUG".to_string(),
+//            format!("/{}", info.config.as_arg()),
+//            "/OPT:REF".to_string(),
         ]);
         let output = cmd.output().unwrap();
         std::io::stdout().write_all(&output.stdout).unwrap();
@@ -116,10 +116,10 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
     }
 }
 
-pub fn run_app(outfile: FileInfo,  runargs: Vec<String>) {
-    log_info!("running application \"{}\"...", outfile.repr);
-    let mut cmd = Command::new(format!("./{}", outfile.repr));
-    cmd.args(runargs)
+pub fn run_app(outfile: PathBuf,  runargs: Vec<String>) {
+    log_info!("running application \"{}\"...", outfile.to_str().unwrap());
+    Command::new(format!("./{}", outfile.to_str().unwrap()))
+        .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
         .unwrap();
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     pub fn test_compile_cmd() {
         let src = "src/main.cpp";
-        let obj = "bin/obj/main.obj";
+        let obj = "bin/debug/obj/main.obj";
         let defines = vec![];
         let incdirs = vec![ "src/".to_string() ];
         let pch = None;
@@ -192,7 +192,16 @@ mod tests {
         };
 
         let args = compile_cmd(src, obj, info);
-        assert_eq!(args, vec![ "".to_string() ]);
+        assert_eq!(args, vec![
+            "src/main.cpp".to_string(),
+            "/c".to_string(),
+            "/EHsc".to_string(),
+            "/std:c++20".to_string(),
+            "/Fo:bin/debug/obj/main.obj".to_string(),
+            "/Isrc/".to_string(),
+            "/MDd".to_string(),
+            "/Od".to_string(),
+        ]);
     }
 }
 

@@ -1,7 +1,24 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::fetch::FileInfo;
+
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BuildDef {
+    pub project: String,
+    #[serde(alias = "cpp")]
+    pub cppstd: String,
+    pub dependencies: Vec<String>,
+
+    #[serde(default = "src_def")]
+    pub src_dir: String,
+    #[serde(default = "inc_def")]
+    pub inc_dirs: Vec<String>,
+    #[serde(default)]
+    pub defines: Vec<String>,
+    #[serde(default)]
+    pub pch: Option<String>,
+}
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,26 +37,6 @@ impl ProjKind {
 }
 
 
-fn src_def() -> String      {       "src/".to_string()   }
-fn inc_def() -> Vec<String> { vec![ "src/".to_string() ] }
-
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct BuildDef {
-    pub project: String,
-    #[serde(alias = "cpp")]
-    pub cppstd: String,
-    #[serde(default = "src_def")]
-    pub src_dir: String,
-    #[serde(default = "inc_def")]
-    pub inc_dirs: Vec<String>,
-    #[serde(default)]
-    pub defines: Vec<String>,
-    pub dependencies: Vec<String>,
-    #[serde(default)]
-    pub pch: Option<String>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Config {
     Debug,
@@ -47,9 +44,9 @@ pub enum Config {
 }
 
 impl Config {
-    // pub fn is_debug  (&self) -> bool { *self == Config::Debug }
+    #[allow(unused)]
+    pub fn is_debug  (&self) -> bool { *self == Config::Debug }
     pub fn is_release(&self) -> bool { *self == Config::Release }
-
     pub fn as_arg(&self) -> String {
         match self {
             Self::Debug   => "DEBUG".to_string(),
@@ -91,12 +88,6 @@ pub struct LibConfig {
 }
 
 
-#[derive(Debug, Clone)]
-pub struct Dependencies {
-    pub incdirs: Vec<String>,
-    pub headers: Vec<FileInfo>,
-    pub libdirs: Vec<String>,
-    pub links: Vec<String>,
-    pub defines: Vec<String>,
-}
+fn src_def() -> String      {       "src/".to_string()   }
+fn inc_def() -> Vec<String> { vec![ "src/".to_string() ] }
 

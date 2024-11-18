@@ -7,19 +7,18 @@ use std::{
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String> {
-    let mut args = vec![
-        src.to_string(),
-        "-c".to_string(),
-        format!("-std={}", info.cppstd),
-        format!("-o {}", obj),
-    ];
+    let mut args = vec![];
     args.extend(info.incdirs.iter().map(|i| format!("-I{}", i)));
     args.extend(info.defines.iter().map(|d| format!("-D{}", d)));
     if info.config.is_release() {
         args.push("-O2".to_string());
-    } else {
-        args.push("-Od".to_string());
     }
+    args.extend([
+        format!("-std={}", info.cppstd),
+        format!("-o {}", obj),
+        "-c".to_string(),
+        src.to_string(),
+    ]);
     // if let Some(outfile) = info.pch {
     //     let cmpd = format!("{}/{}.pch", info.out_dir, outfile);
     //     args.push(format!("/Yu{}", outfile));
@@ -31,7 +30,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
     let mut cmd = Command::new("ar rcs");
     cmd.args(objs.into_iter().map(|o| o.repr));
-    cmd.args(&info.links);
+    cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args([
         format!("-o {}", info.outfile.repr),
@@ -45,7 +44,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
     let mut cmd = Command::new("link");
     cmd.args(objs.into_iter().map(|fi| fi.repr));
-    cmd.args(&info.links);
+    cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args([
         format!("-o {}", info.outfile.repr),

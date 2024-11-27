@@ -8,6 +8,7 @@ use crate::{
 pub struct CmdInput {
     pub action: Action,
     pub config: Config,
+    pub mingw: bool,
     pub args: Vec<String>,
 }
 
@@ -25,15 +26,19 @@ pub fn parse_input(args: Vec<String>) -> Result<CmdInput, Error> {
         return Err(Error::BadAction(args[2].clone()))
     }
 
-    let (config, skip) = match args.get(2).map(|a| a.as_str()) {
+    let (config, mut skip) = match args.get(2).map(|a| a.as_str()) {
         Some("-debug"  |"-d") => (Config::Debug, 3),
         Some("-release"|"-r") => (Config::Release, 3),
         _ => (Config::Debug, 2)
     };
 
+    let mingw = args.iter().position(|a| a.as_str() == "-mingw").is_some();
+    if mingw { skip += 1; }
+
     Ok(CmdInput{
         action,
         config,
+        mingw,
         args: args.into_iter().skip(skip).collect(),
     })
 }

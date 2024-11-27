@@ -11,6 +11,7 @@ use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
 pub struct BuildInfo {
     pub cppstd: String,
     pub config: Config,
+    pub mingw: bool,
     pub src_dir: String,
     pub out_dir: String,
     pub defines: Vec<String>,
@@ -51,8 +52,14 @@ struct CompileInfo<'a> {
 pub fn run_build(info: BuildInfo) -> Result<(), Error> {
     log_info!("starting build for \"{}\":", info.outfile.repr);
     prep::assert_out_dirs(&info.src_dir, &info.out_dir);
+
     if let Some(pch) = &info.pch {
-        prep::precompile_header(pch, &info)
+        if cfg!(windows) && !info.mingw {
+            prep::precompile_header(pch, &info)
+            // msvc::prep::precompile_header(pch, &info)
+        } else {
+            // gcc::prep::precompile_header(pch, &info)
+        }
     }
 
     match incremental::get_outdated(&info) {
@@ -63,10 +70,17 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         Some(elems) => {
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
-                let output = std::process::Command::new("cl")
-                    .args(msvc::compile_cmd(src, &obj, info.compile_info()))
-                    .output()
-                    .unwrap();
+                let output = if cfg!(windows) && !info.mingw {
+                    std::process::Command::new("cl")
+                        .args(msvc::compile_cmd(src, &obj, info.compile_info()))
+                        .output()
+                        .unwrap()
+                } else {
+                    std::process::Command::new("g++")
+                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .output()
+                        .unwrap()
+                };
                 std::io::stdout().write_all(&output.stdout).unwrap();
                 println!();
                 if !output.status.success() { return Err(Error::CompilerFail(src.to_string())) }
@@ -76,47 +90,18 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
 
     let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.out_dir), ".obj").unwrap();
     log_info!("linking: {}", info.outfile.repr);
-    if info.outfile.repr.ends_with(".lib") {
-        msvc::link_lib(all_objs, info)
-    } else {
-        msvc::link_exe(all_objs, info)
-    }
-}
-
-
-#[cfg(target_os = "macos")]
-pub fn run_build(info: BuildInfo) -> Result<(), Error> {
-    log_info!("starting build for \"{}\":", info.outfile.repr);
-    prep::assert_out_dirs(&info.src_dir, &info.out_dir);
-    if let Some(pch) = &info.pch {
-        prep::precompile_header(pch, &info)
-    }
-
-    match incremental::get_outdated(&info) {
-        None => {
-            log_info!("build up to date for \"{}\"", info.outfile.repr);
-            return Ok(())
+    if cfg!(windows) && !info.mingw {
+        if info.outfile.repr.ends_with(".lib") {
+            msvc::link_lib(all_objs, info)
+        } else {
+            msvc::link_exe(all_objs, info)
         }
-        Some(elems) => {
-            for (src, obj) in elems {
-                log_info!("compiling: {}", src);
-                let output = std::process::Command::new("g++")
-                    .args(gcc::compile_cmd(src, &obj, info.compile_info()))
-                    .output()
-                    .unwrap();
-                std::io::stdout().write_all(&output.stdout).unwrap();
-                println!();
-                if !output.status.success() { return Err(Error::CompilerFail(src.to_string())) }
-            }
-        }
-    }
-
-    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.out_dir), ".o").unwrap();
-    log_info!("linking: {}", info.outfile.repr);
-    if info.outfile.repr.ends_with(".a") {
-        gcc::link_lib(all_objs, info)
     } else {
-        gcc::link_exe(all_objs, info)
+        if info.outfile.repr.ends_with(".a") {
+            gcc::link_lib(all_objs, info)
+        } else {
+            gcc::link_exe(all_objs, info)
+        }
     }
 }
 

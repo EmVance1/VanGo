@@ -29,7 +29,7 @@ fn action_clean(build: BuildDef) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildDef, config: Config) -> Result<PathBuf, Error> {
+fn action_build(build: BuildDef, config: Config, mingw: bool) -> Result<PathBuf, Error> {
     let mut defines = build.defines;
     defines.push(config.as_arg());
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
@@ -41,6 +41,7 @@ fn action_build(build: BuildDef, config: Config) -> Result<PathBuf, Error> {
     let info = BuildInfo{
         cppstd: build.cppstd,
         config,
+        mingw,
         src_dir: build.src_dir,
         out_dir: format!("bin/{}/obj/", config),
         defines,
@@ -82,7 +83,7 @@ fn main() {
     if cmd.action == input::Action::Clean {
         action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
     } else if cmd.action.build() {
-        let outfile = action_build(build, cmd.config).unwrap_or_else(|e| exit_with!("{}", e));
+        let outfile = action_build(build, cmd.config, cmd.mingw).unwrap_or_else(|e| exit_with!("{}", e));
         if cmd.action.run() {
             exec::run_app(outfile, cmd.args)
         }

@@ -67,3 +67,27 @@ pub fn precompile_header(header: &str, info: &BuildInfo) {
     }
 }
 
+pub fn precompile_header_gcc(header: &str, info: &BuildInfo) {
+    let head_with_dir = format!("{}{}", info.src_dir, header);
+    let cmpd = format!("{}{}.gch", info.out_dir, header.replace(&info.src_dir, &info.out_dir));
+    let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
+    let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
+
+    if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
+        let mut cmd = Command::new("g++");
+        cmd.args([
+            "-c".to_string(),
+            format!("-Yc{}", header),
+            format!("-Fp{}", cmpd),
+            format!("-std:{}", info.cppstd),
+        ]);
+        cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
+        cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
+        if info.config.is_release() {
+            cmd.args(["/O2"]);
+        }
+        println!("[mscmp:  info] compiling precompiled header: {}", header);
+        std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
+        println!();
+    }
+}

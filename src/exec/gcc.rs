@@ -42,7 +42,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
-    let mut cmd = Command::new("link");
+    let mut cmd = Command::new("g++");
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));

@@ -75,6 +75,11 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
                         .args(msvc::compile_cmd(src, &obj, info.compile_info()))
                         .output()
                         .unwrap()
+                } else if info.cppstd == "c" {
+                    std::process::Command::new("gcc")
+                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .output()
+                        .unwrap()
                 } else {
                     std::process::Command::new("g++")
                         .args(gcc::compile_cmd(src, &obj, info.compile_info()))

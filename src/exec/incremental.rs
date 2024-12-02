@@ -27,6 +27,6 @@ fn get_recent_changes(sources: &[FileInfo], pivot: std::time::SystemTime) -> Vec
 }
 
 fn transform_file(path: &str, src_dir: &str, out_dir: &str) -> String {
-    path.replace(src_dir, out_dir).replace(".cpp", ".obj")
+    path.replace(src_dir, out_dir).replace(".cpp", ".obj").replace(".c", ".obj")
 }
 

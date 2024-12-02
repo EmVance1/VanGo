@@ -18,7 +18,7 @@ use error::Error;
 
 
 fn action_clean(build: BuildDef) -> Result<(), Error> {
-    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
+    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), if build.cppstd == "c" { ".c" } else { ".cpp" }).unwrap();
     let kind = fetch::get_project_kind(&sources)?;
     let outpath = PathBuf::from(&format!("{}.{}", build.project, kind.ext()));
     log_info!("cleaning build files for \"{}\"", outpath.to_str().unwrap());
@@ -32,7 +32,7 @@ fn action_clean(build: BuildDef) -> Result<(), Error> {
 fn action_build(build: BuildDef, config: Config, mingw: bool) -> Result<PathBuf, Error> {
     let mut defines = build.defines;
     defines.push(config.as_arg());
-    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), ".cpp").unwrap();
+    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), if build.cppstd == "c" { ".c" } else { ".cpp" }).unwrap();
     let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, &build.cppstd)?;
     defines.extend(deps.defines);
     let kind = fetch::get_project_kind(&sources)?;

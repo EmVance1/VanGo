@@ -68,9 +68,9 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
 
 pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, Error> {
     for s in srcs {
-        if s.file_name() == "main.cpp" {
+        if s.file_name() == "main.cpp" || s.file_name() == "main.c" {
             return Ok(ProjKind::App)
-        } else if s.file_name() == "lib.cpp" {
+        } else if s.file_name() == "lib.cpp" || s.file_name() == "lib.c" {
             return Ok(ProjKind::Lib)
         }
     }
@@ -183,6 +183,10 @@ fn get_lib_info(src: &str, cfg: Option<&str>, config: Config, cpp: &str) -> Resu
 
 
 pub fn u32_from_cppstd(cpp: &str) -> Result<u32, Error> {
+    if cpp.to_ascii_lowercase() == "c" {
+        return Ok(0)
+    }
+
     let num: u32 = cpp.to_ascii_lowercase()
         .strip_prefix("c++")
         .ok_or(Error::InvalidCppStd(cpp.to_string()))?

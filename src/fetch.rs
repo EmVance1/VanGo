@@ -70,7 +70,7 @@ pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, Error> {
     for s in srcs {
         if s.file_name() == "main.cpp" || s.file_name() == "main.c" {
             return Ok(ProjKind::App)
-        } else if s.file_name() == "lib.cpp" || s.file_name() == "lib.c" {
+        } else if s.file_name() == "lib.hpp" || s.file_name() == "lib.h" {
             return Ok(ProjKind::Lib)
         }
     }

@@ -41,7 +41,7 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 ```
 "pch": "pch.h",
 ```
-- Executable/Library output deduction using main.cpp/lib.cpp entry points
+- Executable/Library output deduction using main.cpp/lib.h entry points
 
 - Debug and Release configurations (work in progress)
 ```

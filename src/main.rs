@@ -18,8 +18,7 @@ use error::Error;
 
 
 fn action_clean(build: BuildDef) -> Result<(), Error> {
-    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), if build.cppstd == "c" { ".c" } else { ".cpp" }).unwrap();
-    let kind = fetch::get_project_kind(&sources)?;
+    let kind = fetch::get_project_kind(&PathBuf::from(&build.src_dir))?;
     let outpath = PathBuf::from(&format!("{}.{}", build.project, kind.ext()));
     log_info!("cleaning build files for \"{}\"", outpath.to_str().unwrap());
     std::process::Command::new("rm").args(["-f", "-r", "bin/*"]).status().unwrap();
@@ -35,7 +34,7 @@ fn action_build(build: BuildDef, config: Config, mingw: bool) -> Result<PathBuf,
     let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), if build.cppstd == "c" { ".c" } else { ".cpp" }).unwrap();
     let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, &build.cppstd)?;
     defines.extend(deps.defines);
-    let kind = fetch::get_project_kind(&sources)?;
+    let kind = fetch::get_project_kind(&PathBuf::from(&build.src_dir))?;
     let outpath = PathBuf::from(&format!("bin/{}/{}.{}", config, build.project, kind.ext()));
     let outfile = FileInfo::from_path(&outpath);
     let info = BuildInfo{

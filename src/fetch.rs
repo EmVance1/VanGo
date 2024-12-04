@@ -66,11 +66,36 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     Some(res)
 }
 
-pub fn get_project_kind(srcs: &[FileInfo]) -> Result<ProjKind, Error> {
+pub fn get_project_kind(sdir: &Path) -> Result<ProjKind, Error> {
+    for e in std::fs::read_dir(sdir).map_err(|_| Error::MissingEntryPoint)? {
+        let e = e.map_err(|_| Error::MissingEntryPoint)?;
+        if e.path().is_file() {
+            let filename = e.path().file_name().unwrap().to_str().unwrap().to_string();
+            if filename.ends_with("main.cpp") {
+                return Ok(ProjKind::App)
+            }
+            if filename.ends_with("main.c") {
+                return Ok(ProjKind::App)
+            }
+            if filename.ends_with("lib.hpp") {
+                return Ok(ProjKind::Lib)
+            }
+            if filename.ends_with("lib.h") {
+                return Ok(ProjKind::Lib)
+            }
+        }
+    }
+    Err(Error::MissingEntryPoint)
+}
+
+pub fn _get_project_kind(srcs: &[FileInfo], headers: &[FileInfo]) -> Result<ProjKind, Error> {
     for s in srcs {
         if s.file_name() == "main.cpp" || s.file_name() == "main.c" {
             return Ok(ProjKind::App)
-        } else if s.file_name() == "lib.hpp" || s.file_name() == "lib.h" {
+        }
+    }
+    for s in headers {
+        if s.file_name() == "lib.hpp" || s.file_name() == "lib.h" {
             return Ok(ProjKind::Lib)
         }
     }

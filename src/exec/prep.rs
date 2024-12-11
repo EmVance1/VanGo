@@ -1,5 +1,5 @@
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
-use crate::fetch::FileInfo;
+use crate::{fetch::FileInfo, log_info};
 use super::BuildInfo;
 
 
@@ -33,10 +33,10 @@ pub fn assert_out_dirs_rec(root: &Path, sdir: &str, odir: &str) {
 }
 
 pub fn precompile_header(header: &str, info: &BuildInfo) {
-    let head_with_dir = format!("{}{}", info.src_dir, header);
-    let cppf = format!("{}{}", info.src_dir, header.replace(".h", ".cpp"));
-    let objt = format!("{}{}", info.out_dir, header.replace(".h", ".obj"));
-    let cmpd = format!("{}{}.pch", info.out_dir, header.replace(&info.src_dir, &info.out_dir));
+    let head_with_dir = format!("{}{}", info.srcdir, header);
+    let cppf = format!("{}{}", info.srcdir, header.replace(".h", ".cpp"));
+    let objt = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
+    let cmpd = format!("{}{}.pch", info.outdir, header.replace(&info.srcdir, &info.outdir));
     let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
@@ -61,15 +61,15 @@ pub fn precompile_header(header: &str, info: &BuildInfo) {
         } else {
             cmd.args(["/MDd", "/Od"]);
         }
-        println!("[mscmp:  info] compiling precompiled header: {}", header);
+        log_info!("[mscmp:  info] compiling precompiled header: {}", header);
         std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
         println!();
     }
 }
 
 pub fn precompile_header_gcc(header: &str, info: &BuildInfo) {
-    let head_with_dir = format!("{}{}", info.src_dir, header);
-    let cmpd = format!("{}{}.gch", info.out_dir, header.replace(&info.src_dir, &info.out_dir));
+    let head_with_dir = format!("{}{}", info.srcdir, header);
+    let cmpd = format!("{}{}.gch", info.outdir, header.replace(&info.srcdir, &info.outdir));
     let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 

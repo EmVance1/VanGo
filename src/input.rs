@@ -19,6 +19,7 @@ pub fn parse_input(args: Vec<String>) -> Result<CmdInput, Error> {
         "build"|"b" => Action::Build,
         "run"  |"r" => Action::Run,
         "clean"|"c" => Action::Clean,
+        "test" |"t" => Action::Test,
         _ => return Err(Error::BadAction(args[1].clone())),
     };
 
@@ -49,11 +50,14 @@ pub enum Action {
     Build,
     Run,
     Clean,
+    Test,
 }
 
+#[allow(dead_code)]
 impl Action {
     pub fn build(&self) -> bool { *self != Action::Clean }
     pub fn run(&self)   -> bool { *self == Action::Run }
+    pub fn test(&self)  -> bool { *self == Action::Test }
 }
 
 
@@ -63,7 +67,7 @@ mod tests {
 
     #[test]
     pub fn test_get_input_simple() {
-        let expected = CmdInput{ action: Action::Build, config: Config::Debug, args: vec![] };
+        let expected = CmdInput{ action: Action::Build, config: Config::Debug, mingw: false, args: vec![] };
 
         let args = vec![ "mscmp".to_string(), "build".to_string() ];
         assert_eq!(parse_input(args).unwrap(), expected);

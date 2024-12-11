@@ -2,6 +2,7 @@ mod input;
 mod repr;
 mod fetch;
 mod exec;
+mod testfw;
 mod error;
 #[macro_use]
 mod log;
@@ -17,9 +18,9 @@ use error::Error;
 
 
 
-fn action_clean(build: BuildDef) -> Result<(), Error> {
-    let kind = fetch::get_project_kind(&PathBuf::from(&build.src_dir))?;
-    let outpath = PathBuf::from(&format!("{}.{}", build.project, kind.ext()));
+fn action_clean(build: BuildFile) -> Result<(), Error> {
+    let kind = fetch::get_project_kind(&build.srcdir)?;
+    let outpath = PathBuf::from(&format!("{}{}", build.project, kind.ext()));
     log_info!("cleaning build files for \"{}\"", outpath.to_str().unwrap());
     std::process::Command::new("rm").args(["-f", "-r", "bin/*"]).status().unwrap();
     std::process::Command::new("rm").args(["-f", &format!("{}.ilk", build.project)]).status().unwrap();
@@ -28,29 +29,27 @@ fn action_clean(build: BuildDef) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildDef, config: Config, mingw: bool) -> Result<PathBuf, Error> {
-    let mut defines = build.defines;
-    defines.push(config.as_arg());
-    let sources = fetch::get_source_files(&PathBuf::from(&build.src_dir), if build.cppstd == "c" { ".c" } else { ".cpp" }).unwrap();
-    let deps = fetch::get_dependencies(build.inc_dirs, build.dependencies, config, &build.cppstd)?;
-    defines.extend(deps.defines);
-    let kind = fetch::get_project_kind(&PathBuf::from(&build.src_dir))?;
-    let outpath = PathBuf::from(&format!("bin/{}/{}.{}", config, build.project, kind.ext()));
-    let outfile = FileInfo::from_path(&outpath);
+fn action_build(build: BuildFile, config: Config, mingw: bool) -> Result<String, Error> {
+    let kind = fetch::get_project_kind(&build.srcdir)?;
+    let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
+    deps.defines.extend(build.defines);
+    deps.incdirs.extend(build.incdirs);
+    let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext());
+    let outfile = FileInfo::from_str(&outpath);
     let info = BuildInfo{
-        cppstd: build.cppstd,
-        config,
-        mingw,
-        src_dir: build.src_dir,
-        out_dir: format!("bin/{}/obj/", config),
-        defines,
-        sources,
-        headers: deps.headers,
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp == "c" { ".c" } else { ".cpp" }).unwrap(),
+        headers: fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap(),
+        srcdir: build.srcdir,
+        outdir: format!("bin/{}/obj/", config),
+        outfile: outfile.clone(),
+        defines: deps.defines,
         incdirs: deps.incdirs,
         libdirs: deps.libdirs,
         links: deps.links,
         pch: build.pch,
-        outfile: outfile.clone(),
+        cppstd: build.cpp,
+        config,
+        mingw,
     };
     if let Err(e) = exec::run_build(info) {
         Err(e)
@@ -75,16 +74,19 @@ fn main() {
     let bfile = std::fs::read_to_string("build.json")
         .map_err(|_| Error::FileNotFound("build.json".to_string()))
         .unwrap_or_else(|e| exit_with!("{}", e));
-    let build: BuildDef = serde_json::from_str(&bfile)
+    let build = BuildFile::from_str(&bfile)
         .map_err(Error::JsonParse)
-        .unwrap_or_else(|e| exit_with!("{}", e));
+        .unwrap_or_else(|e| exit_with!("{}", e))
+        .finalise(cmd.config);
 
     if cmd.action == input::Action::Clean {
         action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
-    } else if cmd.action.build() {
-        let outfile = action_build(build, cmd.config, cmd.mingw).unwrap_or_else(|e| exit_with!("{}", e));
+    } else {
+        let outfile = action_build(build.clone(), cmd.config, cmd.mingw).unwrap_or_else(|e| exit_with!("{}", e));
         if cmd.action.run() {
-            exec::run_app(outfile, cmd.args)
+            exec::run_app(&outfile, cmd.args)
+        } else if cmd.action.test() {
+            testfw::test_lib(build, cmd.config)
         }
     }
 }

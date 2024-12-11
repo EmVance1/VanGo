@@ -2,21 +2,47 @@ use crate::fetch::FileInfo;
 use super::BuildInfo;
 
 
+pub enum BuildLevel<'a> {
+    UpToDate,
+    LinkOnly,
+    CompileAndLink(Vec<(&'a str, String)>),
+}
 
 
-pub fn get_outdated(info: &BuildInfo) -> Option<Vec<(&str, String)>> {
-    if !info.outfile.exists() || !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
-        Some(info.sources.iter().map(|c| {
-            (c.repr.as_str(), transform_file(&c.repr, &info.src_dir, &info.out_dir))
-        }).collect())
-    } else {
-        let src_changes = get_recent_changes(&info.sources, info.outfile.modified().unwrap());
-        if src_changes.is_empty() { 
-            None
+pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
+    let pairs: Vec<_> = info.sources.iter()
+        .map(|c| (c, FileInfo::from_str(&transform_file(&c.repr, &info.srcdir, &info.outdir))))
+        .collect();
+
+    if info.outfile.exists() {
+        if !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
+            BuildLevel::CompileAndLink(pairs.into_iter()
+                .map(|(src, obj)| (src.repr.as_str(), obj.repr))
+                .collect())
         } else {
-            Some(src_changes.into_iter().map(|c| {
-                (c.repr.as_str(), transform_file(&c.repr, &info.src_dir, &info.out_dir))
-            }).collect())
+            let mut build = Vec::new();
+            for (src, obj) in pairs {
+                if !obj.exists() || src.modified().unwrap() > obj.modified().unwrap() || src.modified().unwrap() > info.outfile.modified().unwrap() {
+                    build.push((src.repr.as_str(), obj.repr))
+                }
+            }
+            if build.is_empty() {
+                BuildLevel::UpToDate
+            } else {
+                BuildLevel::CompileAndLink(build)
+            }
+        }
+    } else {
+        let mut build = Vec::new();
+        for (src, obj) in pairs {
+            if !obj.exists() || src.modified().unwrap() > obj.modified().unwrap() {
+                build.push((src.repr.as_str(), obj.repr))
+            }
+        }
+        if build.is_empty() {
+            BuildLevel::LinkOnly
+        } else {
+            BuildLevel::CompileAndLink(build)
         }
     }
 }

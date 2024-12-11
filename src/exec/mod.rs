@@ -5,23 +5,24 @@ mod gcc;
 
 use std::{io::Write, path::PathBuf, process::Command};
 use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
+use incremental::BuildLevel;
 
 
 #[derive(Debug)]
 pub struct BuildInfo {
-    pub cppstd: String,
-    pub config: Config,
-    pub mingw: bool,
-    pub src_dir: String,
-    pub out_dir: String,
-    pub defines: Vec<String>,
     pub sources: Vec<FileInfo>,
     pub headers: Vec<FileInfo>,
+    pub srcdir: String,
+    pub outdir: String,
+    pub outfile: FileInfo,
+    pub defines: Vec<String>,
     pub incdirs: Vec<String>,
     pub libdirs: Vec<String>,
     pub links: Vec<String>,
     pub pch: Option<String>,
-    pub outfile: FileInfo,
+    pub cppstd: String,
+    pub config: Config,
+    pub mingw: bool,
 }
 
 impl BuildInfo {
@@ -29,7 +30,7 @@ impl BuildInfo {
         CompileInfo{
             cppstd: &self.cppstd,
             config: self.config,
-            out_dir: &self.out_dir,
+            outdir: &self.outdir,
             defines: &self.defines,
             incdirs: &self.incdirs,
             pch: &self.pch,
@@ -41,7 +42,7 @@ impl BuildInfo {
 struct CompileInfo<'a> {
     cppstd: &'a str,
     config: Config,
-    out_dir: &'a str,
+    outdir: &'a str,
     defines: &'a [String],
     incdirs: &'a [String],
     pch: &'a Option<String>,
@@ -51,7 +52,7 @@ struct CompileInfo<'a> {
 #[cfg(target_os = "windows")]
 pub fn run_build(info: BuildInfo) -> Result<(), Error> {
     log_info!("starting build for \"{}\":", info.outfile.repr);
-    prep::assert_out_dirs(&info.src_dir, &info.out_dir);
+    prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
         if cfg!(windows) && !info.mingw {
@@ -62,17 +63,23 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         }
     }
 
-    match incremental::get_outdated(&info) {
-        None => {
+    match incremental::get_build_level(&info) {
+        BuildLevel::UpToDate => {
             log_info!("build up to date for \"{}\"", info.outfile.repr);
             return Ok(())
         }
-        Some(elems) => {
+        BuildLevel::LinkOnly => {
+            std::process::Command::new("rm").args(["-f", "-r", &info.outfile.repr]).status().unwrap();
+        }
+        BuildLevel::CompileAndLink(elems) => {
+            std::process::Command::new("rm").args(["-f", "-r", &info.outfile.repr]).status().unwrap();
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
                 let output = if cfg!(windows) && !info.mingw {
+                    let args = msvc::compile_cmd(src, &obj, info.compile_info());
+                    // println!("{:?}", args);
                     std::process::Command::new("cl")
-                        .args(msvc::compile_cmd(src, &obj, info.compile_info()))
+                        .args(args)
                         .output()
                         .unwrap()
                 } else if info.cppstd == "c" {
@@ -93,7 +100,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         }
     }
 
-    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.out_dir), ".obj").unwrap();
+    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
     log_info!("linking: {}", info.outfile.repr);
     if cfg!(windows) && !info.mingw {
         if info.outfile.repr.ends_with(".lib") {
@@ -111,9 +118,9 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
 }
 
 
-pub fn run_app(outfile: PathBuf,  runargs: Vec<String>) {
-    log_info!("running application \"{}\"...", outfile.to_str().unwrap());
-    Command::new(format!("./{}", outfile.to_str().unwrap()))
+pub fn run_app(outfile: &str,  runargs: Vec<String>) {
+    log_info!("running application \"{}\"...", outfile);
+    Command::new(format!("./{}", outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
@@ -137,7 +144,7 @@ mod tests {
         let info = CompileInfo{
             cppstd: "c++20",
             config: Config::Debug,
-            out_dir: "bin/debug/obj/",
+            outdir: "bin/debug/obj/",
             defines: &defines,
             incdirs: &incdirs,
             pch: &pch,

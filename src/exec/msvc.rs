@@ -27,7 +27,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         args.push("/Od".to_string());
     }
     if let Some(outfile) = info.pch {
-        let cmpd = format!("{}/{}.pch", info.out_dir, outfile);
+        let cmpd = format!("{}/{}.pch", info.outdir, outfile);
         args.push(format!("/Yu{}", outfile));
         args.push(format!("/Fp{}", cmpd));
     }

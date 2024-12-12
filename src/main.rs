@@ -39,13 +39,8 @@ fn action_new(name: &str, library: bool) -> Result<(), Error> {
 }
 
 fn action_clean(build: BuildFile) -> Result<(), Error> {
-    let kind = fetch::get_project_kind(&build.srcdir)?;
-    let outpath = PathBuf::from(&format!("{}{}", build.project, kind.ext()));
-    log_info!("cleaning build files for \"{}\"", outpath.to_str().unwrap());
-    std::process::Command::new("rm").args(["-f", "-r", "bin/*"]).status().unwrap();
-    std::process::Command::new("rm").args(["-f", &format!("{}.ilk", build.project)]).status().unwrap();
-    std::process::Command::new("rm").args(["-f", &format!("{}.pdb", build.project)]).status().unwrap();
-    std::process::Command::new("rm").args(["-f", &outpath.to_str().unwrap()]).status().unwrap();
+    log_info!("cleaning build files for \"{}\"", build.project);
+    std::fs::remove_dir_all("bin/").unwrap();
     Ok(())
 }
 

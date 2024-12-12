@@ -38,7 +38,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     let mut cmd = Command::new("lib");
     cmd.args(objs.into_iter().map(|o| o.repr));
     cmd.args(&info.links);
-    cmd.args(DEFAULT_LIBS);
+    // cmd.args(DEFAULT_LIBS);
     cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l)));
     cmd.args([
         format!("/OUT:{}", info.outfile.repr),
@@ -80,16 +80,16 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
 
 
 const DEFAULT_LIBS: &[&str] = &[
-    // "kernel32.lib",
-    // "user32.lib",
-    // "winspool.lib",
-    // "comdlg32.lib",
-    // "advapi32.lib",
-    // "shell32.lib",
-    // "ole32.lib",
-    // "oleaut32.lib",
-    // "uuid.lib",
-    // "odbc32.lib",
-    // "odbccp32.lib",
+    "kernel32.lib",
+    "user32.lib",
+    "winspool.lib",
+    "comdlg32.lib",
+    "advapi32.lib",
+    "shell32.lib",
+    "ole32.lib",
+    "oleaut32.lib",
+    "uuid.lib",
+    "odbc32.lib",
+    "odbccp32.lib",
 ];
 

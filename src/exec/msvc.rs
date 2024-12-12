@@ -47,8 +47,14 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
 //            "/LTCG".to_string(),
     ]);
     let output = cmd.output().unwrap();
-    std::io::stdout().write_all(&output.stdout).unwrap();
-    if !output.status.success() { Err(Error::LinkerFail(info.outfile.repr)) } else { Ok(()) }
+    if !output.status.success() {
+        std::io::stdout().write_all(&output.stdout).unwrap();
+        Err(Error::LinkerFail(info.outfile.repr))
+    } else {
+        println!();
+        log_info!("successfully built project {}", info.outfile.repr);
+        Ok(())
+    }
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
@@ -67,10 +73,11 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
 //            "/OPT:REF".to_string(),
     ]);
     let output = cmd.output().unwrap();
-    std::io::stdout().write_all(&output.stdout).unwrap();
     if !output.status.success() {
+        std::io::stdout().write_all(&output.stdout).unwrap();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
+        println!();
         log_info!("successfully built project {}", info.outfile.repr);
         Ok(())
     }

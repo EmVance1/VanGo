@@ -101,7 +101,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
     }
 
     let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
-    log_info!("linking: {}", info.outfile.repr);
+    log_info!("linking:   {}", info.outfile.repr);
     if cfg!(windows) && !info.mingw {
         if info.outfile.repr.ends_with(".lib") {
             msvc::link_lib(all_objs, info)

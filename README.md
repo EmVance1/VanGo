@@ -10,7 +10,7 @@ Yes millions of options are lovely, but actually what's wrong with sensible defa
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 ## Features supported so far
-- Build, Run and Clean actions
+- Build, Run, Test, and Clean actions
 
 - Specify header-only and binary libraries with a lib.json, supports multiple configurations...
 ```
@@ -23,8 +23,6 @@ The above configuration is already the minimum requirement. `./src` is assumed a
     }
 },
 ```
-(see example `lib.json` for more)
-
 - ...and plug and play at will in main project. Libraries can be placed in `./lib` or specified otherwise
 ```
 "dependencies": [ "SFML.static", "../Rusty" ],
@@ -56,10 +54,10 @@ Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everyt
 ## How-to:
 The build system is invoked like so:
 
-`mscmp b[uild] [-r[elease]]`
-`mscmp r[un]   [-r[elease]]`
-`mscmp t[est]  [-r[elease]]`
-`mscmp c[lean]`
+- `mscmp b[uild] [-r[elease]]`
+- `mscmp r[un]   [-r[elease]]`
+- `mscmp t[est]  [-r[elease]]`
+- `mscmp c[lean]`
 
 MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraenious arguments are passed to the invoked executable.
 

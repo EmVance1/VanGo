@@ -1,5 +1,5 @@
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
-use crate::{fetch::FileInfo, log_info};
+use crate::{fetch::FileInfo, log_info_noline};
 use super::BuildInfo;
 
 
@@ -61,7 +61,7 @@ pub fn precompile_header(header: &str, info: &BuildInfo) {
         } else {
             cmd.args(["/MDd", "/Od"]);
         }
-        log_info!("[mscmp:  info] compiling precompiled header: {}", header);
+        log_info_noline!("compiling precompiled header: ");
         std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
         println!();
     }
@@ -86,7 +86,7 @@ pub fn precompile_header_gcc(header: &str, info: &BuildInfo) {
         if info.config.is_release() {
             cmd.args(["/O2"]);
         }
-        println!("[mscmp:  info] compiling precompiled header: {}", header);
+        log_info_noline!("compiling precompiled header: ");
         std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
         println!();
     }

@@ -101,27 +101,33 @@ macro_rules! exit_with {
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
-    if cmd.action == input::Action::New {
-        action_new(&cmd.args[0], cmd.library).unwrap_or_else(|e| exit_with!("{}", e));
-        return;
-    }
 
-    let bfile = std::fs::read_to_string("build.json")
-        .map_err(|_| Error::FileNotFound("build.json".to_string()))
-        .unwrap_or_else(|e| exit_with!("{}", e));
-    let build = BuildFile::from_str(&bfile)
-        .map_err(Error::JsonParse)
-        .unwrap_or_else(|e| exit_with!("{}", e))
-        .finalise(cmd.config);
-
-    if cmd.action == input::Action::Clean {
-        action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
+    if let input::Action::New{ name, library } = &cmd {
+        action_new(name, *library).unwrap_or_else(|e| exit_with!("{}", e));
     } else {
-        let outfile = action_build(build.clone(), cmd.config, cmd.mingw, cmd.action.test()).unwrap_or_else(|e| exit_with!("{}", e));
-        if cmd.action.run() {
-            exec::run_app(&outfile, cmd.args)
-        } else if cmd.action.test() {
-            testfw::test_lib(build, cmd.config)
+        let bfile = std::fs::read_to_string("build.json")
+            .map_err(|_| Error::FileNotFound("build.json".to_string()))
+            .unwrap_or_else(|e| exit_with!("{}", e));
+        let build = BuildFile::from_str(&bfile)
+            .map_err(Error::JsonParse)
+            .unwrap_or_else(|e| exit_with!("{}", e));
+
+        match cmd {
+            input::Action::Clean => {
+                action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
+            }
+            input::Action::Build{ config, mingw } => {
+                action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+            }
+            input::Action::Run{ config, mingw, args } => {
+                let outfile = action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                exec::run_app(&outfile, args)
+            }
+            input::Action::Test{ config, mingw } => {
+                action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
+                testfw::test_lib(build, config)
+            }
+            _ => (),
         }
     }
 }

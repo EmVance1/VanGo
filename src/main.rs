@@ -18,6 +18,26 @@ use error::Error;
 
 
 
+fn action_new(name: &str, library: bool) -> Result<(), Error> {
+    log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
+    std::fs::create_dir(name).unwrap();
+    std::fs::create_dir(format!("{}/src", name)).unwrap();
+    if library {
+        std::fs::create_dir(format!("{}/include", name)).unwrap();
+        std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
+        std::fs::write(format!("{}/src/lib.h", name),   "#pragma once\n\nint func(int a, int b);\n").unwrap();
+        std::fs::write(format!("{}/src/lib.cpp", name), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}").unwrap();
+        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"C++17\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"./src/\", \"./include/{}\" ],\n    \"include-public\": \"include/\"\n}}", name, name);
+        std::fs::write(format!("{}/build.json", name), json).unwrap();
+    } else {
+        std::fs::write(format!("{}/src/main.cpp", name), "#include <cstdio>\n\nint main() {\n    printf(\"Hello World!\");\n}").unwrap();
+        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"C++17\",\n    \"dependencies\": []\n}}", name);
+        std::fs::write(format!("{}/build.json", name), json).unwrap();
+    }
+    log_info!("successfully created project '{}'", name);
+    Ok(())
+}
+
 fn action_clean(build: BuildFile) -> Result<(), Error> {
     let kind = fetch::get_project_kind(&build.srcdir)?;
     let outpath = PathBuf::from(&format!("{}{}", build.project, kind.ext()));
@@ -81,6 +101,11 @@ macro_rules! exit_with {
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
+    if cmd.action == input::Action::New {
+        action_new(&cmd.args[0], cmd.library).unwrap_or_else(|e| exit_with!("{}", e));
+        return;
+    }
+
     let bfile = std::fs::read_to_string("build.json")
         .map_err(|_| Error::FileNotFound("build.json".to_string()))
         .unwrap_or_else(|e| exit_with!("{}", e));

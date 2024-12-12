@@ -9,6 +9,7 @@ pub struct CmdInput {
     pub action: Action,
     pub config: Config,
     pub mingw: bool,
+    pub library: bool,
     pub args: Vec<String>,
 }
 
@@ -20,6 +21,7 @@ pub fn parse_input(args: Vec<String>) -> Result<CmdInput, Error> {
         "run"  |"r" => Action::Run,
         "clean"|"c" => Action::Clean,
         "test" |"t" => Action::Test,
+        "new"  |"n" => Action::New,
         _ => return Err(Error::BadAction(args[1].clone())),
     };
 
@@ -36,10 +38,14 @@ pub fn parse_input(args: Vec<String>) -> Result<CmdInput, Error> {
     let mingw = args.iter().position(|a| a.as_str() == "-mingw").is_some();
     if mingw { skip += 1; }
 
+    let library = args.iter().position(|a| a.as_str() == "-lib").is_some();
+    if library { skip += 1; }
+
     Ok(CmdInput{
         action,
         config,
         mingw,
+        library,
         args: args.into_iter().skip(skip).collect(),
     })
 }
@@ -51,6 +57,7 @@ pub enum Action {
     Run,
     Clean,
     Test,
+    New,
 }
 
 #[allow(dead_code)]
@@ -67,7 +74,7 @@ mod tests {
 
     #[test]
     pub fn test_get_input_simple() {
-        let expected = CmdInput{ action: Action::Build, config: Config::Debug, mingw: false, args: vec![] };
+        let expected = CmdInput{ action: Action::Build, config: Config::Debug, mingw: false, library: false, args: vec![] };
 
         let args = vec![ "mscmp".to_string(), "build".to_string() ];
         assert_eq!(parse_input(args).unwrap(), expected);

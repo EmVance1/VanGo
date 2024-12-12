@@ -9,8 +9,8 @@ Yes millions of options are lovely, but actually what's wrong with sensible defa
 }
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
-## Features supported so far
-- Build, Run, Test, and Clean actions
+### Features supported so far
+- New, Build, Run, Test, and Clean actions
 
 - Specify header-only and binary libraries with a lib.json, supports multiple configurations...
 ```
@@ -48,20 +48,21 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 "SETTING.release": { ... },
 ```
 
-## It just works
+### It just works
 Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard Microsoft? No Visual Studio needed.
 
 ## How-to:
 The build system is invoked like so:
 
+- `mscmp n[ew]   [-lib] name`
 - `mscmp b[uild] [-r[elease]]`
-- `mscmp r[un]   [-r[elease]]`
+- `mscmp r[un]   [-r[elease]] [args...]`
 - `mscmp t[est]  [-r[elease]]`
 - `mscmp c[lean]`
 
 MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraenious arguments are passed to the invoked executable.
 
-## How-to: build.json
+### How-to: build.json
 All `build.json` files are expected to have 3 base declarations at the root:
 
 - `"project": "foobar"`
@@ -74,13 +75,13 @@ All `build.json` files are expected to have 3 base declarations at the root:
 
 Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `"DEBUG"` or `"RELEASE"` definitions, aswell as `"TEST"` for test builds.
 
-If you want to precompile a header, just specify the header file at the root of `src/` that you want precompiled as shown above.
+If you want to precompile a header, just specify the header file at the root of `src/` that you want precompiled as shown above (All source files will be assumed to use it).
 
 Source directory and (project) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or appended to through the `srcdir` and `incdirs` options.
 
 If the project you are defining is going to be a library, you may want to add an `include-public` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
 
-## How-to: lib.json
+### How-to: lib.json
 A `lib.json` file specifies for prebuilt libraries how they should be correctly linked. It must contain:
 
 - `"library": "foobar"`
@@ -106,6 +107,6 @@ as well as an optional field for version specific preprocessor flags
 
 The `all` field represents a standard configuration if versions are not necessary for a project.
 
-## How-to: automated testing
+### How-to: automated testing
 Testing is made easy by assuming all tests are in a `test/` directory in the project root. Your test project may be arbitrarily complex as long as it contains a `main` function that executes the tests. A set of convenience macros are provided in the header `mscmptest/asserts.h` which is in the default include path for test configurations. Using these, you can write tests like in any other language, and run them in your `main` function by calling `test(test_function)`.
 

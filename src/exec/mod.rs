@@ -12,6 +12,7 @@ use incremental::BuildLevel;
 pub struct BuildInfo {
     pub sources: Vec<FileInfo>,
     pub headers: Vec<FileInfo>,
+    pub relink: Vec<FileInfo>,
     pub srcdir: String,
     pub outdir: String,
     pub outfile: FileInfo,

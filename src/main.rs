@@ -39,6 +39,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool) -> Result<String,
     let info = BuildInfo{
         sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp == "c" { ".c" } else { ".cpp" }).unwrap(),
         headers: fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap(),
+        relink: vec![],
         srcdir: build.srcdir,
         outdir: format!("bin/{}/obj/", config),
         outfile: outfile.clone(),

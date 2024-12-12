@@ -27,7 +27,11 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
                 }
             }
             if build.is_empty() {
-                BuildLevel::UpToDate
+                if !get_recent_changes(&info.relink, info.outfile.modified().unwrap()).is_empty() {
+                    BuildLevel::LinkOnly
+                } else {
+                    BuildLevel::UpToDate
+                }
             } else {
                 BuildLevel::CompileAndLink(build)
             }

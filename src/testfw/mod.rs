@@ -28,14 +28,16 @@ pub fn test_lib(build: BuildFile, config: Config) {
     let mut partial = inherited(&build, config);
     partial.defines.extend([ config.as_arg(), "TEST".to_string() ]);
     partial.incdirs.extend([ "test/".to_string(), format!("{}/testframework/", inc) ]);
-    let dep = vec![ FileInfo::from_str(&format!("bin/{}/{}.lib", config, build.project)) ];
+    let headers = vec![ FileInfo::from_str(&format!("{}/testframework/mscmptest/asserts.h", inc)) ];
+    let relink = vec![ FileInfo::from_str(&format!("bin/{}/{}.lib", config, build.project)) ];
 
     let sources = crate::fetch::get_source_files(&PathBuf::from("test/"), ".cpp").unwrap();
     let outpath = format!("bin/{}/test_{}.exe", config, build.project);
     let outfile = FileInfo::from_str(&outpath);
     let info = BuildInfo{
         sources,
-        headers: dep,
+        headers,
+        relink,
         srcdir: "test/".to_string(),
         outdir: format!("bin/{}/obj/", config),
         outfile,

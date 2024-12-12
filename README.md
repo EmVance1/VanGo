@@ -60,7 +60,7 @@ The build system is invoked like so:
 - `mscmp t[est]  [-r[elease]]`
 - `mscmp c[lean]`
 
-MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraenious arguments are passed to the invoked executable.
+MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
 
 ### How-to: build.json
 All `build.json` files are expected to have 3 base declarations at the root:

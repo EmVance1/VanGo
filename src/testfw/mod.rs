@@ -1,5 +1,12 @@
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{exec::BuildInfo, fetch::FileInfo, BuildFile, Config, log_info};
+use crate::{
+    BuildFile,
+    Config,
+    exec::BuildInfo,
+    fetch::FileInfo,
+    Error,
+    log_info,
+};
 
 
 struct TestInfo{
@@ -18,7 +25,11 @@ fn inherited(build: &BuildFile, config: Config) -> TestInfo {
     }
 }
 
-pub fn test_lib(build: BuildFile, config: Config) {
+pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
+    if !std::fs::exists("test/").unwrap() {
+        return Err(Error::MissingTests)
+    }
+
     let inc = std::env::current_exe().unwrap() // ./target/release/mscmp.exe
                        .parent().unwrap()      // ./target/release/
                        .parent().unwrap()      // ./target/
@@ -55,17 +66,14 @@ pub fn test_lib(build: BuildFile, config: Config) {
         mingw: false,
         defines: partial.defines,
     };
-    if let Err(_) = crate::exec::run_build(info) {
-        // Err(e)
-    } else {
-        println!();
-        log_info!("running tests for project: {}", build.project);
-        println!();
-        Command::new(format!("./{}", &outpath))
-            .current_dir(std::env::current_dir().unwrap())
-            .status()
-            .unwrap();
-        // Ok(outpath)
-    }
+    crate::exec::run_build(info)?;
+    println!();
+    log_info!("running tests for project: {}", build.project);
+    println!();
+    Command::new(format!("./{}", &outpath))
+        .current_dir(std::env::current_dir().unwrap())
+        .status()
+        .unwrap();
+    Ok(())
 }
 

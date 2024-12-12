@@ -23,6 +23,8 @@ pub enum Error {
     CompilerFail(String),
     #[error("failed to link project '{0}'")]
     LinkerFail(String),
+    #[error("missing  'test' directory in this project")]
+    MissingTests,
     #[error("build failed")]
     #[allow(unused)]
     Unknown

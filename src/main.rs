@@ -123,7 +123,7 @@ fn main() {
             input::Action::Test{ config, mingw } => {
                 let build = build.finalise(config);
                 action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
-                testfw::test_lib(build, config)
+                testfw::test_lib(build, config).unwrap_or_else(|e| exit_with!("{}", e));
             }
             _ => (),
         }

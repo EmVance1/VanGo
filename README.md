@@ -71,9 +71,10 @@ All `build.json` files are expected to have 3 base declarations at the root:
 - `"dependencies": [ ... ]`
 
 `project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, necessarily prefixed by `"C++"` (case insensitive). It also takes `"C"` if you want to build C-only projects.
+
 `dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by MSCMP. If no path to the library is specified, MSCMP will search in `./lib`. The dependency string also supports an optional version, separated by a '.' (see chapter on library version definitions) as in `SFML.static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
 
-Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `"DEBUG"` or `"RELEASE"` definitions, aswell as`"TEST"` for test builds.
+Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `"DEBUG"` or `"RELEASE"` definitions, aswell as `"TEST"` for test builds.
 
 If you want to precompile a header, just specify the header file at the root of `src/` that you want precompiled as shown above.
 
@@ -82,7 +83,7 @@ Source directory and (project) include directories are assumed to be `./src` and
 If the project you are defining is going to be a library, you may want to add an `include-public` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
 
 ## How-to: lib.json
-A `lib.json` file specifies for prebuild libraries how they should be correctly linked. It must contain:
+A `lib.json` file specifies for prebuilt libraries how they should be correctly linked. It must contain:
 
 - `"library": "foobar"`
 - `"minstd": "C++XX"`
@@ -93,7 +94,7 @@ A `lib.json` file specifies for prebuild libraries how they should be correctly 
 In addition, all libraries must have one of the following (but not both):
 
 - `"all": { ... }`
-- `"configs": { ... }`
+- `"configs": { "name": { ... }, ... }`
 
 Configs represent different ways of linking a given library, for example if a library supports both static and dynamic linking. It is defined by 3 required fields
 

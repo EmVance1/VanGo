@@ -29,10 +29,13 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildFile, config: Config, mingw: bool) -> Result<String, Error> {
+fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<String, Error> {
     let kind = fetch::get_project_kind(&build.srcdir)?;
     let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
     deps.defines.extend(build.defines);
+    if test {
+        deps.defines.push("TEST".to_string());
+    }
     deps.incdirs.extend(build.incdirs);
     let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext());
     let outfile = FileInfo::from_str(&outpath);
@@ -89,7 +92,7 @@ fn main() {
     if cmd.action == input::Action::Clean {
         action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
     } else {
-        let outfile = action_build(build.clone(), cmd.config, cmd.mingw).unwrap_or_else(|e| exit_with!("{}", e));
+        let outfile = action_build(build.clone(), cmd.config, cmd.mingw, cmd.action.test()).unwrap_or_else(|e| exit_with!("{}", e));
         if cmd.action.run() {
             exec::run_app(&outfile, cmd.args)
         } else if cmd.action.test() {

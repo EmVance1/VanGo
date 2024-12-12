@@ -87,10 +87,15 @@ impl LibFile {
 
 impl From<BuildFile> for LibFile {
     fn from(value: BuildFile) -> Self {
+        let include = if value.inc_public.is_empty() {
+            value.srcdir
+        } else {
+            value.inc_public
+        };
         Self{
             library: value.project.clone(),
             minstd: value.cpp,
-            include: value.inc_public,
+            include,
             all: Some(LibConfig{
                 binary_debug: "bin/debug/".to_string(),
                 binary_release: "bin/release/".to_string(),

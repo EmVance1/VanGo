@@ -4,7 +4,7 @@ mod msvc;
 mod gcc;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
+use crate::{repr::Config, fetch::FileInfo, error::Error, log_info, log_info_noline};
 use incremental::BuildLevel;
 
 
@@ -75,10 +75,9 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         BuildLevel::CompileAndLink(elems) => {
             std::process::Command::new("rm").args(["-f", "-r", &info.outfile.repr]).status().unwrap();
             for (src, obj) in elems {
-                log_info!("compiling: {}", src);
+                log_info_noline!("compiling: ");
                 let output = if cfg!(windows) && !info.mingw {
                     let args = msvc::compile_cmd(src, &obj, info.compile_info());
-                    // println!("{:?}", args);
                     std::process::Command::new("cl")
                         .args(args)
                         .output()

@@ -18,6 +18,24 @@ macro_rules! log_info {
     } };
 }
 
+#[macro_export]
+macro_rules! log_info_noline {
+    () => { {
+        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
+            .set_fg(Some(::termcolor::Color::Green))).unwrap();
+        write!(&mut stdout, "[mscmp:  info]").unwrap();
+    } };
+    ($($arg:tt)*) => { {
+        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
+            .set_fg(Some(::termcolor::Color::Green))).unwrap();
+        write!(&mut stdout, "[mscmp:  info] ").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut stdout).unwrap();
+        write!(&mut stdout, $($arg)*).unwrap();
+    } };
+}
+
 
 #[macro_export]
 macro_rules! log_error {

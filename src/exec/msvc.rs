@@ -48,7 +48,6 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     ]);
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
-    println!();
     if !output.status.success() { Err(Error::LinkerFail(info.outfile.repr)) } else { Ok(()) }
 }
 
@@ -69,7 +68,6 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     ]);
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
-    println!();
     if !output.status.success() {
         Err(Error::LinkerFail(info.outfile.repr))
     } else {

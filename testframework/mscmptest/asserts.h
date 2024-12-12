@@ -73,5 +73,11 @@ struct AssertionFail: public std::exception {
         std::cerr << "[mscmp:  test] test '" << #f << "' failed on line " << e.failline << ": "; \
         SetConsoleTextAttribute(hConsole, TERMINAL_WHITE); \
         std::cerr << e.what() << "\n"; \
+    } catch (const std::exception& e) { \
+        HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE); \
+        SetConsoleTextAttribute(hConsole, TERMINAL_RED); \
+        std::cerr << "[mscmp:  test] test '" << #f << "' failed: "; \
+        SetConsoleTextAttribute(hConsole, TERMINAL_WHITE); \
+        std::cerr << "uncaught exception (" << e.what() << ")\n"; \
     } }
 

@@ -53,6 +53,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     } else {
         println!();
         log_info!("successfully built project {}", info.outfile.repr);
+        println!();
         Ok(())
     }
 }
@@ -79,6 +80,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     } else {
         println!();
         log_info!("successfully built project {}", info.outfile.repr);
+        println!();
         Ok(())
     }
 }

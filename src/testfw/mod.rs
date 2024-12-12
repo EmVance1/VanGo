@@ -67,9 +67,7 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
         defines: partial.defines,
     };
     crate::exec::run_build(info)?;
-    println!();
-    log_info!("running tests for project: {}", build.project);
-    println!();
+    log_info!("running tests for project {:-<57}", format!("\"{}\" ", build.project));
     Command::new(format!("./{}", &outpath))
         .current_dir(std::env::current_dir().unwrap())
         .status()

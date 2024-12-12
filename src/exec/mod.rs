@@ -52,7 +52,7 @@ struct CompileInfo<'a> {
 
 #[cfg(target_os = "windows")]
 pub fn run_build(info: BuildInfo) -> Result<(), Error> {
-    log_info!("starting build for \"{}\":", info.outfile.repr);
+    log_info!("starting build for {:-<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
@@ -119,7 +119,7 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
 
 
 pub fn run_app(outfile: &str,  runargs: Vec<String>) {
-    log_info!("running application \"{}\"...", outfile);
+    log_info!("running application {:-<63}", format!("\"{}\" ", outfile));
     Command::new(format!("./{}", outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())

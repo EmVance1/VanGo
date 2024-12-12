@@ -112,13 +112,16 @@ fn main() {
                 action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
             }
             input::Action::Build{ config, mingw } => {
+                let build = build.finalise(config);
                 action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
             }
             input::Action::Run{ config, mingw, args } => {
+                let build = build.finalise(config);
                 let outfile = action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args)
             }
             input::Action::Test{ config, mingw } => {
+                let build = build.finalise(config);
                 action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
                 testfw::test_lib(build, config)
             }

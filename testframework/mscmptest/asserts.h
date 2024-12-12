@@ -12,7 +12,7 @@ struct AssertionFail: public std::exception {
 
     explicit AssertionFail(const std::string& _msg, uint32_t _failtype, uint32_t _failline) : msg(_msg), failtype(_failtype), failline(_failline) {}
 
-    virtual const char* what() const noexcept {
+    const char* what() const noexcept override {
        return msg.c_str();
     }
 };
@@ -27,28 +27,28 @@ struct AssertionFail: public std::exception {
 
 #define ASSERT_OUT std::stringstream _assert_output; _assert_output
 
-#define assert(a)           if (!a)     { ASSERT_OUT << "assertion fail: expected 'true', received 'false'";                  \
+#define assert(a)           if (!a)     { ASSERT_OUT << "assertion fail: 'assert' expected expression to be 'true'"; \
     throw AssertionFail(_assert_output.str(), FAIL_TRUE, __LINE__); }
 
-#define assert_eq(a, b)     if (a != b) { ASSERT_OUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+#define assert_eq(a, b)     if (a != b) { ASSERT_OUT << "assertion fail: 'assert_eq' expected '" << a << "', received '" << b << "'"; \
     throw AssertionFail(_assert_output.str(), FAIL_EQ, __LINE__); }
 
-#define assert_ne(a, b)     if (a == b) { ASSERT_OUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+#define assert_ne(a, b)     if (a == b) { ASSERT_OUT << "assertion fail: 'assert_ne' expected not '" << a << "', received '" << b << "'"; \
     throw AssertionFail(_assert_output.str(), FAIL_NE, __LINE__); }
 
-#define assert_null(a)      if (!a)     { ASSERT_OUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+#define assert_null(a)      if (!a)     { ASSERT_OUT << "assertion fail: 'assert_null' expected 'nullptr'"; \
     throw AssertionFail(_assert_output.str(), FAIL_NULL, __LINE__); }
 
-#define assert_non_null(a)  if (a)      { ASSERT_OUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+#define assert_non_null(a)  if (a)      { ASSERT_OUT << "assertion fail: 'assert_non_null' expected valid pointer"; \
     throw AssertionFail(_assert_output.str(), FAIL_NON_NULL, __LINE__); }
 
 #define assert_throws(a, e) { bool _throw_fail = false; std::stringstream _assert_output; \
     try { \
         a; \
         _throw_fail = true; \
-        _assert_output << "assertion fail: expected '" #a "' to throw '" #e "' but it did not"; \
+        _assert_output << "assertion fail: 'assert_throws' expected '" #a "' to throw '" #e "' but it did not"; \
     } catch (const e&) {} catch (...) { \
-        _assert_output << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; \
+        _assert_output << "assertion fail: 'assert_throws' expected '" #a "' to throw '" #e "' but it threw something else"; \
         throw AssertionFail(_assert_output.str(), FAIL_THROWS, __LINE__); \
     } if (_throw_fail) { \
         throw AssertionFail(_assert_output.str(), FAIL_THROWS, __LINE__); \

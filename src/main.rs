@@ -36,9 +36,15 @@ fn action_build(build: BuildFile, config: Config, mingw: bool) -> Result<String,
     deps.incdirs.extend(build.incdirs);
     let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext());
     let outfile = FileInfo::from_str(&outpath);
+
+    let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
+    if !build.inc_public.is_empty() {
+        headers.extend(fetch::get_source_files(&PathBuf::from(&build.inc_public), ".h").unwrap());
+    }
+
     let info = BuildInfo{
         sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp == "c" { ".c" } else { ".cpp" }).unwrap(),
-        headers: fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap(),
+        headers,
         relink: vec![],
         srcdir: build.srcdir,
         outdir: format!("bin/{}/obj/", config),

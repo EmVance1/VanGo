@@ -40,7 +40,8 @@ fn action_new(name: &str, library: bool) -> Result<(), Error> {
 
 fn action_clean(build: BuildFile) -> Result<(), Error> {
     log_info!("cleaning build files for \"{}\"", build.project);
-    std::fs::remove_dir_all("bin/").unwrap();
+    std::fs::remove_dir_all("bin/debug/").unwrap();
+    std::fs::remove_dir_all("bin/release/").unwrap();
     Ok(())
 }
 
@@ -113,11 +114,11 @@ fn main() {
             }
             input::Action::Build{ config, mingw } => {
                 let build = build.finalise(config);
-                action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
             }
             input::Action::Run{ config, mingw, args } => {
                 let build = build.finalise(config);
-                let outfile = action_build(build.clone(), config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                let outfile = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args)
             }
             input::Action::Test{ config, mingw } => {

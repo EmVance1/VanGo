@@ -57,10 +57,9 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
 
     if let Some(pch) = &info.pch {
         if cfg!(windows) && !info.mingw {
-            prep::precompile_header(pch, &info)
-            // msvc::prep::precompile_header(pch, &info)
+            msvc::prep::precompile_header(pch, &info)
         } else {
-            // gcc::prep::precompile_header(pch, &info)
+            gcc::prep::precompile_header(pch, &info)
         }
     }
 
@@ -70,10 +69,10 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
             return Ok(())
         }
         BuildLevel::LinkOnly => {
-            std::process::Command::new("rm").args(["-f", "-r", &info.outfile.repr]).status().unwrap();
+            let _ = std::fs::remove_file(&info.outfile.repr).unwrap();
         }
         BuildLevel::CompileAndLink(elems) => {
-            std::process::Command::new("rm").args(["-f", "-r", &info.outfile.repr]).status().unwrap();
+            let _ = std::fs::remove_file(&info.outfile.repr);
             for (src, obj) in elems {
                 log_info_noline!("compiling: ");
                 let output = if cfg!(windows) && !info.mingw {
@@ -108,13 +107,11 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
         } else {
             msvc::link_exe(all_objs, info)
         }
-    } else {
-        if info.outfile.repr.ends_with(".a") {
+    } else if info.outfile.repr.ends_with(".a") {
             gcc::link_lib(all_objs, info)
         } else {
             gcc::link_exe(all_objs, info)
         }
-    }
 }
 
 

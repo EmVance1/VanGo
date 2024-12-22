@@ -48,7 +48,7 @@ pub struct LibData {
 
 impl LibFile {
     pub fn validate(self, maxcpp: &str) -> Result<Self, Error> {
-        if u32_from_cppstd(&self.minstd)? > u32_from_cppstd(&maxcpp)? {
+        if u32_from_cppstd(&self.minstd)? > u32_from_cppstd(maxcpp)? {
             Err(Error::IncompatibleCppStd(self.library))
         } else {
             Ok(self)

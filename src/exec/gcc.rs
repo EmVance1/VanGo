@@ -60,3 +60,39 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     }
 }
 
+
+pub mod prep {
+    use crate::{fetch::FileInfo, log_info_noline};
+    use super::BuildInfo;
+    use std::{
+        process::Command,
+        path::PathBuf,
+        io::Write,
+    };
+
+    pub fn precompile_header(header: &str, info: &BuildInfo) {
+        let head_with_dir = format!("{}{}", info.srcdir, header);
+        let cmpd = format!("{}{}.gch", info.outdir, header.replace(&info.srcdir, &info.outdir));
+        let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
+        let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
+
+        if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
+            let mut cmd = Command::new("g++");
+            cmd.args([
+                "-c".to_string(),
+                format!("-Yc{}", header),
+                format!("-Fp{}", cmpd),
+                format!("-std:{}", info.cppstd),
+            ]);
+            cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
+            cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
+            if info.config.is_release() {
+                cmd.args(["/O2"]);
+            }
+            log_info_noline!("compiling precompiled header: ");
+            std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
+            println!();
+        }
+    }
+}
+

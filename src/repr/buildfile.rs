@@ -18,6 +18,7 @@ pub struct BuildFile {
     pub pch: Option<String>,
 
     #[serde(default)]
+    #[allow(unused)]
     pub compiler_options: Vec<String>,
     #[serde(default)]
     #[serde(alias = "include-public")]
@@ -37,5 +38,5 @@ impl BuildFile {
 }
 
 
-fn src_default() -> String      {       "src/".to_string()   }
+fn src_default() -> String { "src/".to_string() }
 

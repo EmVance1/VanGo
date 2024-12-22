@@ -19,23 +19,24 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
 
     match args[0].as_str() {
         "new"|"n" => {
-            if args.len() == 1 {
-                Ok(Action::New{ name: args[0].clone(), library: false })
-            } else if args.len() == 2 {
-                if args.iter().find(|s| *s == "-lib").is_some() {
-                    Ok(Action::New{ name: args[0].clone(), library: true })
+            if args.len() == 2 {
+                Ok(Action::New{ name: args[1].clone(), library: false })
+            } else if args.len() == 3 {
+                if let Some(pos) = args.iter().position(|s| *s == "-lib") {
+                    args.remove(pos);
+                    Ok(Action::New{ name: args[1].clone(), library: true })
                 } else {
-                    return Err(Error::BadAction(args[2].clone()))
+                    Err(Error::BadAction(args[1].clone()))
                 }
             } else {
-                return Err(Error::BadAction(args[2].clone()))
+                Err(Error::BadAction(args[2].clone()))
             }
         }
         "clean"|"c" => {
             if args.len() == 1 {
                 Ok(Action::Clean)
             } else {
-                return Err(Error::BadAction(args[2].clone()))
+                Err(Error::BadAction(args[2].clone()))
             }
         }
         "build"|"b" => {

@@ -65,6 +65,8 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
         config,
         mingw: false,
         defines: partial.defines,
+        comp_args: vec![],
+        link_args: vec![],
     };
     crate::exec::run_build(info)?;
     log_info!("running tests for project {:-<57}", format!("\"{}\" ", build.project));

@@ -31,6 +31,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         args.push(format!("/Yu{}", outfile));
         args.push(format!("/Fp{}", cmpd));
     }
+    args.extend(info.comp_args.iter().map(|s| s.to_string()));
     args
 }
 
@@ -42,9 +43,9 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     cmd.args([
         format!("/OUT:{}", info.outfile.repr),
         "/MACHINE:X64".to_string(),
-        "/SUBSYSTEM:CONSOLE".to_string(),
         // "/LTCG".to_string(),
     ]);
+    cmd.args(info.link_args);
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stdout().write_all(&output.stdout).unwrap();
@@ -66,12 +67,12 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
     cmd.args([
         format!("/OUT:{}", info.outfile.repr),
         "/MACHINE:X64".to_string(),
-        "/SUBSYSTEM:CONSOLE".to_string(),
         // "/LTCG".to_string(),
         // "/DEBUG".to_string(),
         // format!("/{}", info.config.as_arg()),
         // "/OPT:REF".to_string(),
     ]);
+    cmd.args(info.link_args);
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stdout().write_all(&output.stdout).unwrap();

@@ -21,7 +21,11 @@ pub struct BuildFile {
     #[allow(unused)]
     pub compiler_options: Vec<String>,
     #[serde(default)]
-    #[serde(alias = "include-public")]
+    #[allow(unused)]
+    pub linker_options: Vec<String>,
+
+    #[serde(default)]
+    #[serde(rename = "include-public")]
     pub inc_public: String,
 }
 

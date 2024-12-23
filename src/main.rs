@@ -76,6 +76,8 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
         cppstd: build.cpp,
         config,
         mingw,
+        comp_args: build.compiler_options,
+        link_args: build.linker_options,
     };
     if let Err(e) = exec::run_build(info) {
         Err(e)

@@ -24,6 +24,8 @@ pub struct BuildInfo {
     pub cppstd: String,
     pub config: Config,
     pub mingw: bool,
+    pub comp_args: Vec<String>,
+    pub link_args: Vec<String>,
 }
 
 impl BuildInfo {
@@ -35,6 +37,7 @@ impl BuildInfo {
             defines: &self.defines,
             incdirs: &self.incdirs,
             pch: &self.pch,
+            comp_args: &self.comp_args,
         }
     }
 }
@@ -47,6 +50,7 @@ struct CompileInfo<'a> {
     defines: &'a [String],
     incdirs: &'a [String],
     pch: &'a Option<String>,
+    comp_args: &'a [String],
 }
 
 
@@ -135,16 +139,17 @@ mod tests {
     pub fn test_compile_cmd() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.obj";
-        let defines = vec![];
+        let empty = vec![];
         let incdirs = vec![ "src/".to_string() ];
         let pch = None;
         let info = CompileInfo{
             cppstd: "c++20",
             config: Config::Debug,
             outdir: "bin/debug/obj/",
-            defines: &defines,
+            defines: &empty,
             incdirs: &incdirs,
             pch: &pch,
+            comp_args: &empty,
         };
 
         let args = msvc::compile_cmd(src, obj, info);

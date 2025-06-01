@@ -45,26 +45,31 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<String, Error> {
-    let kind = fetch::get_project_kind(&build.srcdir)?;
+fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<(bool, String), Error> {
+    let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
+
     let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
     }
-    deps.incdirs.extend(build.incdirs);
+    let rebuilt_dep = deps.rebuilt;
     let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext());
     let outfile = FileInfo::from_str(&outpath);
 
     let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
-    if !build.inc_public.is_empty() {
-        headers.extend(fetch::get_source_files(&PathBuf::from(&build.inc_public), ".h").unwrap());
+    if let Some(inc) = build.inc_public {
+        headers.extend(fetch::get_source_files(&PathBuf::from(&inc), ".h").unwrap());
     }
+    for dep in &build.incdirs {
+        headers.extend(fetch::get_source_files(&PathBuf::from(dep), ".h").unwrap());
+    }
+    deps.incdirs.extend(build.incdirs);
 
     let info = BuildInfo{
         sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp == "c" { ".c" } else { ".cpp" }).unwrap(),
         headers,
-        relink: vec![],
+        relink: deps.relink,
         srcdir: build.srcdir,
         outdir: format!("bin/{}/obj/", config),
         outfile: outfile.clone(),
@@ -73,7 +78,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
         libdirs: deps.libdirs,
         links: deps.links,
         pch: build.pch,
-        cppstd: build.cpp,
+        cppstd: build.cpp.to_ascii_lowercase(),
         config,
         mingw,
         comp_args: build.compiler_options,
@@ -82,7 +87,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     if let Err(e) = exec::run_build(info) {
         Err(e)
     } else {
-        Ok(outpath)
+        Ok((rebuilt_dep, outpath))
     }
 }
 
@@ -96,12 +101,13 @@ macro_rules! exit_with {
 }
 
 
-fn main() {
+fn main() -> std::process::ExitCode {
     let args: Vec<_> = std::env::args().collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
 
     if let input::Action::New{ name, library } = &cmd {
         action_new(name, *library).unwrap_or_else(|e| exit_with!("{}", e));
+        0.into()
     } else {
         let bfile = std::fs::read_to_string("build.json")
             .map_err(|_| Error::FileNotFound("build.json".to_string()))
@@ -113,22 +119,25 @@ fn main() {
         match cmd {
             input::Action::Clean => {
                 action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
+                0.into()
             }
             input::Action::Build{ config, mingw } => {
                 let build = build.finalise(config);
                 action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                0.into()
             }
             input::Action::Run{ config, mingw, args } => {
                 let build = build.finalise(config);
-                let outfile = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
-                exec::run_app(&outfile, args)
+                let (_, outfile) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                exec::run_app(&outfile, args).into()
             }
             input::Action::Test{ config, mingw } => {
                 let build = build.finalise(config);
                 action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
                 testfw::test_lib(build, config).unwrap_or_else(|e| exit_with!("{}", e));
+                0.into()
             }
-            _ => (),
+            _ => 0.into(),
         }
     }
 }

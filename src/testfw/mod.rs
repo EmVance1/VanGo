@@ -39,10 +39,10 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
     let mut partial = inherited(&build, config);
     partial.defines.extend([ config.as_arg(), "TEST".to_string() ]);
     partial.incdirs.extend([ "test/".to_string(), format!("{}/testframework/", inc) ]);
-    let mut headers = if build.inc_public.is_empty() {
-        crate::fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
+    let mut headers = if let Some(inc) = build.inc_public {
+        crate::fetch::get_source_files(&PathBuf::from(&inc), ".h").unwrap()
     } else {
-        crate::fetch::get_source_files(&PathBuf::from(&build.inc_public), ".h").unwrap()
+        crate::fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
     };
     headers.push(FileInfo::from_str(&format!("{}/testframework/mscmptest/asserts.h", inc)));
     let relink = vec![ FileInfo::from_str(&format!("bin/{}/{}.lib", config, build.project)) ];

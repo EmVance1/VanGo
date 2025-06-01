@@ -71,26 +71,41 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     Some(res)
 }
 
-pub fn get_project_kind(sdir: &str) -> Result<ProjKind, Error> {
-    for e in std::fs::read_dir(sdir).map_err(|_| Error::MissingEntryPoint)? {
-        let e = e.map_err(|_| Error::MissingEntryPoint)?;
-        if e.path().is_file() {
+pub fn get_project_kind(srcdir: &str, incpub: &Option<String>) -> Result<ProjKind, Error> {
+    let sig = find_project_signifier(srcdir)?;
+    if let Some(sig) = sig { return Ok(sig); }
+    if let Some(inc) = incpub {
+        let sig = find_project_signifier(&inc)?;
+        if let Some(sig) = sig { return Ok(sig); }
+    }
+    println!("not found, searched {:#?}", incpub);
+    Err(Error::MissingEntryPoint)
+}
+
+fn find_project_signifier(sdir: &str) -> Result<Option<ProjKind>, Error> {
+    for e in std::fs::read_dir(sdir).map_err(|_| Error::DirNotFound(sdir.to_string()))? {
+        // let e = e.map_err(|_| Error::MissingEntryPoint)?;
+        let e = e.unwrap();
+        if e.path().is_dir() {
+            let sig = find_project_signifier(e.path().to_str().unwrap())?;
+            if sig.is_some() { return Ok(sig); }
+        } else if e.path().is_file() {
             let filename = e.path().file_name().unwrap().to_str().unwrap().to_string();
             if filename.ends_with("main.cpp") {
-                return Ok(ProjKind::App)
+                return Ok(Some(ProjKind::App))
             }
             if filename.ends_with("main.c") {
-                return Ok(ProjKind::App)
+                return Ok(Some(ProjKind::App))
             }
             if filename.ends_with("lib.hpp") {
-                return Ok(ProjKind::Lib)
+                return Ok(Some(ProjKind::Lib))
             }
             if filename.ends_with("lib.h") {
-                return Ok(ProjKind::Lib)
+                return Ok(Some(ProjKind::Lib))
             }
         }
     }
-    Err(Error::MissingEntryPoint)
+    Ok(None)
 }
 
 
@@ -99,7 +114,9 @@ pub struct Dependencies {
     pub incdirs: Vec<String>,
     pub libdirs: Vec<String>,
     pub links: Vec<String>,
+    pub relink: Vec<FileInfo>,
     pub defines: Vec<String>,
+    pub rebuilt: bool,
 }
 
 
@@ -107,7 +124,9 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
     let mut links = Vec::new();
+    let mut relink = Vec::new();
     let mut defines = Vec::new();
+    let mut rebuilt = false;
 
     for lib in libraries {
         let (name, version) = get_version(&lib);
@@ -133,17 +152,23 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             log_info!("building project dependency: {}", build.project);
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(name).unwrap();
-            std::process::Command::new("mscmp")
+            let code = std::process::Command::new("mscmp")
                 .arg("build")
                 .arg(format!("-{}", config))
                 .status()
                 .unwrap();
+            if code.code() == Some(1) {
+                rebuilt = true;
+            }
             std::env::set_current_dir(&save).unwrap();
             let libinfo = LibFile::from(build)
                 .validate(maxcpp)?
                 .linearise(config, version)?;
             incdirs.push(format!("{}/{}", name, libinfo.incdir));
             libdirs.push(format!("{}/{}", name, libinfo.libdir));
+            for l in &libinfo.links {
+                relink.push(FileInfo::from_str(&format!("{}/{}/{}", name, libinfo.libdir, l)));
+            }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
             println!();
@@ -154,7 +179,9 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
         incdirs,
         libdirs,
         links,
+        relink,
         defines,
+        rebuilt,
     })
 }
 
@@ -163,7 +190,7 @@ fn get_version(s: &str) -> (&str, Option<&str>) {
     for (i, c) in s.chars().rev().enumerate() {
         if c == '/' || c == '\\' {
             return (s, None)
-        } else if c == '.' {
+        } else if c == ':' {
             let l = s.len();
             return (&s[..(l-i-1)], Some(&s[(l-i)..]))
         }
@@ -179,11 +206,12 @@ mod tests {
     #[test]
     pub fn test_get_version() {
         assert_eq!(get_version("SFML"),             ("SFML", None));
-        assert_eq!(get_version("SFML.static"),      ("SFML", Some("static")));
-        assert_eq!(get_version("SF.ML.static"),     ("SF.ML", Some("static")));
+        assert_eq!(get_version("SFML:static"),      ("SFML", Some("static")));
+        assert_eq!(get_version("SF.ML:static"),     ("SF.ML", Some("static")));
+        assert_eq!(get_version("SFML-2.6.1"),       ("SFML-2.6.1", None));
         assert_eq!(get_version("../Rusty"),         ("../Rusty", None));
-        assert_eq!(get_version("../Rusty.static"),  ("../Rusty", Some("static")));
-        assert_eq!(get_version("../Ru.sty.static"), ("../Ru.sty", Some("static")));
+        assert_eq!(get_version("../Rusty:static"),  ("../Rusty", Some("static")));
+        assert_eq!(get_version("../Ru.sty:static"), ("../Ru.sty", Some("static")));
     }
 }
 

@@ -35,7 +35,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
     args
 }
 
-pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
+pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
     let mut cmd = Command::new("lib");
     cmd.args(objs.into_iter().map(|o| o.repr));
     cmd.args(&info.links);
@@ -54,11 +54,11 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
         println!();
         log_info!("successfully built project {}", info.outfile.repr);
         println!();
-        Ok(())
+        Ok(true)
     }
 }
 
-pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error> {
+pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
     let mut cmd = Command::new("link");
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(&info.links);
@@ -81,7 +81,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<(), Error
         println!();
         log_info!("successfully built project {}", info.outfile.repr);
         println!();
-        Ok(())
+        Ok(true)
     }
 }
 
@@ -145,5 +145,6 @@ const DEFAULT_LIBS: &[&str] = &[
     "uuid.lib",
     "odbc32.lib",
     "odbccp32.lib",
+    "gdi32.lib",
 ];
 

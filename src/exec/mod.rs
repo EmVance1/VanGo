@@ -55,7 +55,7 @@ struct CompileInfo<'a> {
 
 
 #[cfg(target_os = "windows")]
-pub fn run_build(info: BuildInfo) -> Result<(), Error> {
+pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     log_info!("starting build for {:-<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
@@ -70,15 +70,15 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
     match incremental::get_build_level(&info) {
         BuildLevel::UpToDate => {
             log_info!("build up to date for \"{}\"", info.outfile.repr);
-            return Ok(())
+            return Ok(false)
         }
         BuildLevel::LinkOnly => {
-            let _ = std::fs::remove_file(&info.outfile.repr).unwrap();
+            let _ = std::fs::remove_file(&info.outfile.repr); // .unwrap();
         }
         BuildLevel::CompileAndLink(elems) => {
             let _ = std::fs::remove_file(&info.outfile.repr);
             for (src, obj) in elems {
-                log_info_noline!("compiling: ");
+                log_info_noline!("compiling: {}", src);
                 let output = if cfg!(windows) && !info.mingw {
                     let args = msvc::compile_cmd(src, &obj, info.compile_info());
                     std::process::Command::new("cl")
@@ -96,9 +96,12 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
                         .output()
                         .unwrap()
                 };
-                std::io::stdout().write_all(&output.stdout).unwrap();
+
                 println!();
-                if !output.status.success() { return Err(Error::CompilerFail(src.to_string())) }
+                if !output.status.success() {
+                    std::io::stdout().write_all(&output.stdout).unwrap();
+                    return Err(Error::CompilerFail(src.to_string()))
+                }
             }
         }
     }
@@ -119,13 +122,15 @@ pub fn run_build(info: BuildInfo) -> Result<(), Error> {
 }
 
 
-pub fn run_app(outfile: &str,  runargs: Vec<String>) {
+pub fn run_app(outfile: &str,  runargs: Vec<String>) -> u8 {
     log_info!("running application {:-<63}", format!("\"{}\" ", outfile));
     Command::new(format!("./{}", outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
-        .unwrap();
+        .unwrap()
+        .code()
+        .unwrap() as u8
 }
 
 

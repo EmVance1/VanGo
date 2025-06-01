@@ -9,6 +9,8 @@ pub enum Error {
     BadAction(String),
     #[error("file '{0}' not found")]
     FileNotFound(String),
+    #[error("directory '{0}' not found")]
+    DirNotFound(String),
     #[error("parse json error: {0}")]
     JsonParse(#[from] serde_json::Error),
     #[error("'{0}' is not a valid C++ standard")]
@@ -17,7 +19,7 @@ pub enum Error {
     IncompatibleCppStd(String),
     #[error("library '{0}' does not have config '{1}'")]
     ConfigUnavailable(String, String),
-    #[error("no program entry point 'main.cpp' or 'lib.cpp' found")]
+    #[error("no project signifier 'main.cpp' or 'lib.h' found")]
     MissingEntryPoint,
     #[error("failed to compile file '{0}'")]
     CompilerFail(String),

@@ -53,7 +53,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
 
 
 fn get_recent_changes(sources: &[FileInfo], pivot: std::time::SystemTime) -> Vec<&FileInfo> {
-    sources.iter().filter(|src| src.modified().unwrap() > pivot).collect()
+    sources.iter().filter(|src| src.modified().unwrap() > pivot ).collect()
 }
 
 fn transform_file(path: &str, src_dir: &str, out_dir: &str) -> String {

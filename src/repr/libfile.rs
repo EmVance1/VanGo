@@ -87,10 +87,10 @@ impl LibFile {
 
 impl From<BuildFile> for LibFile {
     fn from(value: BuildFile) -> Self {
-        let include = if value.inc_public.is_empty() {
-            value.srcdir
+        let include = if let Some(inc) = value.inc_public {
+            inc
         } else {
-            value.inc_public
+            value.srcdir
         };
         Self{
             library: value.project.clone(),

@@ -26,7 +26,7 @@ pub struct BuildFile {
 
     #[serde(default)]
     #[serde(rename = "include-public")]
-    pub inc_public: String,
+    pub inc_public: Option<String>,
 }
 
 impl BuildFile {

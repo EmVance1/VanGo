@@ -7,10 +7,7 @@ mod error;
 #[macro_use]
 mod log;
 
-use std::{
-    io::Write,
-    path::PathBuf,
-};
+use std::{ io::Write, path::PathBuf };
 use repr::*;
 use fetch::FileInfo;
 use exec::BuildInfo;
@@ -67,7 +64,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     deps.incdirs.extend(build.incdirs);
 
     let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp == "c" { ".c" } else { ".cpp" }).unwrap(),
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase() == "c" { ".c" } else { ".cpp" }).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,

@@ -25,6 +25,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
     } else {
         args.push("/MDd".to_string());
         args.push("/Od".to_string());
+        args.push("/Zi".to_string());
     }
     if let Some(outfile) = info.pch {
         let cmpd = format!("{}/{}.pch", info.outdir, outfile);
@@ -68,11 +69,13 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
         format!("/OUT:{}", info.outfile.repr),
         "/MACHINE:X64".to_string(),
         // "/LTCG".to_string(),
-        // "/DEBUG".to_string(),
         // format!("/{}", info.config.as_arg()),
         // "/OPT:REF".to_string(),
     ]);
     cmd.args(info.link_args);
+    if info.config.is_debug() {
+        cmd.arg("/DEBUG");
+    }
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stdout().write_all(&output.stdout).unwrap();

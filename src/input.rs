@@ -6,7 +6,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
-    New{ name: String, library: bool },
+    New{ name: String, library: bool, isc: bool },
     Clean,
     Build{ config: Config, mingw: bool },
     Run  { config: Config, mingw: bool, args: Vec<String> },
@@ -20,16 +20,24 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
     match args[0].as_str() {
         "new"|"n" => {
             if args.len() == 2 {
-                Ok(Action::New{ name: args[1].clone(), library: false })
-            } else if args.len() == 3 {
-                if let Some(pos) = args.iter().position(|s| *s == "-lib") {
-                    args.remove(pos);
-                    Ok(Action::New{ name: args[1].clone(), library: true })
-                } else {
-                    Err(Error::BadAction(args[1].clone()))
-                }
+                Ok(Action::New{ name: args[1].clone(), library: false, isc: false })
             } else {
-                Err(Error::BadAction(args[2].clone()))
+                let mut library = false;
+                let mut isc = false;
+                let mut safety = 0;
+                while args.len() > 2 {
+                    if let Some(pos) = args.iter().position(|s| *s == "-lib") {
+                        args.remove(pos);
+                        library = true;
+                    } else if let Some(pos) = args.iter().position(|s| *s == "-c") {
+                        args.remove(pos);
+                        isc = true;
+                    } else if safety > 2 {
+                        return Err(Error::BadAction(args[1].clone()));
+                    }
+                    safety += 1;
+                }
+                Ok(Action::New{ name: args[1].clone(), library, isc })
             }
         }
         "clean"|"c" => {

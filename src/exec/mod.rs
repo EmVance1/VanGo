@@ -78,6 +78,8 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         BuildLevel::CompileAndLink(elems) => {
             let _ = std::fs::remove_file(&info.outfile.repr);
             let mut handles = Vec::new();
+            const LIMIT: u32 = 12;
+            let mut batch = 0;
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
                 if cfg!(windows) && !info.mingw {
@@ -106,6 +108,18 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                         .spawn()
                         .unwrap()));
                 };
+                batch += 1;
+                if batch == LIMIT {
+                    for (src, proc) in handles {
+                        let output = proc.wait_with_output().unwrap();
+                        if !output.status.success() {
+                            std::io::stdout().write_all(&output.stdout).unwrap();
+                            return Err(Error::CompilerFail(src.to_string()))
+                        }
+                    }
+                    batch = 0;
+                    handles = Vec::new();
+                }
             }
 
             for (src, proc) in handles {

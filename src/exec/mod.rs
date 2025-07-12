@@ -4,7 +4,7 @@ mod msvc;
 mod gcc;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{repr::Config, fetch::FileInfo, error::Error, log_info, log_info_noline};
+use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
 use incremental::BuildLevel;
 
 
@@ -77,6 +77,45 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         }
         BuildLevel::CompileAndLink(elems) => {
             let _ = std::fs::remove_file(&info.outfile.repr);
+            let mut handles = Vec::new();
+            for (src, obj) in elems {
+                log_info!("compiling: {}", src);
+                if cfg!(windows) && !info.mingw {
+                    let args = msvc::compile_cmd(src, &obj, info.compile_info());
+                    handles.push((src, std::process::Command::new("cl")
+                        .args(args)
+                        .arg("/FS")
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .unwrap()));
+                } else if info.cppstd == "c" {
+                    handles.push((src, std::process::Command::new("gcc")
+                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .arg("/FS")
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .unwrap()));
+                } else {
+                    handles.push((src, std::process::Command::new("g++")
+                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .arg("/FS")
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .unwrap()));
+                };
+            }
+
+            for (src, proc) in handles {
+                let output = proc.wait_with_output().unwrap();
+                if !output.status.success() {
+                    std::io::stdout().write_all(&output.stdout).unwrap();
+                    return Err(Error::CompilerFail(src.to_string()))
+                }
+            }
+            /*
             for (src, obj) in elems {
                 log_info_noline!("compiling: {}", src);
                 let output = if cfg!(windows) && !info.mingw {
@@ -103,6 +142,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                     return Err(Error::CompilerFail(src.to_string()))
                 }
             }
+            */
         }
     }
 

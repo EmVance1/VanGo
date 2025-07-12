@@ -125,7 +125,7 @@ pub mod prep {
             if info.config.is_release() {
                 cmd.args(["/MD", "/O2"]);
             } else {
-                cmd.args(["/MDd", "/Od"]);
+                cmd.args(["/MDd", "/Od", "/Zi"]);
             }
             log_info_noline!("compiling precompiled header: ");
             let _ = std::io::stdout().flush();

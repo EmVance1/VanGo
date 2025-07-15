@@ -86,23 +86,20 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                     let args = msvc::compile_cmd(src, &obj, info.compile_info());
                     handles.push((src, std::process::Command::new("cl")
                         .args(args)
-                        .arg("/FS")
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()));
-                } else if info.cppstd == "c" {
-                    handles.push((src, std::process::Command::new("gcc")
+                } else if info.cppstd.starts_with("c++") {
+                    handles.push((src, std::process::Command::new("g++")
                         .args(gcc::compile_cmd(src, &obj, info.compile_info()))
-                        .arg("/FS")
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()));
                 } else {
-                    handles.push((src, std::process::Command::new("g++")
+                    handles.push((src, std::process::Command::new("gcc")
                         .args(gcc::compile_cmd(src, &obj, info.compile_info()))
-                        .arg("/FS")
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
@@ -221,6 +218,7 @@ mod tests {
             "/Isrc/".to_string(),
             "/MDd".to_string(),
             "/Od".to_string(),
+            "/Zi".to_string(),
         ]);
     }
 }

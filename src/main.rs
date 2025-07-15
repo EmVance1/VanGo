@@ -21,7 +21,7 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
     std::fs::create_dir(format!("{}/src", name)).unwrap();
     let ext = if isc { "c" } else { "cpp" };
     let header = if isc { "stdio.h" } else { "cstdio" };
-    let cstd = if isc { "C" } else { "C++17" };
+    let cstd = if isc { "C11" } else { "C++17" };
     if library {
         std::fs::create_dir(format!("{}/include", name)).unwrap();
         std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
@@ -52,6 +52,8 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
 fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<(bool, String), Error> {
     let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
+    let _ = repr::u32_from_cppstd(&build.cpp)?;
+
     let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
@@ -71,7 +73,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     deps.incdirs.extend(build.incdirs);
 
     let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase() == "c" { ".c" } else { ".cpp" }).unwrap(),
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase().starts_with("c++") { ".cpp" } else { ".c" }).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,

@@ -108,22 +108,62 @@ impl From<BuildFile> for LibFile {
 }
 
 
-pub fn u32_from_cppstd(cpp: &str) -> Result<u32, Error> {
-    if cpp.to_ascii_lowercase() == "c" {
-        return Ok(0)
-    }
+#[derive(Debug, PartialEq, Eq)]
+pub enum Lang { Cpp(u32), C(u32) }
 
-    let num: u32 = cpp.to_ascii_lowercase()
-        .strip_prefix("c++")
-        .ok_or(Error::InvalidCppStd(cpp.to_string()))?
-        .parse()
-        .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
-    if !matches!(num, 98|3|11|14|17|20|23) {
-        Err(Error::InvalidCppStd(cpp.to_string()))
-    } else if num < 50 {
-        Ok(100 + num)
+impl Ord for Lang {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Lang::Cpp(a), Lang::Cpp(b)) => {
+                a.cmp(b)
+            }
+            (Lang::Cpp(_), Lang::C(_)) => {
+                1.cmp(&0)
+            }
+            (Lang::C(_), Lang::Cpp(_)) => {
+                0.cmp(&1)
+            }
+            (Lang::C(a), Lang::C(b)) => {
+                a.cmp(b)
+            }
+        }
+    }
+}
+
+impl PartialOrd for Lang {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
+    let cpp = cpp.to_ascii_lowercase();
+    if cpp.starts_with("c++") {
+        let num: u32 = cpp.strip_prefix("c++")
+            .unwrap()
+            .parse()
+            .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
+        if !matches!(num, 98|3|11|14|17|20|23) {
+            Err(Error::InvalidCppStd(cpp.to_string()))
+        } else if num < 50 {
+            Ok(Lang::Cpp(100 + num))
+        } else {
+            Ok(Lang::Cpp(num))
+        }
+    } else if cpp == "c" {
+        Ok(Lang::C(0))
     } else {
-        Ok(num)
+        let num: u32 = cpp.strip_prefix("c")
+            .ok_or(Error::InvalidCppStd(cpp.to_string()))?
+            .parse()
+            .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
+        if !matches!(num, 89|99|11|17|20) {
+            Err(Error::InvalidCppStd(cpp.to_string()))
+        } else if num < 50 {
+            Ok(Lang::C(100 + num))
+        } else {
+            Ok(Lang::C(num))
+        }
     }
 }
 
@@ -134,17 +174,30 @@ mod tests {
 
     #[test]
     pub fn test_u32_from_cppstd() {
-        assert_eq!(u32_from_cppstd("c++98").unwrap(), 98);
-        assert_eq!(u32_from_cppstd("c++03").unwrap(), 103);
-        assert_eq!(u32_from_cppstd("c++11").unwrap(), 111);
-        assert_eq!(u32_from_cppstd("c++14").unwrap(), 114);
-        assert_eq!(u32_from_cppstd("c++17").unwrap(), 117);
-        assert_eq!(u32_from_cppstd("c++20").unwrap(), 120);
-        assert_eq!(u32_from_cppstd("c++23").unwrap(), 123);
+        assert_eq!(u32_from_cppstd("c++98").unwrap(), Lang::Cpp(98));
+        assert_eq!(u32_from_cppstd("c++03").unwrap(), Lang::Cpp(103));
+        assert_eq!(u32_from_cppstd("c++11").unwrap(), Lang::Cpp(111));
+        assert_eq!(u32_from_cppstd("c++14").unwrap(), Lang::Cpp(114));
+        assert_eq!(u32_from_cppstd("C++17").unwrap(), Lang::Cpp(117));
+        assert_eq!(u32_from_cppstd("C++20").unwrap(), Lang::Cpp(120));
+        assert_eq!(u32_from_cppstd("C++23").unwrap(), Lang::Cpp(123));
+    }
 
+    #[test]
+    pub fn test_u32_from_cstd() {
+        assert_eq!(u32_from_cppstd("c89").unwrap(), Lang::C(89));
+        assert_eq!(u32_from_cppstd("c99").unwrap(), Lang::C(99));
+        assert_eq!(u32_from_cppstd("C11").unwrap(), Lang::C(111));
+        assert_eq!(u32_from_cppstd("C17").unwrap(), Lang::C(117));
+        assert_eq!(u32_from_cppstd("C20").unwrap(), Lang::C(120));
+    }
+
+    #[test]
+    pub fn test_u32_from_cstd_err() {
         assert!(u32_from_cppstd("c++24").is_err());
         assert!(u32_from_cppstd("c++").is_err());
         assert!(u32_from_cppstd("c23").is_err());
+        assert!(u32_from_cppstd("c4").is_err());
         assert!(u32_from_cppstd("3").is_err());
     }
 }

@@ -75,7 +75,7 @@ pub fn get_project_kind(srcdir: &str, incpub: &Option<String>) -> Result<ProjKin
     let sig = find_project_signifier(srcdir)?;
     if let Some(sig) = sig { return Ok(sig); }
     if let Some(inc) = incpub {
-        let sig = find_project_signifier(&inc)?;
+        let sig = find_project_signifier(inc)?;
         if let Some(sig) = sig { return Ok(sig); }
     }
     println!("not found, searched {:#?}", incpub);

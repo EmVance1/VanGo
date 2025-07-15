@@ -11,12 +11,20 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         src.to_string(),
         "/c".to_string(),
         "/EHsc".to_string(),
-        format!("/std:{}", info.cppstd.to_ascii_lowercase()),
         format!("/Fo:{}", obj),
         // "/Gy".to_string(),
         // "/GL".to_string(),
         // "/Oi".to_string(),
     ];
+    if info.cppstd.ends_with("23") {
+        if info.cppstd.starts_with("c++") {
+            args.push("/std:c++latest".to_string());
+        } else {
+            args.push("/std:clatest".to_string());
+        }
+    } else {
+        args.push(format!("/std:{}", info.cppstd.to_ascii_lowercase()));
+    }
     args.extend(info.incdirs.iter().map(|i| format!("/I{}", i)));
     args.extend(info.defines.iter().map(|d| format!("/D{}", d)));
     if info.config.is_release() {
@@ -26,6 +34,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         args.push("/MDd".to_string());
         args.push("/Od".to_string());
         args.push("/Zi".to_string());
+        args.push("/FS".to_string());
     }
     if let Some(outfile) = info.pch {
         let cmpd = format!("{}/{}.pch", info.outdir, outfile);

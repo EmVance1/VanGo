@@ -213,12 +213,13 @@ mod tests {
             "src/main.cpp".to_string(),
             "/c".to_string(),
             "/EHsc".to_string(),
-            "/std:c++20".to_string(),
             "/Fo:bin/debug/obj/main.obj".to_string(),
+            "/std:c++20".to_string(),
             "/Isrc/".to_string(),
             "/MDd".to_string(),
             "/Od".to_string(),
             "/Zi".to_string(),
+            "/FS".to_string(),
         ]);
     }
 }

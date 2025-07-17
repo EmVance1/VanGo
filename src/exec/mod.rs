@@ -56,7 +56,7 @@ struct CompileInfo<'a> {
 
 #[cfg(target_os = "windows")]
 pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
-    log_info!("starting build for {:-<64}", format!("\"{}\" ", info.outfile.repr));
+    log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
@@ -126,34 +126,6 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                     return Err(Error::CompilerFail(src.to_string()))
                 }
             }
-            /*
-            for (src, obj) in elems {
-                log_info_noline!("compiling: {}", src);
-                let output = if cfg!(windows) && !info.mingw {
-                    let args = msvc::compile_cmd(src, &obj, info.compile_info());
-                    std::process::Command::new("cl")
-                        .args(args)
-                        .output()
-                        .unwrap()
-                } else if info.cppstd == "c" {
-                    std::process::Command::new("gcc")
-                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
-                        .output()
-                        .unwrap()
-                } else {
-                    std::process::Command::new("g++")
-                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
-                        .output()
-                        .unwrap()
-                };
-
-                println!();
-                if !output.status.success() {
-                    std::io::stdout().write_all(&output.stdout).unwrap();
-                    return Err(Error::CompilerFail(src.to_string()))
-                }
-            }
-            */
         }
     }
 
@@ -172,9 +144,30 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         }
 }
 
+#[cfg(target_os = "windows")]
+#[allow(unused)]
+pub fn run_check_outdated(info: BuildInfo) -> bool {
+    log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
+    prep::assert_out_dirs(&info.srcdir, &info.outdir);
+
+    if let Some(pch) = &info.pch {
+        if cfg!(windows) && !info.mingw {
+            msvc::prep::precompile_header(pch, &info)
+        } else {
+            gcc::prep::precompile_header(pch, &info)
+        }
+    }
+
+    if let BuildLevel::UpToDate = incremental::get_build_level(&info) {
+        return false
+    } else {
+        return true
+    }
+}
+
 
 pub fn run_app(outfile: &str,  runargs: Vec<String>) -> u8 {
-    log_info!("running application {:-<63}", format!("\"{}\" ", outfile));
+    log_info!("running application {:=<63}", format!("\"{}\" ", outfile));
     Command::new(format!("./{}", outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())

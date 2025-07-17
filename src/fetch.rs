@@ -149,16 +149,18 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             defines.extend(libinfo.defines);
         } else if let Ok(build) = std::fs::read_to_string(format!("{}/build.json", name)) {
             let build: BuildFile = serde_json::from_str(&build).unwrap();
-            log_info!("building project dependency: {}", build.project);
+            log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(name).unwrap();
-            let code = std::process::Command::new("mscmp")
+            let output = std::process::Command::new("mscmp")
                 .arg("build")
                 .arg(format!("-{}", config))
                 .status()
                 .unwrap();
-            if code.code() == Some(1) {
+            if output.code() == Some(8) {
                 rebuilt = true;
+            } else {
+                println!();
             }
             std::env::set_current_dir(&save).unwrap();
             let libinfo = LibFile::from(build)
@@ -171,7 +173,6 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-            println!();
         }
     }
 

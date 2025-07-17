@@ -90,10 +90,9 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
-    if let Err(e) = exec::run_build(info) {
-        Err(e)
-    } else {
-        Ok((rebuilt_dep, outpath))
+    match exec::run_build(info) {
+        Err(e) => Err(e),
+        Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outpath)),
     }
 }
 
@@ -129,8 +128,12 @@ fn main() -> std::process::ExitCode {
             }
             input::Action::Build{ config, mingw } => {
                 let build = build.finalise(config);
-                action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
-                0.into()
+                let (rebuilt, _) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                if rebuilt {
+                    8.into()
+                } else {
+                    0.into()
+                }
             }
             input::Action::Run{ config, mingw, args } => {
                 let build = build.finalise(config);
@@ -146,5 +149,52 @@ fn main() -> std::process::ExitCode {
             _ => 0.into(),
         }
     }
+}
+
+
+#[allow(unused)]
+fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<bool, Error> {
+    let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
+
+    let _ = repr::u32_from_cppstd(&build.cpp)?;
+
+    let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
+    deps.defines.extend(build.defines);
+    if test {
+        deps.defines.push("TEST".to_string());
+    }
+    let rebuilt_dep = deps.rebuilt;
+    let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext());
+    let outfile = FileInfo::from_str(&outpath);
+
+    let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
+    if let Some(inc) = build.inc_public {
+        headers.extend(fetch::get_source_files(&PathBuf::from(&inc), ".h").unwrap());
+    }
+    for dep in &build.incdirs {
+        headers.extend(fetch::get_source_files(&PathBuf::from(dep), ".h").unwrap());
+    }
+    deps.incdirs.extend(build.incdirs);
+
+    let info = BuildInfo{
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase().starts_with("c++") { ".cpp" } else { ".c" }).unwrap(),
+        headers,
+        relink: deps.relink,
+        srcdir: build.srcdir,
+        outdir: format!("bin/{}/obj/", config),
+        outfile: outfile.clone(),
+        defines: deps.defines,
+        incdirs: deps.incdirs,
+        libdirs: deps.libdirs,
+        links: deps.links,
+        pch: build.pch,
+        cppstd: build.cpp.to_ascii_lowercase(),
+        config,
+        mingw,
+        comp_args: build.compiler_options,
+        link_args: build.linker_options,
+    };
+    let rebuilt = exec::run_check_outdated(info);
+    Ok(rebuilt_dep || rebuilt)
 }
 

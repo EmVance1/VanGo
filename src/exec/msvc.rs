@@ -48,12 +48,9 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
     let mut cmd = Command::new("lib");
     cmd.args(objs.into_iter().map(|o| o.repr));
-    cmd.args(&info.links);
-    cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l)));
     cmd.args([
         format!("/OUT:{}", info.outfile.repr),
         "/MACHINE:X64".to_string(),
-        // "/LTCG".to_string(),
     ]);
     cmd.args(info.link_args);
     let output = cmd.output().unwrap();

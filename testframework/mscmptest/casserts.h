@@ -1,6 +1,6 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
+#ifndef CASSERTS_H
+#define CASSERTS_H
+
 #include <stdio.h>
 
 
@@ -40,3 +40,4 @@ const static TestResult TestOk = { .err=0, .line=0, .msg=NULL };
         fprintf(stderr, "\033[31mtest '" #f "' failed on line %llu: %s\n\033[m", res.line, res.msg); \
     } }
 
+#endif

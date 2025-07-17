@@ -18,10 +18,10 @@ pub struct BuildFile {
     pub pch: Option<String>,
 
     #[serde(default)]
-    #[allow(unused)]
+    #[serde(rename = "compiler-options")]
     pub compiler_options: Vec<String>,
     #[serde(default)]
-    #[allow(unused)]
+    #[serde(rename = "linker-options")]
     pub linker_options: Vec<String>,
 
     #[serde(default)]

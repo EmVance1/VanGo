@@ -1,12 +1,12 @@
+#pragma once
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <exception>
-#include <Windows.h>
 
 
-struct AssertionFail: public std::exception {
-    explicit AssertionFail(uint32_t _failtype, uint32_t _failline) : failtype(_failtype), failline(_failline) {}
+struct AssertionFail : public std::exception {
+    AssertionFail(uint32_t _failtype, uint32_t _failline) : failtype(_failtype), failline(_failline) {}
 
     virtual const char* what() const noexcept {
        return "test failed";
@@ -48,17 +48,13 @@ struct AssertionFail: public std::exception {
     } }
 
 
-#define TERMINAL_RED 4
-#define TERMINAL_GREEN 2
-
-
 #define test(f) { \
     std::stringstream _test_assert_output; \
     try { \
         f(_test_assert_output); \
-        std::cerr << "test '" << #f << "' passed\n"; \
+        std::cerr << "\033[32mtest '" << #f << "' passed\n\033[m"; \
     } catch (const AssertionFail& e) { \
-        std::cerr << "test '" << #f << "' failed on line " << e.failline << ": " << _test_assert_output.str() << "\n"; \
+        std::cerr << "\033[31mtest '" << #f << "' failed on line " << e.failline << ": " << _test_assert_output.str() << "\n\033[m"; \
     } }
 
 #define TEST_PARAMS std::stringstream& _test_assert_output

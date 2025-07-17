@@ -54,7 +54,7 @@ Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everyt
 ## How-to:
 The build system is invoked like so:
 
-- `mscmp n[ew]   [-lib] name`
+- `mscmp n[ew]   [-lib] [-c] name`
 - `mscmp b[uild] [-r[elease]]`
 - `mscmp r[un]   [-r[elease]] [args...]`
 - `mscmp t[est]  [-r[elease]]`
@@ -69,9 +69,9 @@ All `build.json` files are expected to have 3 base declarations at the root:
 - `"cpp": "C++XX"`
 - `"dependencies": [ ... ]`
 
-`project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, necessarily prefixed by `"C++"` (case insensitive). It also takes `"C"` if you want to build C-only projects.
+`project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, necessarily prefixed by `"C++"` (case insensitive). It also takes `"CXX"` if you want to build pure C projects.
 
-`dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by MSCMP. If no path to the library is specified, MSCMP will search in `./lib`. The dependency string also supports an optional version, separated by a '.' (see chapter on library version definitions) as in `SFML.static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
+`dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by MSCMP. If no path to the library is specified, MSCMP will search in `./lib`. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
 
 Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `"DEBUG"` or `"RELEASE"` definitions, aswell as `"TEST"` for test builds.
 
@@ -81,6 +81,8 @@ Source directory and (project) include directories are assumed to be `./src` and
 
 If the project you are defining is going to be a library, you may want to add an `include-public` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
 
+For finer control, the option is provided to pass compiler and linker flags directly, using `compiler-options` and `linker-options` array fields.
+
 ### How-to: lib.json
 A `lib.json` file specifies for prebuilt libraries how they should be correctly linked. It must contain:
 
@@ -88,7 +90,7 @@ A `lib.json` file specifies for prebuilt libraries how they should be correctly 
 - `"minstd": "C++XX"`
 - `"include": "include/"`
 
-`minstd` declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In this sense, `"C"` is always compatible. The rest should be self-explanatory.
+`minstd` declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must insure that this is in fact the case (i.e. no designated initializers in header files etc.).
 
 In addition, all libraries must have one of the following (but not both):
 
@@ -108,5 +110,5 @@ as well as an optional field for version specific preprocessor flags
 The `all` field represents a standard configuration if versions are not necessary for a project.
 
 ### How-to: automated testing
-Testing is made easy by assuming all tests are in a `test/` directory in the project root. Your test project may be arbitrarily complex as long as it contains a `main` function that executes the tests. A set of convenience macros are provided in the header `mscmptest/asserts.h` which is in the default include path for test configurations. Using these, you can write tests like in any other language, and run them in your `main` function by calling `test(test_function)`.
+Testing is made easy by assuming all tests are in a `test/` directory in the project root. Your test project may be arbitrarily complex as long as it contains a `main` function that executes the tests. A set of convenience macros are provided in the headers `mscmptest/asserts.h`, and `mscmptest/casserts.h` respectively, which is in the default include path for test configurations. Using these, you can write tests like in any other language, and run them in your `main` function by calling `test(test_function)`. The C version of these tests must however always `return TestOk;` at the end.
 

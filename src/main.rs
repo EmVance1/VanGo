@@ -26,12 +26,12 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
         std::fs::create_dir(format!("{}/include", name)).unwrap();
         std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
         if isc {
-            std::fs::write(format!("{}/src/lib.h", name), "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif").unwrap();
+            std::fs::write(format!("{}/include/{}/lib.h", name, name), "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif").unwrap();
         } else {
-            std::fs::write(format!("{}/src/lib.h", name), "#pragma once\n\nint func(int a, int b);\n").unwrap();
+            std::fs::write(format!("{}/include/{}/lib.h", name, name), "#pragma once\n\nint func(int a, int b);\n").unwrap();
         }
         std::fs::write(format!("{}/src/lib.{ext}", name), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n").unwrap();
-        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"./src/\", \"./include/{}\" ],\n    \"include-public\": \"include/\"\n}}", name, name);
+        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{}\" ],\n    \"include-public\": \"include/\"\n}}", name, name);
         std::fs::write(format!("{}/build.json", name), json).unwrap();
     } else {
         std::fs::write(format!("{}/src/main.{ext}", name), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n")).unwrap();

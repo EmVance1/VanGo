@@ -34,6 +34,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         args.push("/MDd".to_string());
         args.push("/Od".to_string());
         args.push("/Zi".to_string());
+        args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
         args.push("/FS".to_string());
     }
     if let Some(outfile) = info.pch {
@@ -119,19 +120,28 @@ pub mod prep {
                 "/c".to_string(),
                 "/EHsc".to_string(),
                 format!("/Yc{}", header),
-                format!("/Fp{}", cmpd),
-                format!("/std:{}", info.cppstd),
+                format!("/Fp:{}", cmpd),
                 format!("/Fo:{}", objt),
                 // "/Gy".to_string(),
                 // "/GL".to_string(),
                 // "/Oi".to_string(),
             ]);
+            if info.cppstd.ends_with("23") {
+                if info.cppstd.starts_with("c++") {
+                    cmd.arg("/std:c++latest");
+                } else {
+                    cmd.arg("/std:clatest");
+                }
+            } else {
+                cmd.arg(format!("/std:{}", info.cppstd.to_ascii_lowercase()));
+            }
             cmd.args(info.incdirs.iter().map(|i| format!("/I{}", i)));
             cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
             if info.config.is_release() {
                 cmd.args(["/MD", "/O2"]);
             } else {
-                cmd.args(["/MDd", "/Od", "/Zi"]);
+                cmd.args(["/MDd", "/Od", "/Zi", "/FS"]);
+                cmd.arg(format!("/Fd:{}/vc143.pdb", info.outdir));
             }
             log_info_noline!("compiling precompiled header: ");
             let _ = std::io::stdout().flush();

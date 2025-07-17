@@ -44,8 +44,8 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
 
 fn action_clean(build: BuildFile) -> Result<(), Error> {
     log_info!("cleaning build files for \"{}\"", build.project);
-    std::fs::remove_dir_all("bin/debug/").unwrap();
-    std::fs::remove_dir_all("bin/release/").unwrap();
+    let _ = std::fs::remove_dir_all("bin/debug/");
+    let _ = std::fs::remove_dir_all("bin/release/");
     Ok(())
 }
 

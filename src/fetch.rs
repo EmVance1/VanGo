@@ -130,44 +130,80 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
 
     for lib in libraries {
         let (name, version) = get_version(&lib);
-        let mut dir = name.to_string();
 
         if name.ends_with(".git") {
             let url = std::path::Path::new(name);
+            let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
             let stem = url.file_stem().unwrap().to_string_lossy();
-            if !std::fs::exists(format!("lib/{}/", stem)).unwrap() {
-                log_info!("cloning project dependency: {:-<55}", format!("{}.git ", stem));
+            let dir = format!("{home}/.mscmp/packages/{stem}");
+            if !std::fs::exists(&dir).unwrap() {
+                log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
                 std::process::Command::new("git")
                     .arg("clone")
                     .arg(format!("{}", url.to_string_lossy()))
-                    .arg(format!("lib/{}", stem))
-                    .status()
+                    .arg(&dir)
+                    .output()
                     .unwrap();
             }
-            dir = stem.to_string();
+
+            if let Ok(build) = std::fs::read_to_string(format!("{dir}/lib.json")) {
+                let libinfo = LibFile::from_str(&build)?
+                    .validate(maxcpp)?
+                    .linearise(config, version)?;
+                incdirs.push(format!("{dir}/{}", libinfo.incdir));
+                libdirs.push(format!("{dir}/{}", libinfo.libdir));
+                links.extend(libinfo.links);
+                defines.extend(libinfo.defines);
+            } else if let Ok(build) = std::fs::read_to_string(format!("{dir}/build.json")) {
+                let build: BuildFile = serde_json::from_str(&build).unwrap();
+                log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
+                let save = std::env::current_dir().unwrap();
+                std::env::set_current_dir(&dir).unwrap();
+                let output = std::process::Command::new("mscmp")
+                    .arg("build")
+                    .arg(format!("-{}", config))
+                    .status()
+                    .unwrap();
+                if output.code() == Some(8) {
+                    rebuilt = true;
+                } else {
+                    println!();
+                }
+                std::env::set_current_dir(&save).unwrap();
+                let libinfo = LibFile::from(build)
+                    .validate(maxcpp)?
+                    .linearise(config, version)?;
+                incdirs.push(format!("{dir}/{}", libinfo.incdir));
+                libdirs.push(format!("{dir}/{}", libinfo.libdir));
+                for l in &libinfo.links {
+                    relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
+                }
+                links.extend(libinfo.links);
+                defines.extend(libinfo.defines);
+            }
         }
 
-        if let Ok(build) = std::fs::read_to_string(format!("lib/{dir}/lib.json")) {
+        if let Ok(build) = std::fs::read_to_string(format!("lib/{name}/lib.json")) {
             let libinfo = LibFile::from_str(&build)?
                 .validate(maxcpp)?
                 .linearise(config, version)?;
-            incdirs.push(format!("lib/{dir}/{}", libinfo.incdir));
-            libdirs.push(format!("lib/{dir}/{}", libinfo.libdir));
+            incdirs.push(format!("lib/{name}/{}", libinfo.incdir));
+            libdirs.push(format!("lib/{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Ok(build) = std::fs::read_to_string(format!("{dir}/lib.json")) {
+        } else if let Ok(build) = std::fs::read_to_string(format!("{name}/lib.json")) {
             let libinfo = LibFile::from_str(&build)?
                 .validate(maxcpp)?
                 .linearise(config, version)?;
-            incdirs.push(format!("{dir}/{}", libinfo.incdir));
-            libdirs.push(format!("{dir}/{}", libinfo.libdir));
+            incdirs.push(format!("{name}/{}", libinfo.incdir));
+            libdirs.push(format!("{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Ok(build) = std::fs::read_to_string(format!("lib/{dir}/build.json")) {
+        } else if let Ok(build) = std::fs::read_to_string(format!("{name}/build.json")) {
             let build: BuildFile = serde_json::from_str(&build).unwrap();
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
-            std::env::set_current_dir(&format!("lib/{dir}")).unwrap();
+            std::env::set_current_dir(&name).unwrap();
             let output = std::process::Command::new("mscmp")
                 .arg("build")
                 .arg(format!("-{}", config))
@@ -182,36 +218,10 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             let libinfo = LibFile::from(build)
                 .validate(maxcpp)?
                 .linearise(config, version)?;
-            incdirs.push(format!("lib/{dir}/{}", libinfo.incdir));
-            libdirs.push(format!("lib/{dir}/{}", libinfo.libdir));
+            incdirs.push(format!("{name}/{}", libinfo.incdir));
+            libdirs.push(format!("{name}/{}", libinfo.libdir));
             for l in &libinfo.links {
-                relink.push(FileInfo::from_str(&format!("lib/{dir}/{}/{}", libinfo.libdir, l)));
-            }
-            links.extend(libinfo.links);
-            defines.extend(libinfo.defines);
-        } else if let Ok(build) = std::fs::read_to_string(format!("{dir}/build.json")) {
-            let build: BuildFile = serde_json::from_str(&build).unwrap();
-            log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
-            let save = std::env::current_dir().unwrap();
-            std::env::set_current_dir(&dir).unwrap();
-            let output = std::process::Command::new("mscmp")
-                .arg("build")
-                .arg(format!("-{}", config))
-                .status()
-                .unwrap();
-            if output.code() == Some(8) {
-                rebuilt = true;
-            } else {
-                println!();
-            }
-            std::env::set_current_dir(&save).unwrap();
-            let libinfo = LibFile::from(build)
-                .validate(maxcpp)?
-                .linearise(config, version)?;
-            incdirs.push(format!("{dir}/{}", libinfo.incdir));
-            libdirs.push(format!("{dir}/{}", libinfo.libdir));
-            for l in &libinfo.links {
-                relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
+                relink.push(FileInfo::from_str(&format!("{name}/{}/{}", libinfo.libdir, l)));
             }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);

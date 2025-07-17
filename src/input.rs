@@ -7,6 +7,8 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     New{ name: String, library: bool, isc: bool },
+    #[allow(unused)]
+    Set{ key: String, val: String },
     Clean,
     Build{ config: Config, mingw: bool },
     Run  { config: Config, mingw: bool, args: Vec<String> },

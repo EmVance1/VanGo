@@ -113,6 +113,8 @@ fn main() -> std::process::ExitCode {
     if let input::Action::New{ name, library, isc } = &cmd {
         action_new(name, *library, *isc).unwrap_or_else(|e| exit_with!("{}", e));
         0.into()
+    } else if let input::Action::Set{ .. } = &cmd {
+        0.into()
     } else {
         let bfile = std::fs::read_to_string("build.json")
             .map_err(|_| Error::FileNotFound("build.json".to_string()))

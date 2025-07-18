@@ -21,7 +21,7 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
     std::fs::create_dir(format!("{}/src", name)).unwrap();
     let ext = if isc { "c" } else { "cpp" };
     let header = if isc { "stdio.h" } else { "cstdio" };
-    let cstd = if isc { "C11" } else { "C++17" };
+    let cstd = if isc { "c11" } else { "c++17" };
     if library {
         std::fs::create_dir(format!("{}/include", name)).unwrap();
         std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
@@ -33,10 +33,20 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
         std::fs::write(format!("{}/src/lib.{ext}", name), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n").unwrap();
         let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{}\" ],\n    \"include-public\": \"include/\"\n}}", name, name);
         std::fs::write(format!("{}/build.json", name), json).unwrap();
+        let flags = format!(
+            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc\n-Iinclude/{}",
+                    if !isc { "-xc++\n" } else { "" }, name
+                );
+        std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
     } else {
         std::fs::write(format!("{}/src/main.{ext}", name), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n")).unwrap();
         let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": []\n}}", name);
         std::fs::write(format!("{}/build.json", name), json).unwrap();
+        let flags = format!(
+            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc",
+                    if !isc { "-xc++\n" } else { "" }
+                );
+        std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
     }
     log_info!("successfully created project '{}'", name);
     Ok(())

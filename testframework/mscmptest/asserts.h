@@ -22,8 +22,8 @@ public:
 };
 
 
-#define TEST_OUTPUT std::stringstream _test_assert_output; _test_assert_output
-#define TEST_THROW(type) throw AssertionFail(_test_assert_output.str(), type, __LINE__)
+#define MSCMP_TEST_OUTPUT std::stringstream _test_assert_output; _test_assert_output
+#define MSCMP_TEST_THROW(type) throw AssertionFail(_test_assert_output.str(), type, __LINE__)
 
 #define FAIL_TRUE 1
 #define FAIL_EQ 2
@@ -32,25 +32,25 @@ public:
 #define FAIL_NON_NULL 5
 #define FAIL_THROWS 6
 
-#define assert(a)           if (!a)     { TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
-    TEST_THROW(FAIL_TRUE); }
+#define assert(a)           if (!a)     { MSCMP_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
+    MSCMP_TEST_THROW(FAIL_TRUE); }
 
-#define assert_eq(a, b)     if (a != b) { TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
-    TEST_THROW(FAIL_EQ); }
+#define assert_eq(a, b)     if (a != b) { MSCMP_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+    MSCMP_TEST_THROW(FAIL_EQ); }
 
-#define assert_ne(a, b)     if (a == b) { TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
-    TEST_THROW(FAIL_NE); }
+#define assert_ne(a, b)     if (a == b) { MSCMP_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+    MSCMP_TEST_THROW(FAIL_NE); }
 
-#define assert_null(a)      if (!a)     { TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
-    TEST_THROW(FAIL_NULL); }
+#define assert_null(a)      if (!a)     { MSCMP_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+    MSCMP_TEST_THROW(FAIL_NULL); }
 
-#define assert_non_null(a)  if (a)      { TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
-    TEST_THROW(FAIL_NON_NULL); }
+#define assert_non_null(a)  if (a)      { MSCMP_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+    MSCMP_TEST_THROW(FAIL_NON_NULL); }
 
 #define assert_throws(a, e) { try { a; \
-        TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              TEST_THROW(FAIL_THROWS); \
+        MSCMP_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              MSCMP_TEST_THROW(FAIL_THROWS); \
     } catch (const e&) {} catch (...) { \
-        TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; TEST_THROW(FAIL_THROWS); \
+        MSCMP_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; MSCMP_TEST_THROW(FAIL_THROWS); \
     } }
 
 
@@ -64,20 +64,20 @@ typedef struct TestFuncArray {
 } TestFuncArray;
 
 
+#define test(name) void name(); TestFuncArray* _##name##_runner = init_testfunc( #name, name, false ); void name()
+
+
+TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
+
+
+#ifdef TEST_ROOT
+
 #define run_test(k, f) try { \
         f(); \
         std::cerr << "\033[32m[mscmp:  info] passed: '" << k << "'\033[m\n"; \
     } catch (const AssertionFail& e) { \
         std::cerr << "\033[32m[mscmp:  info] \033[31mfailed: '" << k << "' on line " << e.failline << ": \033[m" << e.msg << "\n"; \
     }
-
-#define test(name) void name(); TestFuncArray* _##name##_runner = init_testfunc( #name, name, false ); void name()
-
-
-TestFuncArray init_testfuncarray(size_t size);
-TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
-
-#ifdef TEST_ROOT
 
 TestFuncArray init_testfuncarray(size_t size) {
     return TestFuncArray{

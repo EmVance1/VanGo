@@ -126,6 +126,7 @@ test(basic_math) {
 }
 ```
 In order to write tests, the header 'mscmptest/asserts.h' or 'mscmptest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+To forward declare a test: in C++ write `void test_name();`, and in C `test(test_name);`.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp

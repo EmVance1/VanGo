@@ -57,7 +57,7 @@ The build system is invoked like so:
 - `mscmp n[ew]   [-lib] [-c] name`
 - `mscmp b[uild] [-r[elease]]`
 - `mscmp r[un]   [-r[elease]] [args...]`
-- `mscmp t[est]  [-r[elease]]`
+- `mscmp t[est]  [-r[elease]] [tests...]`
 - `mscmp c[lean]`
 
 MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
@@ -112,5 +112,34 @@ as well as an optional field for version specific preprocessor flags
 The `all` field represents a standard configuration if versions are not necessary for a project.
 
 ### How-to: automated testing
-Testing is made easy by assuming all tests are in a `test/` directory in the project root. Your test project may be arbitrarily complex as long as it contains a `main` function that executes the tests. A set of convenience macros are provided in the headers `mscmptest/asserts.h`, and `mscmptest/casserts.h` respectively, which is in the default include path for test configurations. Using these, you can write tests like in any other language, and run them in your `main` function by calling `test(test_function)`. The C version of these tests must however always `return TestOk;` at the end.
+Testing is made easy by assuming all tests are in a `test/` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
+```cpp
+#define TEST_ROOT
+#include <mscmp/asserts.h>
+
+test(basic_math) {
+    int a = 2;
+    a += 3;
+    a *= 2;
+
+    assert_eq(a, 10);
+}
+```
+In order to write tests, the header 'mscmptest/asserts.h' or 'mscmptest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
+In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
+```cpp
+#define TEST_ROOT
+#include <mscmp/casserts.h>
+
+test(basic_math) {
+    int a = 10;
+    assert_eq(a, 10);
+}
+
+test_main(
+    test_register(basic_math);
+)
+```
+Given these prerequisites, tests can be run on a case by case basis or all at once by not specifying specific tests.
 

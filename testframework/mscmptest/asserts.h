@@ -5,17 +5,25 @@
 #include <exception>
 
 
-struct AssertionFail : public std::exception {
-    AssertionFail(uint32_t _failtype, uint32_t _failline) : failtype(_failtype), failline(_failline) {}
-
-    virtual const char* what() const noexcept {
-       return "test failed";
-    }
-
+class AssertionFail : public std::exception {
+public:
+    std::string msg;
     uint32_t failtype;
     uint32_t failline;
+
+public:
+    AssertionFail(const std::string& _msg, uint32_t _failtype, uint32_t _failline)
+        : msg(_msg), failtype(_failtype), failline(_failline)
+    {}
+
+    const char* what() const noexcept {
+       return msg.c_str();
+    }
 };
 
+
+#define TEST_OUTPUT std::stringstream _test_assert_output; _test_assert_output
+#define TEST_THROW(type) throw AssertionFail(_test_assert_output.str(), type, __LINE__)
 
 #define FAIL_TRUE 1
 #define FAIL_EQ 2
@@ -24,38 +32,88 @@ struct AssertionFail : public std::exception {
 #define FAIL_NON_NULL 5
 #define FAIL_THROWS 6
 
-#define assert(a)           if (!a)     { _test_assert_output << "assertion fail: expected 'true', received 'false'";                  \
-    throw AssertionFail(FAIL_TRUE, __LINE__); }
+#define assert(a)           if (!a)     { TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
+    TEST_THROW(FAIL_TRUE); }
 
-#define assert_eq(a, b)     if (a != b) { _test_assert_output << "assertion fail: expected '" << a << "', received '" << b << "'";     \
-    throw AssertionFail(FAIL_EQ, __LINE__); }
+#define assert_eq(a, b)     if (a != b) { TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+    TEST_THROW(FAIL_EQ); }
 
-#define assert_ne(a, b)     if (a == b) { _test_assert_output << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
-    throw AssertionFail(FAIL_NE, __LINE__); }
+#define assert_ne(a, b)     if (a == b) { TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+    TEST_THROW(FAIL_NE); }
 
-#define assert_null(a)      if (!a)     { _test_assert_output << "assertion fail: expected 'nullptr', received valid pointer";         \
-    throw AssertionFail(FAIL_NULL, __LINE__); }
+#define assert_null(a)      if (!a)     { TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+    TEST_THROW(FAIL_NULL); }
 
-#define assert_non_null(a)  if (a)      { _test_assert_output << "assertion fail: expected valid pointer, received 'nullptr'";         \
-    throw AssertionFail(FAIL_NON_NULL, __LINE__); }
+#define assert_non_null(a)  if (a)      { TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+    TEST_THROW(FAIL_NON_NULL); }
 
-#define assert_throws(a, e) { bool _throw_fail = false; try { a; _throw_fail = true; \
-    _test_assert_output << "assertion fail: expected '" #a "' to throw '" #e "' but it did not"; throw AssertionFail(FAIL_THROWS, __LINE__); } \
-    catch (const e&) {} catch (...) { \
-        _test_assert_output << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; throw AssertionFail(FAIL_THROWS, __LINE__); \
-    } if (_throw_fail) { \
-        throw AssertionFail(FAIL_THROWS, __LINE__); \
+#define assert_throws(a, e) { try { a; \
+        TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              TEST_THROW(FAIL_THROWS); \
+    } catch (const e&) {} catch (...) { \
+        TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; TEST_THROW(FAIL_THROWS); \
     } }
 
 
-#define test(f) { \
-    std::stringstream _test_assert_output; \
-    try { \
-        f(_test_assert_output); \
-        std::cerr << "\033[32mtest '" << #f << "' passed\n\033[m"; \
+typedef void(*TestFunc)();
+
+typedef struct TestFuncArray {
+    const char** names;
+    TestFunc* funcs;
+    size_t size;
+    size_t cap;
+} TestFuncArray;
+
+
+#define run_test(k, f) try { \
+        f(); \
+        std::cerr << "\033[32m[mscmp:  info] passed: '" << k << "'\033[m\n"; \
     } catch (const AssertionFail& e) { \
-        std::cerr << "\033[31mtest '" << #f << "' failed on line " << e.failline << ": " << _test_assert_output.str() << "\n\033[m"; \
-    } }
+        std::cerr << "\033[32m[mscmp:  info] \033[31mfailed: '" << k << "' on line " << e.failline << ": \033[m" << e.msg << "\n"; \
+    }
 
-#define TEST_PARAMS std::stringstream& _test_assert_output
+#define test(name) void name(); TestFuncArray* _##name##_runner = init_testfunc( #name, name, false ); void name()
+
+
+TestFuncArray init_testfuncarray(size_t size);
+TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
+
+#ifdef TEST_ROOT
+
+TestFuncArray init_testfuncarray(size_t size) {
+    return TestFuncArray{
+        .names=(const char**)malloc(size * sizeof(char*)),
+        .funcs=(TestFunc*)malloc(size * sizeof(TestFunc*)),
+        .size=0,
+        .cap=size
+    };
+}
+
+TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign) {
+    static TestFuncArray testfuncarray = init_testfuncarray(128);
+    if (!noassign) {
+        testfuncarray.names[testfuncarray.size] = name;
+        testfuncarray.funcs[testfuncarray.size] = func;
+        testfuncarray.size++;
+    }
+    return &testfuncarray;
+}
+
+int main(int argc, char** argv) {
+    TestFuncArray* arr = init_testfunc(nullptr, nullptr, true);
+    if (argc == 1) {
+        for (size_t i = 0; i < arr->size; i++) {
+            run_test(arr->names[i], arr->funcs[i]);
+        }
+    } else {
+        for (int j = 1; j < argc; j++) {
+            for (size_t i = 0; i < arr->size; i++) {
+                if (strcmp(arr->names[i], argv[j]) == 0) {
+                    run_test(arr->names[i], arr->funcs[i]);
+                }
+            }
+        }
+    }
+}
+
+#endif
 

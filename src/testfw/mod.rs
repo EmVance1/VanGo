@@ -25,7 +25,7 @@ fn inherited(build: &BuildFile, config: Config) -> TestInfo {
     }
 }
 
-pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
+pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test/").unwrap() {
         return Err(Error::MissingTests)
     }
@@ -45,9 +45,12 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
         crate::fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
     };
     headers.push(FileInfo::from_str(&format!("{}/testframework/mscmptest/asserts.h", inc)));
+    headers.push(FileInfo::from_str(&format!("{}/testframework/mscmptest/casserts.h", inc)));
     let relink = vec![ FileInfo::from_str(&format!("bin/{}/{}.lib", config, build.project)) ];
 
-    let sources = crate::fetch::get_source_files(&PathBuf::from("test/"), ".cpp").unwrap();
+    let isc = !build.cpp.starts_with("c++");
+
+    let sources = crate::fetch::get_source_files(&PathBuf::from("test/"), if isc { ".c" } else { ".cpp" }).unwrap();
     let outpath = format!("bin/{}/test_{}.exe", config, build.project);
     let outfile = FileInfo::from_str(&outpath);
     let info = BuildInfo{
@@ -61,7 +64,7 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
         libdirs: vec![ format!("bin/{}/", config) ],
         links: vec![ format!("{}.lib", build.project) ],
         pch: None,
-        cppstd: "c++20".to_string(),
+        cppstd: build.cpp,
         config,
         mingw: false,
         defines: partial.defines,
@@ -69,8 +72,9 @@ pub fn test_lib(build: BuildFile, config: Config) -> Result<(), Error> {
         link_args: vec![],
     };
     crate::exec::run_build(info)?;
-    log_info!("running tests for project {:-<57}", format!("\"{}\" ", build.project));
+    log_info!("running tests for project {:=<57}", format!("\"{}\" ", build.project));
     Command::new(format!("./{}", &outpath))
+        .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
         .unwrap();

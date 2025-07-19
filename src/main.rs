@@ -152,10 +152,10 @@ fn main() -> std::process::ExitCode {
                 let (_, outfile) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args).into()
             }
-            input::Action::Test{ config, mingw } => {
+            input::Action::Test{ config, mingw, args } => {
                 let build = build.finalise(config);
                 action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
-                testfw::test_lib(build, config).unwrap_or_else(|e| exit_with!("{}", e));
+                testfw::test_lib(build, config, args).unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
             _ => 0.into(),

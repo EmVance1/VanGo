@@ -13,14 +13,15 @@ pub enum ProjKind {
 }
 
 impl ProjKind {
-    pub fn ext(&self) -> String {
+    #[cfg(target_os = "windows")]
+    pub fn ext(&self, mingw: bool) -> String {
         match self {
             Self::App => ".exe".to_string(),
-            Self::Lib => ".lib".to_string(),
+            Self::Lib => if mingw { ".a".to_string() } else { ".lib".to_string() },
         }
     }
-    #[allow(unused)]
-    pub fn ext_gcc(&self) -> String {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub fn ext(&self, _: bool) -> String {
         match self {
             Self::App =>   "".to_string(),
             Self::Lib => ".a".to_string(),

@@ -85,6 +85,14 @@ impl LibFile {
     }
 }
 
+fn get_link(project: &str, mingw: bool) -> String {
+    if cfg!(target_os = "windows") && !mingw {
+        format!("{}.lib", project)
+    } else {
+        project.to_string()
+    }
+}
+
 impl From<BuildFile> for LibFile {
     fn from(value: BuildFile) -> Self {
         let include = if let Some(inc) = value.inc_public {
@@ -99,7 +107,7 @@ impl From<BuildFile> for LibFile {
             all: Some(LibConfig{
                 binary_debug: "bin/debug/".to_string(),
                 binary_release: "bin/release/".to_string(),
-                links: vec![ format!("{}.lib", value.project) ],
+                links: vec![ get_link(&value.project, value.mingw) ],
                 defines: value.defines,
             }),
             configs: HashMap::default(),

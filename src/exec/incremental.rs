@@ -11,7 +11,7 @@ pub enum BuildLevel<'a> {
 
 pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     let pairs: Vec<_> = info.sources.iter()
-        .map(|c| (c, FileInfo::from_str(&transform_file(&c.repr, &info.srcdir, &info.outdir))))
+        .map(|c| (c, FileInfo::from_str(&transform_file(&c.repr, &info.srcdir, &info.outdir, info.mingw))))
         .collect();
 
     if info.outfile.exists() {
@@ -53,10 +53,14 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
 
 
 fn get_recent_changes(sources: &[FileInfo], pivot: std::time::SystemTime) -> Vec<&FileInfo> {
-    sources.iter().filter(|src| src.modified().unwrap() > pivot ).collect()
+    sources.iter().filter(|src| src.modified().unwrap() > pivot).collect()
 }
 
-fn transform_file(path: &str, src_dir: &str, out_dir: &str) -> String {
-    path.replace(src_dir, out_dir).replace(".cpp", ".obj").replace(".c", ".obj")
+fn transform_file(path: &str, src_dir: &str, out_dir: &str, mingw: bool) -> String {
+    if cfg!(windows) && !mingw {
+        path.replace(src_dir, out_dir).replace(".cpp", ".obj").replace(".c", ".obj")
+    } else {
+        path.replace(src_dir, out_dir).replace(".cpp", ".o").replace(".c", ".o")
+    }
 }
 

@@ -22,6 +22,7 @@ pub struct BuildInfo {
     pub links: Vec<String>,
     pub pch: Option<String>,
     pub cppstd: String,
+    pub is_c: bool,
     pub config: Config,
     pub mingw: bool,
     pub comp_args: Vec<String>,
@@ -32,6 +33,7 @@ impl BuildInfo {
     fn compile_info(&self) -> CompileInfo<'_> {
         CompileInfo{
             cppstd: &self.cppstd,
+            is_c: self.is_c,
             config: self.config,
             outdir: &self.outdir,
             defines: &self.defines,
@@ -45,6 +47,7 @@ impl BuildInfo {
 #[derive(Debug)]
 struct CompileInfo<'a> {
     cppstd: &'a str,
+    is_c: bool,
     config: Config,
     outdir: &'a str,
     defines: &'a [String],
@@ -54,13 +57,12 @@ struct CompileInfo<'a> {
 }
 
 
-#[cfg(target_os = "windows")]
 pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if cfg!(windows) && !info.mingw {
+        if cfg!(target_os = "windows") && !info.mingw {
             msvc::prep::precompile_header(pch, &info)
         } else {
             gcc::prep::precompile_header(pch, &info)
@@ -82,7 +84,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             let mut batch = 0;
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
-                if cfg!(windows) && !info.mingw {
+                if cfg!(target_os = "windows") && !info.mingw {
                     let args = msvc::compile_cmd(src, &obj, info.compile_info());
                     handles.push((src, std::process::Command::new("cl")
                         .args(args)
@@ -90,16 +92,20 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                         .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()));
-                } else if info.cppstd.starts_with("c++") {
+                } else if !info.is_c {
+                    let args = gcc::compile_cmd(src, &obj, info.compile_info());
+                    // println!("g++ {}", args.join(" "));
                     handles.push((src, std::process::Command::new("g++")
-                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .args(args)
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()));
                 } else {
+                    let args = gcc::compile_cmd(src, &obj, info.compile_info());
+                    // println!("gcc {}", args.join(" "));
                     handles.push((src, std::process::Command::new("gcc")
-                        .args(gcc::compile_cmd(src, &obj, info.compile_info()))
+                        .args(args)
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
@@ -129,19 +135,22 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         }
     }
 
-    let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
     log_info!("linking:   {}", info.outfile.repr);
-    if cfg!(windows) && !info.mingw {
+    if cfg!(target_os = "windows") && !info.mingw {
+        let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
         if info.outfile.repr.ends_with(".lib") {
             msvc::link_lib(all_objs, info)
         } else {
             msvc::link_exe(all_objs, info)
         }
-    } else if info.outfile.repr.ends_with(".a") {
+    } else {
+        let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
+        if info.outfile.repr.ends_with(".a") {
             gcc::link_lib(all_objs, info)
         } else {
             gcc::link_exe(all_objs, info)
         }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -151,7 +160,7 @@ pub fn run_check_outdated(info: BuildInfo) -> bool {
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if cfg!(windows) && !info.mingw {
+        if cfg!(target_os = "windows") && !info.mingw {
             msvc::prep::precompile_header(pch, &info)
         } else {
             gcc::prep::precompile_header(pch, &info)
@@ -193,6 +202,7 @@ mod tests {
         let pch = None;
         let info = CompileInfo{
             cppstd: "c++20",
+            is_c: false,
             config: Config::Debug,
             outdir: "bin/debug/obj/",
             defines: &empty,

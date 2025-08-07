@@ -10,9 +10,9 @@ pub enum Action {
     #[allow(unused)]
     Set{ key: String, val: String },
     Clean,
-    Build{ config: Config, mingw: bool },
-    Run  { config: Config, mingw: bool, args: Vec<String> },
-    Test { config: Config, mingw: bool, args: Vec<String> },
+    Build{ config: Config },
+    Run  { config: Config, args: Vec<String> },
+    Test { config: Config, args: Vec<String> },
 }
 
 pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
@@ -55,7 +55,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
                 Some("-release"|"-r") => Config::Release,
                 _ => Config::Debug
             };
-            Ok(Action::Build{ config, mingw: false })
+            Ok(Action::Build{ config })
         }
         "run"|"r" => {
             let (config, count) = match args.get(1).map(|a| a.as_str()) {
@@ -67,7 +67,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             if count == 1 {
                 args.remove(0);
             }
-            Ok(Action::Run{ config, mingw: false, args })
+            Ok(Action::Run{ config, args })
         }
         "test"|"t" => {
             let (config, count) = match args.get(1).map(|a| a.as_str()) {
@@ -79,7 +79,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             if count == 1 {
                 args.remove(0);
             }
-            Ok(Action::Test{ config, mingw: false, args })
+            Ok(Action::Test{ config, args })
         }
         _ => Err(Error::BadAction(args[1].clone())),
     }

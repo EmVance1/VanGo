@@ -170,13 +170,20 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
                     println!();
                 }
                 std::env::set_current_dir(&save).unwrap();
+                let mingw = build.mingw;
                 let libinfo = LibFile::from(build)
                     .validate(maxcpp)?
                     .linearise(config, version)?;
                 incdirs.push(format!("{dir}/{}", libinfo.incdir));
                 libdirs.push(format!("{dir}/{}", libinfo.libdir));
-                for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
+                if cfg!(target_os = "windows") && !mingw {
+                    for l in &libinfo.links {
+                        relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
+                    }
+                } else {
+                    for l in &libinfo.links {
+                        relink.push(FileInfo::from_str(&format!("{dir}/{}/lib{}.a", libinfo.libdir, l)));
+                    }
                 }
                 links.extend(libinfo.links);
                 defines.extend(libinfo.defines);
@@ -215,13 +222,20 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
                 println!();
             }
             std::env::set_current_dir(&save).unwrap();
+            let mingw = build.mingw;
             let libinfo = LibFile::from(build)
                 .validate(maxcpp)?
                 .linearise(config, version)?;
             incdirs.push(format!("{name}/{}", libinfo.incdir));
             libdirs.push(format!("{name}/{}", libinfo.libdir));
-            for l in &libinfo.links {
-                relink.push(FileInfo::from_str(&format!("{name}/{}/{}", libinfo.libdir, l)));
+            if cfg!(target_os = "windows") && !mingw {
+                for l in &libinfo.links {
+                    relink.push(FileInfo::from_str(&format!("{name}/{}/{}", libinfo.libdir, l)));
+                }
+            } else {
+                for l in &libinfo.links {
+                    relink.push(FileInfo::from_str(&format!("{name}/{}/lib{}.a", libinfo.libdir, l)));
+                }
             }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);

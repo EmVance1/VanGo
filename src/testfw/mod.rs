@@ -48,9 +48,10 @@ pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(
     headers.push(FileInfo::from_str(&format!("{}/testframework/mscmptest/casserts.h", inc)));
     let relink = vec![ FileInfo::from_str(&format!("bin/{}/{}.lib", config, build.project)) ];
 
-    let isc = !build.cpp.starts_with("c++");
+    let cppstd = build.cpp.to_ascii_lowercase();
+    let is_c = !build.cpp.starts_with("c++");
 
-    let sources = crate::fetch::get_source_files(&PathBuf::from("test/"), if isc { ".c" } else { ".cpp" }).unwrap();
+    let sources = crate::fetch::get_source_files(&PathBuf::from("test/"), if is_c { ".c" } else { ".cpp" }).unwrap();
     let outpath = format!("bin/{}/test_{}.exe", config, build.project);
     let outfile = FileInfo::from_str(&outpath);
     let info = BuildInfo{
@@ -64,7 +65,8 @@ pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(
         libdirs: vec![ format!("bin/{}/", config) ],
         links: vec![ format!("{}.lib", build.project) ],
         pch: None,
-        cppstd: build.cpp,
+        cppstd,
+        is_c,
         config,
         mingw: false,
         defines: partial.defines,

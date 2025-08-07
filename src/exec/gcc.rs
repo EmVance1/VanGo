@@ -8,33 +8,43 @@ use std::{
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String> {
     let mut args = vec![];
+    if !info.is_c {
+        args.push("-xc++".to_string());
+    }
+    args.extend([
+        "-c".to_string(),
+        src.to_string(),
+        "-o".to_string(),
+        obj.to_string(),
+        format!("-std={}", info.cppstd),
+    ]);
     args.extend(info.incdirs.iter().map(|i| format!("-I{}", i)));
     args.extend(info.defines.iter().map(|d| format!("-D{}", d)));
     if info.config.is_release() {
         args.push("-O2".to_string());
+        // args.push("/MD".to_string());
+    } else {
+        args.push("-O0".to_string());
+        args.push("-g".to_string());
+        // args.push("/MDd".to_string());
+        // args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
+        // args.push("/FS".to_string());
     }
-    args.extend([
-        format!("-std={}", info.cppstd),
-        format!("-o {}", obj),
-        "-c".to_string(),
-        src.to_string(),
-    ]);
-    // if let Some(outfile) = info.pch {
-    //     let cmpd = format!("{}/{}.pch", info.out_dir, outfile);
-    //     args.push(format!("/Yu{}", outfile));
-    //     args.push(format!("/Fp{}", cmpd));
-    // }
+    /*
+    if let Some(outfile) = info.pch {
+        let cmpd = format!("{}/{}.gch", info.outdir, outfile);
+        args.push(format!("/Yu{}", outfile));
+        args.push(format!("/Fp{}", cmpd));
+    }
+    */
     args
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new("ar rcs");
+    let mut cmd = Command::new("ar");
+    cmd.arg("rcs");
+    cmd.arg(format!("{}", info.outfile.repr));
     cmd.args(objs.into_iter().map(|o| o.repr));
-    cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
-    cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
-    cmd.args([
-        format!("-o {}", info.outfile.repr),
-    ]);
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
     println!();
@@ -42,12 +52,13 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new("g++");
+    let mut cmd = Command::new(if info.is_c { "gcc" } else { "g++" });
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args([
-        format!("-o {}", info.outfile.repr),
+        "-o",
+        &info.outfile.repr,
     ]);
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
@@ -72,25 +83,31 @@ pub mod prep {
 
     pub fn precompile_header(header: &str, info: &BuildInfo) {
         let head_with_dir = format!("{}{}", info.srcdir, header);
-        let cmpd = format!("{}{}.gch", info.outdir, header.replace(&info.srcdir, &info.outdir));
+        let cmpd = format!("{}.gch", head_with_dir);
         let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
         let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
         if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
-            let mut cmd = Command::new("g++");
+            let mut cmd = Command::new(if info.is_c { "gcc" } else { "g++" });
+            if !info.is_c {
+                cmd.args([ "-x", "c++-header" ]);
+            }
             cmd.args([
-                "-c".to_string(),
-                format!("-Yc{}", header),
-                format!("-Fp{}", cmpd),
-                format!("-std:{}", info.cppstd),
+                head_with_dir,
+                format!("-std={}", info.cppstd),
             ]);
             cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
             cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
             if info.config.is_release() {
-                cmd.args(["/O2"]);
+                cmd.arg("-O2");
             }
-            log_info_noline!("compiling precompiled header: ");
-            std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
+            log_info_noline!("compiling precompiled header: {}\n", cmpd);
+            println!("{:#?}", cmd);
+            let output = cmd.output().unwrap();
+            if !output.status.success() {
+                println!("failed");
+                std::io::stdout().write_all(&output.stdout).unwrap();
+            }
             println!();
         }
     }

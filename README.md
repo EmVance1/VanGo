@@ -1,6 +1,6 @@
-# MS Compile
+# VanGo - A C/C++ Build System for Cargo Lovers
 
-This is a build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Use JSON to define a minimal build script, for example:
+This app is a build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Use JSON to define a minimal build script, for example:
 ```json
 {
     "project": "example",

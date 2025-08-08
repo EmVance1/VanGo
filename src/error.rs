@@ -21,6 +21,8 @@ pub enum Error {
     ConfigUnavailable(String, String),
     #[error("no project signifier 'main.cpp' or 'lib.h' found")]
     MissingEntryPoint,
+    #[error("compiler unavailable for current toolchain: '{0}'")]
+    MissingCompiler(String),
     #[error("failed to compile project '{0}'")]
     CompilerFail(String),
     #[error("failed to link project '{0}'")]

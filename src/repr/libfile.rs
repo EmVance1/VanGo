@@ -1,12 +1,8 @@
-use std::collections::HashMap;
+use crate::{Config, error::Error};
 use serde::Deserialize;
-use crate::{
-    error::Error,
-    Config,
-};
+use std::collections::HashMap;
 
 use super::BuildFile;
-
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibFile {
@@ -25,7 +21,6 @@ impl LibFile {
     }
 }
 
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibConfig {
     #[serde(rename = "binary.debug")]
@@ -36,7 +31,6 @@ pub struct LibConfig {
     #[serde(default)]
     pub defines: Vec<String>,
 }
-
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibData {
@@ -59,12 +53,20 @@ impl LibFile {
         let (libdir, links, defines) = if let Some(ver) = version {
             if let Some(cfg) = self.configs.get(ver) {
                 if config.is_release() {
-                    (cfg.binary_release.clone(), cfg.links.clone(), cfg.defines.clone())
+                    (
+                        cfg.binary_release.clone(),
+                        cfg.links.clone(),
+                        cfg.defines.clone(),
+                    )
                 } else {
-                    (cfg.binary_debug.clone(), cfg.links.clone(), cfg.defines.clone())
+                    (
+                        cfg.binary_debug.clone(),
+                        cfg.links.clone(),
+                        cfg.defines.clone(),
+                    )
                 }
             } else {
-                return Err(Error::ConfigUnavailable(self.library, ver.to_string()))
+                return Err(Error::ConfigUnavailable(self.library, ver.to_string()));
             }
         } else if let Some(all) = self.all {
             if config.is_release() {
@@ -73,10 +75,13 @@ impl LibFile {
                 (all.binary_debug, all.links, all.defines)
             }
         } else {
-            return Err(Error::ConfigUnavailable(self.library, "default".to_string()))
+            return Err(Error::ConfigUnavailable(
+                self.library,
+                "default".to_string(),
+            ));
         };
 
-        Ok(LibData{
+        Ok(LibData {
             incdir: self.include,
             libdir,
             links,
@@ -85,7 +90,6 @@ impl LibFile {
     }
 }
 
-
 impl From<BuildFile> for LibFile {
     fn from(value: BuildFile) -> Self {
         let include = if let Some(inc) = value.inc_public {
@@ -93,14 +97,14 @@ impl From<BuildFile> for LibFile {
         } else {
             value.srcdir
         };
-        Self{
+        Self {
             library: value.project.clone(),
             minstd: value.cpp,
             include,
-            all: Some(LibConfig{
+            all: Some(LibConfig {
                 binary_debug: "bin/debug/".to_string(),
                 binary_release: "bin/release/".to_string(),
-                links: vec![ value.project ],
+                links: vec![value.project],
                 defines: value.defines,
             }),
             configs: HashMap::default(),
@@ -108,25 +112,19 @@ impl From<BuildFile> for LibFile {
     }
 }
 
-
 #[derive(Debug, PartialEq, Eq)]
-pub enum Lang { Cpp(u32), C(u32) }
+pub enum Lang {
+    Cpp(u32),
+    C(u32),
+}
 
 impl Ord for Lang {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
-            (Lang::Cpp(a), Lang::Cpp(b)) => {
-                a.cmp(b)
-            }
-            (Lang::Cpp(_), Lang::C(_)) => {
-                1.cmp(&0)
-            }
-            (Lang::C(_), Lang::Cpp(_)) => {
-                0.cmp(&1)
-            }
-            (Lang::C(a), Lang::C(b)) => {
-                a.cmp(b)
-            }
+            (Lang::Cpp(a), Lang::Cpp(b)) => a.cmp(b),
+            (Lang::Cpp(_), Lang::C(_)) => 1.cmp(&0),
+            (Lang::C(_), Lang::Cpp(_)) => 0.cmp(&1),
+            (Lang::C(a), Lang::C(b)) => a.cmp(b),
         }
     }
 }
@@ -140,11 +138,12 @@ impl PartialOrd for Lang {
 pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
     let cpp = cpp.to_ascii_lowercase();
     if cpp.starts_with("c++") {
-        let num: u32 = cpp.strip_prefix("c++")
+        let num: u32 = cpp
+            .strip_prefix("c++")
             .unwrap()
             .parse()
             .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
-        if !matches!(num, 98|3|11|14|17|20|23) {
+        if !matches!(num, 98 | 3 | 11 | 14 | 17 | 20 | 23) {
             Err(Error::InvalidCppStd(cpp.to_string()))
         } else if num < 50 {
             Ok(Lang::Cpp(100 + num))
@@ -154,11 +153,12 @@ pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
     } else if cpp == "c" {
         Ok(Lang::C(0))
     } else {
-        let num: u32 = cpp.strip_prefix("c")
+        let num: u32 = cpp
+            .strip_prefix("c")
             .ok_or(Error::InvalidCppStd(cpp.to_string()))?
             .parse()
             .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
-        if !matches!(num, 89|99|11|17|20) {
+        if !matches!(num, 89 | 99 | 11 | 17 | 20) {
             Err(Error::InvalidCppStd(cpp.to_string()))
         } else if num < 50 {
             Ok(Lang::C(100 + num))
@@ -167,7 +167,6 @@ pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -202,4 +201,3 @@ mod tests {
         assert!(u32_from_cppstd("3").is_err());
     }
 }
-

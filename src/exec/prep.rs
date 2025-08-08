@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-
 pub fn assert_out_dirs(sdir: &str, odir: &str) {
     if !std::fs::exists("./bin/").unwrap() {
         std::fs::create_dir("./bin/").unwrap();
@@ -29,4 +28,3 @@ pub fn assert_out_dirs_rec(root: &Path, sdir: &str, odir: &str) {
         }
     }
 }
-

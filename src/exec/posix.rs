@@ -1,11 +1,6 @@
-use crate::{Error, fetch::FileInfo, log_info };
-use super::{CompileInfo, BuildInfo};
-use std::{
-    process::Command,
-    path::PathBuf,
-    io::Write,
-};
-
+use super::{BuildInfo, CompileInfo};
+use crate::{Error, fetch::FileInfo, log_info};
+use std::{io::Write, path::PathBuf, process::Command};
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolset.compiler(info.is_c));
@@ -25,12 +20,13 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::proce
         cmd.arg("-O2");
         // args.push("/MD".to_string());
     } else {
-        cmd.args([ "-O0", "-g", ]);
+        cmd.args(["-O0", "-g"]);
         // args.push("/MDd".to_string());
         // args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
         // args.push("/FS".to_string());
     }
-    cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped());
+    cmd.stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
     cmd
 }
 
@@ -53,13 +49,9 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolset.linker(info.is_c));
     cmd.args(objs.into_iter().map(|fi| fi.repr));
-    cmd.args([
-        "-o",
-        &info.outfile.repr,
-    ]);
+    cmd.args(["-o", &info.outfile.repr]);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
-    println!();
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
@@ -70,7 +62,6 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
         Ok(true)
     }
 }
-
 
 pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::process::Command> {
     let head_with_dir = format!("{}{}", info.srcdir, header);
@@ -102,4 +93,3 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::p
         None
     }
 }
-

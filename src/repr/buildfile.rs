@@ -1,6 +1,5 @@
-use serde::Deserialize;
 use super::Config;
-
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BuildFile {
@@ -41,6 +40,6 @@ impl BuildFile {
     }
 }
 
-
-fn src_default() -> String { "src/".to_string() }
-
+fn src_default() -> String {
+    "src/".to_string()
+}

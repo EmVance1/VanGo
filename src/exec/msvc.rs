@@ -1,11 +1,6 @@
-use crate::{Error, fetch::FileInfo, log_info };
-use super::{CompileInfo, BuildInfo};
-use std::{
-    process::Command,
-    path::PathBuf,
-    io::Write,
-};
-
+use super::{BuildInfo, CompileInfo};
+use crate::{Error, fetch::FileInfo, log_info};
+use std::{io::Write, path::PathBuf, process::Command};
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
     let mut cmd = std::process::Command::new("cl");
@@ -30,14 +25,14 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::proce
     cmd.args(info.incdirs.iter().map(|i| format!("/I{}", i)));
     cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
     if info.config.is_release() {
-        cmd.args([ "/MD", "/O2" ]);
+        cmd.args(["/MD", "/O2"]);
     } else {
         cmd.args([
             "/MDd".to_string(),
             "/Od".to_string(),
             "/Zi".to_string(),
             format!("/Fd:{}/vc143.pdb", info.outdir),
-            "/FS".to_string()
+            "/FS".to_string(),
         ]);
     }
     if let Some(outfile) = info.pch {
@@ -96,12 +91,15 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     }
 }
 
-
 pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::process::Command> {
     let head_with_dir = format!("{}{}", info.srcdir, header);
     let cppf = format!("{}{}", info.srcdir, header.replace(".h", ".cpp"));
     let objt = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
-    let cmpd = format!("{}{}.pch", info.outdir, header.replace(&info.srcdir, &info.outdir));
+    let cmpd = format!(
+        "{}{}.pch",
+        info.outdir,
+        header.replace(&info.srcdir, &info.outdir)
+    );
     let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
@@ -141,7 +139,6 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::p
     }
 }
 
-
 const DEFAULT_LIBS: &[&str] = &[
     "kernel32.lib",
     "user32.lib",
@@ -156,4 +153,3 @@ const DEFAULT_LIBS: &[&str] = &[
     "odbccp32.lib",
     "gdi32.lib",
 ];
-

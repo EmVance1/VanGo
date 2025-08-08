@@ -1,20 +1,15 @@
+use crate::{BuildFile, Config, LibFile, ProjKind, error::Error, log_info};
 use std::{
-    path::{Path, PathBuf},
     io::Write,
+    path::{Path, PathBuf},
 };
-use crate::{
-    BuildFile, LibFile, ProjKind, Config,
-    error::Error,
-    log_info,
-};
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileInfo {
     pub path: PathBuf,
     pub repr: String,
     pub exists: bool,
-    pub modified: Option<std::time::SystemTime>
+    pub modified: Option<std::time::SystemTime>,
 }
 
 #[allow(dead_code)]
@@ -29,7 +24,7 @@ impl FileInfo {
         let path = path.to_owned();
         let repr = path.to_string_lossy().to_string();
 
-        Self{
+        Self {
             path,
             repr,
             exists,
@@ -52,7 +47,6 @@ impl FileInfo {
     }
 }
 
-
 pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     let mut res = Vec::new();
 
@@ -73,10 +67,14 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
 
 pub fn get_project_kind(srcdir: &str, incpub: &Option<String>) -> Result<ProjKind, Error> {
     let sig = find_project_signifier(srcdir)?;
-    if let Some(sig) = sig { return Ok(sig); }
+    if let Some(sig) = sig {
+        return Ok(sig);
+    }
     if let Some(inc) = incpub {
         let sig = find_project_signifier(inc)?;
-        if let Some(sig) = sig { return Ok(sig); }
+        if let Some(sig) = sig {
+            return Ok(sig);
+        }
     }
     println!("not found, searched {:#?}", incpub);
     Err(Error::MissingEntryPoint)
@@ -88,26 +86,27 @@ fn find_project_signifier(sdir: &str) -> Result<Option<ProjKind>, Error> {
         let e = e.unwrap();
         if e.path().is_dir() {
             let sig = find_project_signifier(e.path().to_str().unwrap())?;
-            if sig.is_some() { return Ok(sig); }
+            if sig.is_some() {
+                return Ok(sig);
+            }
         } else if e.path().is_file() {
             let filename = e.path().file_name().unwrap().to_str().unwrap().to_string();
             if filename.ends_with("main.cpp") {
-                return Ok(Some(ProjKind::App))
+                return Ok(Some(ProjKind::App));
             }
             if filename.ends_with("main.c") {
-                return Ok(Some(ProjKind::App))
+                return Ok(Some(ProjKind::App));
             }
             if filename.ends_with("lib.hpp") {
-                return Ok(Some(ProjKind::Lib))
+                return Ok(Some(ProjKind::Lib));
             }
             if filename.ends_with("lib.h") {
-                return Ok(Some(ProjKind::Lib))
+                return Ok(Some(ProjKind::Lib));
             }
         }
     }
     Ok(None)
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Dependencies {
@@ -119,8 +118,12 @@ pub struct Dependencies {
     pub rebuilt: bool,
 }
 
-
-pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp: &str) -> Result<Dependencies, Error> {
+pub fn get_libraries(
+    libraries: Vec<String>,
+    config: Config,
+    mingw: bool,
+    maxcpp: &str,
+) -> Result<Dependencies, Error> {
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
     let mut links = Vec::new();
@@ -137,7 +140,10 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             let stem = url.file_stem().unwrap().to_string_lossy();
             let dir = format!("{home}/.mscmp/packages/{stem}");
             if !std::fs::exists(&dir).unwrap() {
-                log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
+                log_info!(
+                    "cloning project dependency to: {:-<52}",
+                    format!("$ENV/packages/{stem} ")
+                );
                 std::process::Command::new("git")
                     .arg("clone")
                     .arg(format!("{}", url.to_string_lossy()))
@@ -161,7 +167,9 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
                 std::env::set_current_dir(&dir).unwrap();
                 let mut cmd = std::process::Command::new("mscmp");
                 cmd.arg("build").arg(format!("-{}", config));
-                if mingw { cmd.arg("-mingw"); }
+                if mingw {
+                    cmd.arg("-mingw");
+                }
                 let output = cmd.status().unwrap();
                 if output.code() == Some(8) {
                     rebuilt = true;
@@ -189,12 +197,17 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             }
         }
 
-
-        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap() {
+        if let Some(build) = if cfg!(target_os = "windows")
+            && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("lib/{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap() {
+        } else if cfg!(target_os = "linux")
+            && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("lib/{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap() {
+        } else if cfg!(target_os = "macos")
+            && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("lib/{name}/macos.lib.json")).ok()
         } else {
             std::fs::read_to_string(format!("lib/{name}/lib.json")).ok()
@@ -206,12 +219,17 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             libdirs.push(format!("lib/{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-
-        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.lib.json")).unwrap() {
+        } else if let Some(build) = if cfg!(target_os = "windows")
+            && std::fs::exists(format!("{name}/win.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.lib.json")).unwrap() {
+        } else if cfg!(target_os = "linux")
+            && std::fs::exists(format!("{name}/linux.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.lib.json")).unwrap() {
+        } else if cfg!(target_os = "macos")
+            && std::fs::exists(format!("{name}/macos.lib.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/macos.lib.json")).ok()
         } else {
             std::fs::read_to_string(format!("{name}/lib.json")).ok()
@@ -223,22 +241,33 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             libdirs.push(format!("{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.build.json")).unwrap() {
+        } else if let Some(build) = if cfg!(target_os = "windows")
+            && std::fs::exists(format!("{name}/win.build.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/win.build.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.build.json")).unwrap() {
+        } else if cfg!(target_os = "linux")
+            && std::fs::exists(format!("{name}/linux.build.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/linux.build.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.build.json")).unwrap() {
+        } else if cfg!(target_os = "macos")
+            && std::fs::exists(format!("{name}/macos.build.json")).unwrap()
+        {
             std::fs::read_to_string(format!("{name}/macos.build.json")).ok()
         } else {
             std::fs::read_to_string(format!("{name}/build.json")).ok()
         } {
             let build: BuildFile = serde_json::from_str(&build).unwrap();
-            log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
+            log_info!(
+                "building project dependency: {:-<54}",
+                format!("{} ", build.project)
+            );
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(&name).unwrap();
             let mut cmd = std::process::Command::new("mscmp");
             cmd.arg("build").arg(format!("-{}", config));
-            if mingw { cmd.arg("-mingw"); }
+            if mingw {
+                cmd.arg("-mingw");
+            }
             let output = cmd.status().unwrap();
             if output.code() == Some(8) {
                 rebuilt = true;
@@ -266,7 +295,7 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
         }
     }
 
-    Ok(Dependencies{
+    Ok(Dependencies {
         incdirs,
         libdirs,
         links,
@@ -276,19 +305,17 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
     })
 }
 
-
 fn get_version(s: &str) -> (&str, Option<&str>) {
     for (i, c) in s.chars().rev().enumerate() {
         if c == '/' || c == '\\' {
-            return (s, None)
+            return (s, None);
         } else if c == ':' {
             let l = s.len();
-            return (&s[..(l-i-1)], Some(&s[(l-i)..]))
+            return (&s[..(l - i - 1)], Some(&s[(l - i)..]));
         }
     }
     (s, None)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -296,13 +323,15 @@ mod tests {
 
     #[test]
     pub fn test_get_version() {
-        assert_eq!(get_version("SFML"),             ("SFML", None));
-        assert_eq!(get_version("SFML:static"),      ("SFML", Some("static")));
-        assert_eq!(get_version("SF.ML:static"),     ("SF.ML", Some("static")));
-        assert_eq!(get_version("SFML-2.6.1"),       ("SFML-2.6.1", None));
-        assert_eq!(get_version("../Rusty"),         ("../Rusty", None));
-        assert_eq!(get_version("../Rusty:static"),  ("../Rusty", Some("static")));
-        assert_eq!(get_version("../Ru.sty:static"), ("../Ru.sty", Some("static")));
+        assert_eq!(get_version("SFML"), ("SFML", None));
+        assert_eq!(get_version("SFML:static"), ("SFML", Some("static")));
+        assert_eq!(get_version("SF.ML:static"), ("SF.ML", Some("static")));
+        assert_eq!(get_version("SFML-2.6.1"), ("SFML-2.6.1", None));
+        assert_eq!(get_version("../Rusty"), ("../Rusty", None));
+        assert_eq!(get_version("../Rusty:static"), ("../Rusty", Some("static")));
+        assert_eq!(
+            get_version("../Ru.sty:static"),
+            ("../Ru.sty", Some("static"))
+        );
     }
 }
-

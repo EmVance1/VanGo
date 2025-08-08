@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("no action provided [build, run, clean]")]
@@ -31,6 +30,5 @@ pub enum Error {
     MissingTests,
     #[error("build failed")]
     #[allow(unused)]
-    Unknown
+    Unknown,
 }
-

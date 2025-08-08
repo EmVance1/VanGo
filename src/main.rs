@@ -1,22 +1,24 @@
+mod error;
+mod exec;
+mod fetch;
 mod input;
 mod repr;
-mod fetch;
-mod exec;
 mod testfw;
-mod error;
 #[macro_use]
 mod log;
 
-use std::{ io::Write, path::PathBuf };
-use repr::*;
-use fetch::FileInfo;
-use exec::BuildInfo;
 use error::Error;
-
-
+use exec::BuildInfo;
+use fetch::FileInfo;
+use repr::*;
+use std::{io::Write, path::PathBuf};
 
 fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
-    log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
+    log_info!(
+        "creating new {} project: {}",
+        if library { "library" } else { "application" },
+        name
+    );
     std::fs::create_dir(name).unwrap();
     std::fs::create_dir(format!("{}/src", name)).unwrap();
     let ext = if isc { "c" } else { "cpp" };
@@ -26,26 +28,51 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
         std::fs::create_dir(format!("{}/include", name)).unwrap();
         std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
         if isc {
-            std::fs::write(format!("{}/include/{}/lib.h", name, name), "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif").unwrap();
+            std::fs::write(
+                format!("{}/include/{}/lib.h", name, name),
+                "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif",
+            )
+            .unwrap();
         } else {
-            std::fs::write(format!("{}/include/{}/lib.h", name, name), "#pragma once\n\nint func(int a, int b);\n").unwrap();
+            std::fs::write(
+                format!("{}/include/{}/lib.h", name, name),
+                "#pragma once\n\nint func(int a, int b);\n",
+            )
+            .unwrap();
         }
-        std::fs::write(format!("{}/src/lib.{ext}", name), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n").unwrap();
-        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{}\" ],\n    \"include-public\": \"include/\"\n}}", name, name);
+        std::fs::write(
+            format!("{}/src/lib.{ext}", name),
+            "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n",
+        )
+        .unwrap();
+        let json = format!(
+            "{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{}\" ],\n    \"include-public\": \"include/\"\n}}",
+            name, name
+        );
         std::fs::write(format!("{}/build.json", name), json).unwrap();
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc\n-Iinclude/{}",
-                    if !isc { "-xc++\n" } else { "" }, name
-                );
+            if !isc { "-xc++\n" } else { "" },
+            name
+        );
         std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
     } else {
-        std::fs::write(format!("{}/src/main.{ext}", name), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n")).unwrap();
-        let json = format!("{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": []\n}}", name);
+        std::fs::write(
+            format!("{}/src/main.{ext}", name),
+            format!(
+                "#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"
+            ),
+        )
+        .unwrap();
+        let json = format!(
+            "{{\n    \"project\": \"{}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": []\n}}",
+            name
+        );
         std::fs::write(format!("{}/build.json", name), json).unwrap();
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc",
-                    if !isc { "-xc++\n" } else { "" }
-                );
+            if !isc { "-xc++\n" } else { "" }
+        );
         std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
     }
     log_info!("successfully created project '{}'", name);
@@ -62,7 +89,12 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<(bool, String), Error> {
+fn action_build(
+    build: BuildFile,
+    config: Config,
+    mingw: bool,
+    test: bool,
+) -> Result<(bool, String), Error> {
     let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
@@ -70,7 +102,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     let toolset = if cfg!(target_os = "windows") && !mingw {
         ToolSet::MSVC
     } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU{ mingw }
+        ToolSet::GNU { mingw }
     } else {
         ToolSet::CLANG
     };
@@ -84,7 +116,13 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     let outpath = if let ProjKind::App = projkind {
         format!("bin/{}/{}{}", config, build.project, projkind.ext(mingw))
     } else {
-        format!("bin/{}/{}{}{}", config, toolset.lib_prefix(), build.project, toolset.ext(projkind))
+        format!(
+            "bin/{}/{}{}{}",
+            config,
+            toolset.lib_prefix(),
+            build.project,
+            toolset.ext(projkind)
+        )
     };
     let outfile = FileInfo::from_str(&outpath);
 
@@ -100,8 +138,12 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     let cppstd = build.cpp.to_ascii_lowercase();
     let is_c = !cppstd.starts_with("c++");
 
-    let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if is_c { ".c" } else { ".cpp" }).unwrap(),
+    let info = BuildInfo {
+        sources: fetch::get_source_files(
+            &PathBuf::from(&build.srcdir),
+            if is_c { ".c" } else { ".cpp" },
+        )
+        .unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
@@ -126,7 +168,6 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     }
 }
 
-
 macro_rules! exit_with {
     () => { { eprintln!(); std::process::exit(1); } };
     ($($arg:tt)*) => { {
@@ -135,15 +176,14 @@ macro_rules! exit_with {
     } };
 }
 
-
 fn main() -> std::process::ExitCode {
     let args: Vec<_> = std::env::args().collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
 
-    if let input::Action::New{ name, library, isc } = &cmd {
+    if let input::Action::New { name, library, isc } = &cmd {
         action_new(name, *library, *isc).unwrap_or_else(|e| exit_with!("{}", e));
         0.into()
-    } else if let input::Action::Set{ .. } = &cmd {
+    } else if let input::Action::Set { .. } = &cmd {
         0.into()
     } else {
         let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {
@@ -166,24 +206,32 @@ fn main() -> std::process::ExitCode {
                 action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
-            input::Action::Build{ config, mingw } => {
+            input::Action::Build { config, mingw } => {
                 let build = build.finalise(config);
-                let (rebuilt, _) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
-                if rebuilt {
-                    8.into()
-                } else {
-                    0.into()
-                }
+                let (rebuilt, _) = action_build(build, config, mingw, false)
+                    .unwrap_or_else(|e| exit_with!("{}", e));
+                if rebuilt { 8.into() } else { 0.into() }
             }
-            input::Action::Run{ config, mingw, args } => {
+            input::Action::Run {
+                config,
+                mingw,
+                args,
+            } => {
                 let build = build.finalise(config);
-                let (_, outfile) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
+                let (_, outfile) = action_build(build, config, mingw, false)
+                    .unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args).into()
             }
-            input::Action::Test{ config, mingw, args } => {
+            input::Action::Test {
+                config,
+                mingw,
+                args,
+            } => {
                 let build = build.finalise(config);
-                action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
-                testfw::test_lib(build, config, mingw, args).unwrap_or_else(|e| exit_with!("{}", e));
+                action_build(build.clone(), config, mingw, true)
+                    .unwrap_or_else(|e| exit_with!("{}", e));
+                testfw::test_lib(build, config, mingw, args)
+                    .unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
             _ => 0.into(),
@@ -191,9 +239,13 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-
 #[allow(unused)]
-fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<bool, Error> {
+fn action_check_outdated(
+    build: BuildFile,
+    config: Config,
+    mingw: bool,
+    test: bool,
+) -> Result<bool, Error> {
     let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
@@ -201,7 +253,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
     let toolset = if cfg!(target_os = "windows") && !mingw {
         ToolSet::MSVC
     } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU{ mingw }
+        ToolSet::GNU { mingw }
     } else {
         ToolSet::CLANG
     };
@@ -227,8 +279,12 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
     let cppstd = build.cpp.to_ascii_lowercase();
     let is_c = !cppstd.starts_with("c++");
 
-    let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if is_c { ".c" } else { ".cpp" }).unwrap(),
+    let info = BuildInfo {
+        sources: fetch::get_source_files(
+            &PathBuf::from(&build.srcdir),
+            if is_c { ".c" } else { ".cpp" },
+        )
+        .unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
@@ -250,4 +306,3 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
     let rebuilt = exec::run_check_outdated(info)?;
     Ok(rebuilt_dep || rebuilt)
 }
-

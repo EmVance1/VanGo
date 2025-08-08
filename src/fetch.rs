@@ -189,7 +189,16 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             }
         }
 
-        if let Ok(build) = std::fs::read_to_string(format!("lib/{name}/lib.json")) {
+
+        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("lib/{name}/win.lib.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("lib/{name}/linux.lib.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("lib/{name}/macos.lib.json")).ok()
+        } else {
+            std::fs::read_to_string(format!("lib/{name}/lib.json")).ok()
+        } {
             let libinfo = LibFile::from_str(&build)?
                 .validate(maxcpp)?
                 .linearise(config, version)?;
@@ -197,7 +206,16 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             libdirs.push(format!("lib/{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Ok(build) = std::fs::read_to_string(format!("{name}/lib.json")) {
+
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/win.lib.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/linux.lib.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/macos.lib.json")).ok()
+        } else {
+            std::fs::read_to_string(format!("{name}/lib.json")).ok()
+        } {
             let libinfo = LibFile::from_str(&build)?
                 .validate(maxcpp)?
                 .linearise(config, version)?;
@@ -205,7 +223,15 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             libdirs.push(format!("{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Ok(build) = std::fs::read_to_string(format!("{name}/build.json")) {
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/win.build.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/linux.build.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{name}/macos.build.json")).ok()
+        } else {
+            std::fs::read_to_string(format!("{name}/build.json")).ok()
+        } {
             let build: BuildFile = serde_json::from_str(&build).unwrap();
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();

@@ -101,7 +101,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     let is_c = !cppstd.starts_with("c++");
 
     let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase().starts_with("c++") { ".cpp" } else { ".c" }).unwrap(),
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if is_c { ".c" } else { ".cpp" }).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,

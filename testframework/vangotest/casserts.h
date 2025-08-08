@@ -1,14 +1,13 @@
 #ifndef CASSERTS_H
 #define CASSERTS_H
-
 #include <stdlib.h>
 
 
-typedef struct MscmpTestResult {
+typedef struct VangoTestResult {
     size_t failtype;
     size_t failline;
     char* msg;
-} MscmpTestResult;
+} VangoTestResult;
 
 
 #define FAIL_TRUE     1
@@ -30,8 +29,8 @@ typedef struct MscmpTestResult {
     _test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; }
 
 
-#define test(name) void name(MscmpTestResult* _test_result)
-#define decl_test(name) void name(MscmpTestResult* _test_result)
+#define test(name) void name(VangoTestResult* _test_result)
+#define decl_test(name) void name(VangoTestResult* _test_result)
 
 
 #ifdef TEST_ROOT
@@ -43,7 +42,7 @@ typedef struct MscmpTestResult {
 #define test_main(tests) int main(int argc, char** argv) { tests }
 
 
-void _test_register_impl(int argc, char** argv, const char* name, void(*f)(MscmpTestResult*)) {
+void _test_register_impl(int argc, char** argv, const char* name, void(*f)(VangoTestResult*)) {
     if (argc == 1) {
         goto run_test;
     } else {
@@ -56,12 +55,12 @@ void _test_register_impl(int argc, char** argv, const char* name, void(*f)(Mscmp
     return;
 
 run_test:
-    MscmpTestResult test_result = { .failtype=0, .failline=0, .msg=NULL };
+    VangoTestResult test_result = { .failtype=0, .failline=0, .msg=NULL };
     f(&test_result);
     if (test_result.failtype == 0) {
-        fprintf(stderr, "\033[32m[mscmp:  info] passed '%s'\033[m\n", name);
+        fprintf(stderr, "\033[32m[VanGo:  info] passed '%s'\033[m\n", name);
     } else {
-        fprintf(stderr, "\033[32m[mscmp:  info] \033[31mfailed '%s' on line %llu: \033[m%s\n", name, test_result.failline, test_result.msg);
+        fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %llu: \033[m%s\n", name, test_result.failline, test_result.msg);
     }
 }
 

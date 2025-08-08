@@ -55,13 +55,13 @@ Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everyt
 ## How-to:
 The build system is invoked like so:
 
-- `mscmp n[ew]   [-lib] [-c] name`
-- `mscmp b[uild] [-r[elease]]`
-- `mscmp r[un]   [-r[elease]] [args...]`
-- `mscmp t[est]  [-r[elease]] [tests...]`
-- `mscmp c[lean]`
+- `vango n[ew]   [-lib] [-c] name`
+- `vango b[uild] [-r[elease]]`
+- `vango r[un]   [-r[elease]] [args...]`
+- `vango t[est]  [-r[elease]] [tests...]`
+- `vango c[lean]`
 
-MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
+VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
 
 All platforms have a compiler toolchain they default to, that being MSVC on windows. To use MinGW GCC instead, you can just pass `-mingw` to the build, run or test commands.
 
@@ -78,9 +78,9 @@ All `build.json` files are expected to have 3 base declarations at the root:
 `project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, prefixed by `"C++"` (case insensitive). It also takes `"CXX"` if you want to build pure C projects.
 
 
-`dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by MSCMP. If no path to the library is specified, MSCMP will search in `./lib`. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
+`dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in `./lib`. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
 
-There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.mscmp/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
+There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
 
 As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
 
@@ -133,7 +133,7 @@ The `all` field represents a standard configuration if versions are not necessar
 Testing is made easy by assuming all tests are in a `test/` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
 ```cpp
 #define TEST_ROOT
-#include <mscmp/asserts.h>
+#include <vango/asserts.h>
 
 test(basic_math) {
     int a = 2;
@@ -143,14 +143,14 @@ test(basic_math) {
     assert_eq(a, 10);
 }
 ```
-In order to write tests, the header 'mscmptest/asserts.h' or 'mscmptest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
 To forward declare a test, use the macro `decl_test(test_name)`.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp
 #define TEST_ROOT
-#include <mscmp/casserts.h>
+#include <vango/casserts.h>
 
 test(basic_math) {
     int a = 10;

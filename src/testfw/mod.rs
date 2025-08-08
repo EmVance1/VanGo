@@ -1,10 +1,12 @@
 use crate::{BuildFile, Config, Error, exec::BuildInfo, fetch::FileInfo, log_info, repr::ToolSet};
 use std::{io::Write, path::PathBuf, process::Command};
 
+
 struct TestInfo {
     defines: Vec<String>,
     incdirs: Vec<String>,
 }
+
 
 fn inherited(build: &BuildFile, config: Config, mingw: bool) -> TestInfo {
     let mut deps =
@@ -37,7 +39,7 @@ pub fn test_lib(
     };
 
     let inc = std::env::current_exe()
-        .unwrap() // ./target/release/mscmp.exe
+        .unwrap() // ./target/release/vango.exe
         .parent()
         .unwrap() // ./target/release/
         .parent()
@@ -60,11 +62,11 @@ pub fn test_lib(
         crate::fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
     };
     headers.push(FileInfo::from_str(&format!(
-        "{}/testframework/mscmptest/asserts.h",
+        "{}/testframework/vangotest/asserts.h",
         inc
     )));
     headers.push(FileInfo::from_str(&format!(
-        "{}/testframework/mscmptest/casserts.h",
+        "{}/testframework/vangotest/casserts.h",
         inc
     )));
     let relink = vec![FileInfo::from_str(&format!(
@@ -112,3 +114,4 @@ pub fn test_lib(
         .unwrap();
     Ok(())
 }
+

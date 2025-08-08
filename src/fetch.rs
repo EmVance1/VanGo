@@ -138,7 +138,7 @@ pub fn get_libraries(
             let url = std::path::Path::new(name);
             let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
             let stem = url.file_stem().unwrap().to_string_lossy();
-            let dir = format!("{home}/.mscmp/packages/{stem}");
+            let dir = format!("{home}/.vango/packages/{stem}");
             if !std::fs::exists(&dir).unwrap() {
                 log_info!(
                     "cloning project dependency to: {:-<52}",
@@ -165,7 +165,7 @@ pub fn get_libraries(
                 log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
                 let save = std::env::current_dir().unwrap();
                 std::env::set_current_dir(&dir).unwrap();
-                let mut cmd = std::process::Command::new("mscmp");
+                let mut cmd = std::process::Command::new("vango");
                 cmd.arg("build").arg(format!("-{}", config));
                 if mingw {
                     cmd.arg("-mingw");
@@ -263,7 +263,7 @@ pub fn get_libraries(
             );
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(&name).unwrap();
-            let mut cmd = std::process::Command::new("mscmp");
+            let mut cmd = std::process::Command::new("vango");
             cmd.arg("build").arg(format!("-{}", config));
             if mingw {
                 cmd.arg("-mingw");

@@ -3,55 +3,57 @@
 #[macro_export]
 macro_rules! log_info {
     () => { {
-        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
+        let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
-        writeln!(&mut stdout, "[mscmp:  info]").unwrap();
+        writeln!(&mut termcolor_stdout, "[mscmp:  info]").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
     } };
     ($($arg:tt)*) => { {
-        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
+        let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
-        write!(&mut stdout, "[mscmp:  info] ").unwrap();
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut stdout).unwrap();
-        writeln!(&mut stdout, $($arg)*).unwrap();
+        write!(&mut termcolor_stdout, "[mscmp:  info] ").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
+        writeln!(&mut termcolor_stdout, $($arg)*).unwrap();
     } };
 }
 
 #[macro_export]
-macro_rules! log_info_noline {
+macro_rules! log_warn {
     () => { {
-        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
-            .set_fg(Some(::termcolor::Color::Green))).unwrap();
-        write!(&mut stdout, "[mscmp:  info]").unwrap();
+        let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
+            .set_fg(Some(::termcolor::Color::Yellow))).unwrap();
+        writeln!(&mut termcolor_stdout, "[mscmp:  warn]").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
     } };
     ($($arg:tt)*) => { {
-        let mut stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stdout, ::termcolor::ColorSpec::new()
-            .set_fg(Some(::termcolor::Color::Green))).unwrap();
-        write!(&mut stdout, "[mscmp:  info] ").unwrap();
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut stdout).unwrap();
-        write!(&mut stdout, $($arg)*).unwrap();
+        let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
+            .set_fg(Some(::termcolor::Color::Yellow))).unwrap();
+        write!(&mut termcolor_stdout, "[mscmp:  warn] ").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
+        writeln!(&mut termcolor_stdout, $($arg)*).unwrap();
     } };
 }
-
 
 #[macro_export]
 macro_rules! log_error {
     () => { {
-        let mut stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stderr, ::termcolor::ColorSpec::new()
+        let mut termcolor_stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stderr, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Red))).unwrap();
-        writeln!(&mut stderr, "[mscmp: error]").unwrap();
+        writeln!(&mut termcolor_stderr, "[mscmp: error]").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stderr).unwrap();
     } };
     ($($arg:tt)*) => { {
-        let mut stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut stderr, ::termcolor::ColorSpec::new()
+        let mut termcolor_stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stderr, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Red))).unwrap();
-        write!(&mut stderr, "[mscmp: error] ").unwrap();
-        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut stderr).unwrap();
-        writeln!(&mut stderr, $($arg)*).unwrap();
+        write!(&mut termcolor_stderr, "[mscmp: error] ").unwrap();
+        <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stderr).unwrap();
+        writeln!(&mut termcolor_stderr, $($arg)*).unwrap();
     } };
 }
 

@@ -1,7 +1,8 @@
-use crate::{Error, fetch::FileInfo, log_info};
+use crate::{Error, fetch::FileInfo, log_info };
 use super::{CompileInfo, BuildInfo};
 use std::{
     process::Command,
+    path::PathBuf,
     io::Write,
 };
 
@@ -70,47 +71,34 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 }
 
 
-pub mod prep {
-    use crate::{fetch::FileInfo, log_error, log_info_noline};
-    use super::BuildInfo;
-    use std::{
-        process::Command,
-        path::PathBuf,
-        io::Write,
-    };
+pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::process::Command> {
+    let head_with_dir = format!("{}{}", info.srcdir, header);
+    let cmpd = format!("{}.gch", head_with_dir);
+    let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
+    let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
-    pub fn precompile_header(header: &str, info: &BuildInfo) {
-        let head_with_dir = format!("{}{}", info.srcdir, header);
-        let cmpd = format!("{}.gch", head_with_dir);
-        let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
-        let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
-
-        if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
-            let mut cmd = Command::new(info.toolset.compiler(info.is_c));
-            if !info.is_c {
-                cmd.arg("-xc++-header");
-            }
-            cmd.args([
-                format!("-std={}", info.cppstd),
-                head_with_dir,
-                // "-o".to_string(),
-                // obj.to_string(),
-            ]);
-            cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
-            cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
-            if info.config.is_release() {
-                cmd.arg("-O2");
-            } else {
-                cmd.arg("-O0");
-                cmd.arg("-g");
-            }
-            log_info_noline!("compiling precompiled header: {}\n", cmpd);
-            let output = cmd.output().unwrap_or_else(|_| { println!(); log_error!("compiler not found for current target"); std::process::exit(1) });
-            if !output.status.success() {
-                std::io::stderr().write_all(&output.stderr).unwrap();
-            }
-            println!();
+    if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
+        let mut cmd = Command::new(info.toolset.compiler(info.is_c));
+        if !info.is_c {
+            cmd.arg("-xc++-header");
         }
+        cmd.args([
+            format!("-std={}", info.cppstd),
+            head_with_dir,
+            // "-o".to_string(),
+            // obj.to_string(),
+        ]);
+        cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
+        cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
+        if info.config.is_release() {
+            cmd.arg("-O2");
+        } else {
+            cmd.arg("-O0");
+            cmd.arg("-g");
+        }
+        Some(cmd)
+    } else {
+        None
     }
 }
 

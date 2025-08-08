@@ -207,11 +207,11 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
 
-        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap() {
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap() {
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap() {
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/macos.lib.json")).ok()
         } else {
             std::fs::read_to_string(format!("{name}/lib.json")).ok()

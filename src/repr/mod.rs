@@ -45,8 +45,14 @@ impl ToolSet {
     pub fn is_gnu(&self) -> bool {
         matches!(self, Self::GNU)
     }
-    pub fn is_gnu_compat(&self) -> bool {
+    pub fn is_clang(&self) -> bool {
+        matches!(self, Self::CLANG)
+    }
+    pub fn is_posix(&self) -> bool {
         matches!(self, Self::GNU|Self::CLANG)
+    }
+    pub fn is_llvm(&self) -> bool {
+        matches!(self, Self::CLANG)
     }
     pub fn ext(&self, kind: ProjKind) -> String {
         match kind {
@@ -70,6 +76,26 @@ impl ToolSet {
         match self {
             Self::MSVC => String::new(),
             _ => "lib".to_string(),
+        }
+    }
+    pub fn compiler(&self, is_c: bool) -> String {
+        match self {
+            Self::MSVC => "cl".to_string(),
+            Self::GNU => if is_c { "gcc".to_string() } else { "g++".to_string() },
+            Self::CLANG => if is_c { "clang".to_string() } else { "clang++".to_string() },
+        }
+    }
+    pub fn linker(&self, is_c: bool) -> String {
+        match self {
+            Self::MSVC => "LINK".to_string(),
+            Self::GNU|Self::CLANG => self.compiler(is_c),
+        }
+    }
+    pub fn archiver(&self) -> String {
+        match self {
+            Self::MSVC => "LIB".to_string(),
+            Self::GNU => "ar".to_string(),
+            Self::CLANG => "llvm-ar".to_string(),
         }
     }
 }

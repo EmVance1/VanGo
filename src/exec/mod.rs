@@ -1,7 +1,7 @@
 mod incremental;
 mod prep;
 mod msvc;
-mod gcc;
+mod posix;
 
 use std::{io::Write, path::PathBuf, process::Command};
 use crate::{repr::{Config, ToolSet}, fetch::FileInfo, error::Error, log_info};
@@ -65,7 +65,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         if info.toolset.is_msvc() {
             msvc::prep::precompile_header(pch, &info)
         } else {
-            gcc::prep::precompile_header(pch, &info)
+            posix::prep::precompile_header(pch, &info)
         }
     }
 
@@ -92,19 +92,9 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                         .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()));
-                } else if !info.is_c {
-                    let args = gcc::compile_cmd(src, &obj, info.compile_info());
-                    // println!("g++ {}", args.join(" "));
-                    handles.push((src, std::process::Command::new("g++")
-                        .args(args)
-                        .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::piped())
-                        .spawn()
-                        .unwrap()));
                 } else {
-                    let args = gcc::compile_cmd(src, &obj, info.compile_info());
-                    // println!("gcc {}", args.join(" "));
-                    handles.push((src, std::process::Command::new("gcc")
+                    let args = posix::compile_cmd(src, &obj, info.compile_info());
+                    handles.push((src, std::process::Command::new(info.toolset.compiler(info.is_c))
                         .args(args)
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
@@ -148,9 +138,9 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     } else {
         let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
         if info.outfile.repr.ends_with(".a") {
-            gcc::link_lib(all_objs, info)
+            posix::link_lib(all_objs, info)
         } else {
-            gcc::link_exe(all_objs, info)
+            posix::link_exe(all_objs, info)
         }
     }
 }
@@ -164,7 +154,7 @@ pub fn run_check_outdated(info: BuildInfo) -> bool {
         if info.toolset.is_msvc() {
             msvc::prep::precompile_header(pch, &info)
         } else {
-            gcc::prep::precompile_header(pch, &info)
+            posix::prep::precompile_header(pch, &info)
         }
     }
 

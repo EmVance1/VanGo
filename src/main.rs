@@ -56,6 +56,9 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
     log_info!("cleaning build files for \"{}\"", build.project);
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
+    if let Some(pch) = build.pch {
+        let _ = std::fs::remove_file(format!("src/{}.gch", pch));
+    }
     Ok(())
 }
 

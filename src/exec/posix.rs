@@ -12,11 +12,11 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
         args.push("-xc++".to_string());
     }
     args.extend([
+        format!("-std={}", info.cppstd),
         "-c".to_string(),
         src.to_string(),
         "-o".to_string(),
         obj.to_string(),
-        format!("-std={}", info.cppstd),
     ]);
     args.extend(info.incdirs.iter().map(|i| format!("-I{}", i)));
     args.extend(info.defines.iter().map(|d| format!("-D{}", d)));
@@ -41,7 +41,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new("ar");
+    let mut cmd = Command::new(info.toolset.archiver());
     cmd.arg("rcs");
     cmd.arg(format!("{}", info.outfile.repr));
     cmd.args(objs.into_iter().map(|o| o.repr));
@@ -53,7 +53,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new(if info.is_c { "gcc" } else { "g++" });
+    let mut cmd = Command::new(info.toolset.linker(info.is_c));
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args([
         "-o",
@@ -90,18 +90,23 @@ pub mod prep {
         let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
         if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
-            let mut cmd = Command::new(if info.is_c { "gcc" } else { "g++" });
+            let mut cmd = Command::new(info.toolset.compiler(info.is_c));
             if !info.is_c {
-                cmd.args([ "-x", "c++-header" ]);
+                cmd.arg("-xc++-header");
             }
             cmd.args([
-                head_with_dir,
                 format!("-std={}", info.cppstd),
+                head_with_dir,
+                // "-o".to_string(),
+                // obj.to_string(),
             ]);
             cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
             cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
             if info.config.is_release() {
                 cmd.arg("-O2");
+            } else {
+                cmd.arg("-O0");
+                cmd.arg("-g");
             }
             log_info_noline!("compiling precompiled header: {}\n", cmpd);
             let output = cmd.output().unwrap();

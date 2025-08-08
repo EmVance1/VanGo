@@ -9,12 +9,13 @@ This is a build system designed with rusts cargo philosophy in mind. You can hav
 }
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
+
 The terrible name is now also outdated as this now supports all the most popular toolchains, specifically: MSVC and MinGW on windows, GNU on Linux, and Clang/LLVM on MacOS.
+
 The system of course assumes that you have all relevant compiler tools installed. It is not in itself a compiler.
 
 ### Features supported so far
 - New, Build, Run, Test, and Clean actions
-
 - Specify header-only and binary libraries with a lib.json, supports multiple configurations...
 ```json
 {
@@ -42,7 +43,6 @@ The system of course assumes that you have all relevant compiler tools installed
 "pch": "pch.h",
 ```
 - Executable/Library output deduction using main.cpp/lib.h entry points
-
 - Debug and Release configurations (work in progress)
 ```json
 "SETTING.debug": { ... },
@@ -62,6 +62,7 @@ The build system is invoked like so:
 - `mscmp c[lean]`
 
 MSCMP is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
+
 All platforms have a compiler toolchain they default to, that being MSVC on windows. To use MinGW GCC instead, you can just pass `-mingw` to the build, run or test commands.
 
 ### How-to: build.json
@@ -76,9 +77,13 @@ All `build.json` files are expected to have 3 base declarations at the root:
 ```
 `project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, prefixed by `"C++"` (case insensitive). It also takes `"CXX"` if you want to build pure C projects.
 
+
 `dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by MSCMP. If no path to the library is specified, MSCMP will search in `./lib`. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
+
 There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.mscmp/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
+
 As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
+
 
 Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `DEBUG` or `RELEASE` definitions, aswell as `TEST` for test builds.
 
@@ -139,7 +144,8 @@ test(basic_math) {
 }
 ```
 In order to write tests, the header 'mscmptest/asserts.h' or 'mscmptest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
-To forward declare a test: in C++ write `void test_name();`, and in C `test(test_name);`.
+
+To forward declare a test, use the macro `decl_test(test_name)`.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp

@@ -31,6 +31,8 @@ typedef struct MscmpTestResult {
 
 
 #define test(name) void name(MscmpTestResult* _test_result)
+#define decl_test(name) void name(MscmpTestResult* _test_result)
+
 
 #ifdef TEST_ROOT
 

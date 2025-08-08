@@ -65,6 +65,7 @@ typedef struct TestFuncArray {
 
 
 #define test(name) void name(); TestFuncArray* _##name##_runner = init_testfunc( #name, name, false ); void name()
+#define decl_test(name) void name()
 
 
 TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);

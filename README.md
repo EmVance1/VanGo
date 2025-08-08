@@ -10,9 +10,7 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 
-The terrible name is now also outdated as this now supports all the most popular toolchains, specifically: MSVC and MinGW on windows, GNU on Linux, and Clang/LLVM on MacOS.
-
-The system of course assumes that you have all relevant compiler tools installed. It is not in itself a compiler.
+The system supports most popular toolchains, specifically: MSVC and MinGW on windows, GNU on Linux, and Clang/LLVM on MacOS. It does of course assume that you have all relevant compiler tools installed. It is not in itself a compiler.
 
 ### Features supported so far
 - New, Build, Run, Test, and Clean actions

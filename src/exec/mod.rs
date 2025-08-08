@@ -4,7 +4,7 @@ mod msvc;
 mod posix;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{repr::{Config, ToolSet}, fetch::FileInfo, error::Error, log_info};
+use crate::{error::Error, fetch::FileInfo, log_info, repr::{Config, ProjKind, ToolSet}};
 use incremental::BuildLevel;
 
 
@@ -25,6 +25,7 @@ pub struct BuildInfo {
     pub is_c: bool,
     pub config: Config,
     pub toolset: ToolSet,
+    pub projkind: ProjKind,
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
 }
@@ -34,6 +35,7 @@ impl BuildInfo {
         CompileInfo{
             cppstd: &self.cppstd,
             is_c: self.is_c,
+            toolset: self.toolset,
             config: self.config,
             outdir: &self.outdir,
             defines: &self.defines,
@@ -48,6 +50,7 @@ impl BuildInfo {
 struct CompileInfo<'a> {
     cppstd: &'a str,
     is_c: bool,
+    toolset: ToolSet,
     config: Config,
     outdir: &'a str,
     defines: &'a [String],
@@ -85,21 +88,9 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
                 if info.toolset.is_msvc() {
-                    let args = msvc::compile_cmd(src, &obj, info.compile_info());
-                    handles.push((src, std::process::Command::new("cl")
-                        .args(args)
-                        .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::piped())
-                        .spawn()
-                        .unwrap()));
+                    handles.push((src, msvc::compile_cmd(src, &obj, info.compile_info()).spawn().unwrap()));
                 } else {
-                    let args = posix::compile_cmd(src, &obj, info.compile_info());
-                    handles.push((src, std::process::Command::new(info.toolset.compiler(info.is_c))
-                        .args(args)
-                        .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::piped())
-                        .spawn()
-                        .unwrap()));
+                    handles.push((src, posix::compile_cmd(src, &obj, info.compile_info()).spawn().unwrap()));
                 };
                 batch += 1;
                 if batch == LIMIT {
@@ -130,17 +121,17 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     log_info!("linking:   {}", info.outfile.repr);
     if info.toolset.is_msvc() {
         let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
-        if info.outfile.repr.ends_with(".lib") {
-            msvc::link_lib(all_objs, info)
-        } else {
+        if info.projkind == ProjKind::App {
             msvc::link_exe(all_objs, info)
+        } else {
+            msvc::link_lib(all_objs, info)
         }
     } else {
         let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
-        if info.outfile.repr.ends_with(".a") {
-            posix::link_lib(all_objs, info)
-        } else {
+        if info.projkind == ProjKind::App {
             posix::link_exe(all_objs, info)
+        } else {
+            posix::link_lib(all_objs, info)
         }
     }
 }
@@ -180,11 +171,11 @@ pub fn run_app(outfile: &str,  runargs: Vec<String>) -> u8 {
 
 
 #[cfg(test)]
-#[cfg(target_os = "windows")]
 mod tests {
     use super::*;
 
     #[test]
+    #[cfg(target_os = "windows")]
     pub fn test_compile_cmd() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.obj";
@@ -195,6 +186,7 @@ mod tests {
             cppstd: "c++20",
             is_c: false,
             config: Config::Debug,
+            toolset: ToolSet::MSVC,
             outdir: "bin/debug/obj/",
             defines: &empty,
             incdirs: &incdirs,
@@ -202,18 +194,18 @@ mod tests {
             comp_args: &empty,
         };
 
-        let args = msvc::compile_cmd(src, obj, info);
-        assert_eq!(args, vec![
-            "src/main.cpp".to_string(),
-            "/c".to_string(),
-            "/EHsc".to_string(),
-            "/Fo:bin/debug/obj/main.obj".to_string(),
-            "/std:c++20".to_string(),
-            "/Isrc/".to_string(),
-            "/MDd".to_string(),
-            "/Od".to_string(),
-            "/Zi".to_string(),
-            "/FS".to_string(),
+        let cmd = msvc::compile_cmd(src, obj, info);
+        assert_eq!(cmd.get_args().collect::<Vec<_>>(), &[
+            "/std:c++20",
+            "/c",
+            "src/main.cpp",
+            "/Fo:bin/debug/obj/main.obj",
+            "/EHsc",
+            "/Isrc/",
+            "/MDd",
+            "/Od",
+            "/Zi",
+            "/FS",
         ]);
     }
 }

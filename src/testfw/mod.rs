@@ -78,6 +78,7 @@ pub fn test_lib(build: BuildFile, config: Config, mingw: bool, args: Vec<String>
         is_c,
         config,
         toolset,
+        projkind: crate::repr::ProjKind::App,
         defines: partial.defines,
         comp_args: vec![],
         link_args: vec![],

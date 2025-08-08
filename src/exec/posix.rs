@@ -6,38 +6,31 @@ use std::{
 };
 
 
-pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String> {
-    let mut args = vec![];
+pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
+    let mut cmd = std::process::Command::new(info.toolset.compiler(info.is_c));
     if !info.is_c {
-        args.push("-xc++".to_string());
+        cmd.arg("-xc++");
     }
-    args.extend([
+    cmd.args([
         format!("-std={}", info.cppstd),
         "-c".to_string(),
         src.to_string(),
         "-o".to_string(),
         obj.to_string(),
     ]);
-    args.extend(info.incdirs.iter().map(|i| format!("-I{}", i)));
-    args.extend(info.defines.iter().map(|d| format!("-D{}", d)));
+    cmd.args(info.incdirs.iter().map(|i| format!("-I{}", i)));
+    cmd.args(info.defines.iter().map(|d| format!("-D{}", d)));
     if info.config.is_release() {
-        args.push("-O2".to_string());
+        cmd.arg("-O2");
         // args.push("/MD".to_string());
     } else {
-        args.push("-O0".to_string());
-        args.push("-g".to_string());
+        cmd.args([ "-O0", "-g", ]);
         // args.push("/MDd".to_string());
         // args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
         // args.push("/FS".to_string());
     }
-    /*
-    if let Some(outfile) = info.pch {
-        let cmpd = format!("{}/{}.gch", info.outdir, outfile);
-        args.push(format!("/Yu{}", outfile));
-        args.push(format!("/Fp{}", cmpd));
-    }
-    */
-    args
+    cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped());
+    cmd
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {

@@ -2,7 +2,7 @@
 /target/
 spec.md
 todo.md
-wsl.bat
+build.bat
 
 mscmp-1.0.0-win-x86_64/
 *.zip

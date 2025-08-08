@@ -6,44 +6,46 @@ use std::{
 };
 
 
-pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> Vec<String> {
-    let mut args = vec![
-        src.to_string(),
+pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
+    let mut cmd = std::process::Command::new("cl");
+    if info.cppstd.ends_with("23") {
+        if info.cppstd.starts_with("c++") {
+            cmd.arg("/std:c++latest");
+        } else {
+            cmd.arg("/std:clatest");
+        }
+    } else {
+        cmd.arg(format!("/std:{}", info.cppstd.to_ascii_lowercase()));
+    }
+    cmd.args([
         "/c".to_string(),
-        "/EHsc".to_string(),
+        src.to_string(),
         format!("/Fo:{}", obj),
+        "/EHsc".to_string(),
         // "/Gy".to_string(),
         // "/GL".to_string(),
         // "/Oi".to_string(),
-    ];
-    if info.cppstd.ends_with("23") {
-        if info.cppstd.starts_with("c++") {
-            args.push("/std:c++latest".to_string());
-        } else {
-            args.push("/std:clatest".to_string());
-        }
-    } else {
-        args.push(format!("/std:{}", info.cppstd.to_ascii_lowercase()));
-    }
-    args.extend(info.incdirs.iter().map(|i| format!("/I{}", i)));
-    args.extend(info.defines.iter().map(|d| format!("/D{}", d)));
+    ]);
+    cmd.args(info.incdirs.iter().map(|i| format!("/I{}", i)));
+    cmd.args(info.defines.iter().map(|d| format!("/D{}", d)));
     if info.config.is_release() {
-        args.push("/MD".to_string());
-        args.push("/O2".to_string());
+        cmd.args([ "/MD", "/O2" ]);
     } else {
-        args.push("/MDd".to_string());
-        args.push("/Od".to_string());
-        args.push("/Zi".to_string());
-        args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
-        args.push("/FS".to_string());
+        cmd.args([
+            "/MDd".to_string(),
+            "/Od".to_string(),
+            "/Zi".to_string(),
+            format!("/Fd:{}/vc143.pdb", info.outdir),
+            "/FS".to_string()
+        ]);
     }
     if let Some(outfile) = info.pch {
         let cmpd = format!("{}/{}.pch", info.outdir, outfile);
-        args.push(format!("/Yu{}", outfile));
-        args.push(format!("/Fp{}", cmpd));
+        cmd.arg(format!("/Yu{}", outfile));
+        cmd.arg(format!("/Fp{}", cmpd));
     }
-    args.extend(info.comp_args.iter().map(|s| s.to_string()));
-    args
+    cmd.args(info.comp_args.iter().map(|s| s.to_string()));
+    cmd
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {

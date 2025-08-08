@@ -63,7 +63,7 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
 }
 
 fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<(bool, String), Error> {
-    let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
+    let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
@@ -81,10 +81,10 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
-    let outpath = if let ProjKind::App = kind {
-        format!("bin/{}/{}{}", config, build.project, kind.ext(mingw))
+    let outpath = if let ProjKind::App = projkind {
+        format!("bin/{}/{}{}", config, build.project, projkind.ext(mingw))
     } else {
-        format!("bin/{}/{}{}{}", config, toolset.lib_prefix(), build.project, toolset.ext(kind))
+        format!("bin/{}/{}{}{}", config, toolset.lib_prefix(), build.project, toolset.ext(projkind))
     };
     let outfile = FileInfo::from_str(&outpath);
 
@@ -116,6 +116,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
         is_c,
         config,
         toolset,
+        projkind,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
@@ -193,7 +194,7 @@ fn main() -> std::process::ExitCode {
 
 #[allow(unused)]
 fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<bool, Error> {
-    let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
+    let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
@@ -211,7 +212,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
-    let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext(mingw));
+    let outpath = format!("bin/{}/{}{}", config, build.project, projkind.ext(mingw));
     let outfile = FileInfo::from_str(&outpath);
 
     let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
@@ -227,7 +228,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
     let is_c = !cppstd.starts_with("c++");
 
     let info = BuildInfo{
-        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if build.cpp.to_ascii_lowercase().starts_with("c++") { ".cpp" } else { ".c" }).unwrap(),
+        sources: fetch::get_source_files(&PathBuf::from(&build.srcdir), if is_c { ".c" } else { ".cpp" }).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
@@ -242,6 +243,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
         is_c,
         config,
         toolset,
+        projkind,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };

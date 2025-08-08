@@ -4,6 +4,7 @@ use crate::{
     Config,
     exec::BuildInfo,
     fetch::FileInfo,
+    repr::ToolSet,
     Error,
     log_info,
 };
@@ -14,8 +15,8 @@ struct TestInfo{
     incdirs: Vec<String>,
 }
 
-fn inherited(build: &BuildFile, config: Config) -> TestInfo {
-    let mut deps = crate::fetch::get_libraries(build.dependencies.clone(), config, &build.cpp).unwrap();
+fn inherited(build: &BuildFile, config: Config, mingw: bool) -> TestInfo {
+    let mut deps = crate::fetch::get_libraries(build.dependencies.clone(), config, mingw, &build.cpp).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -25,10 +26,18 @@ fn inherited(build: &BuildFile, config: Config) -> TestInfo {
     }
 }
 
-pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(), Error> {
+pub fn test_lib(build: BuildFile, config: Config, mingw: bool, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test/").unwrap() {
         return Err(Error::MissingTests)
     }
+
+    let toolset = if cfg!(target_os = "windows") && !mingw {
+        ToolSet::MSVC
+    } else if cfg!(target_os = "linux") || mingw {
+        ToolSet::GNU
+    } else {
+        ToolSet::CLANG
+    };
 
     let inc = std::env::current_exe().unwrap() // ./target/release/mscmp.exe
                        .parent().unwrap()      // ./target/release/
@@ -36,7 +45,7 @@ pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(
                        .parent().unwrap()      // ./
                        .to_string_lossy().to_string();
 
-    let mut partial = inherited(&build, config);
+    let mut partial = inherited(&build, config, mingw);
     partial.defines.extend([ config.as_arg(), "TEST".to_string() ]);
     partial.incdirs.extend([ "test/".to_string(), format!("{}/testframework/", inc) ]);
     let mut headers = if let Some(inc) = build.inc_public {
@@ -68,7 +77,7 @@ pub fn test_lib(build: BuildFile, config: Config, args: Vec<String>) -> Result<(
         cppstd,
         is_c,
         config,
-        mingw: false,
+        toolset,
         defines: partial.defines,
         comp_args: vec![],
         link_args: vec![],

@@ -10,9 +10,9 @@ pub enum Action {
     #[allow(unused)]
     Set{ key: String, val: String },
     Clean,
-    Build{ config: Config },
-    Run  { config: Config, args: Vec<String> },
-    Test { config: Config, args: Vec<String> },
+    Build{ config: Config, mingw: bool },
+    Run  { config: Config, mingw: bool, args: Vec<String> },
+    Test { config: Config, mingw: bool, args: Vec<String> },
 }
 
 pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
@@ -50,36 +50,59 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             }
         }
         "build"|"b" => {
-            let config = match args.get(1).map(|a| a.as_str()) {
-                Some("-debug"  |"-d") => Config::Debug,
-                Some("-release"|"-r") => Config::Release,
-                _ => Config::Debug
-            };
-            Ok(Action::Build{ config })
+            let mut config = Config::Debug;
+            let mut mingw = false;
+            args.remove(0);
+            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
+                args.remove(pos);
+                config = Config::Debug;
+            }
+            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
+                args.remove(pos);
+                config = Config::Release;
+            }
+            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
+                args.remove(pos);
+                mingw = true;
+            }
+            if !args.is_empty() { return Err(Error::BadAction(args[0].clone()))}
+            Ok(Action::Build{ config, mingw })
         }
         "run"|"r" => {
-            let (config, count) = match args.get(1).map(|a| a.as_str()) {
-                Some("-debug"  |"-d") => (Config::Debug, 1),
-                Some("-release"|"-r") => (Config::Release, 1),
-                _ => (Config::Debug, 0)
-            };
+            let mut config = Config::Debug;
+            let mut mingw = false;
             args.remove(0);
-            if count == 1 {
-                args.remove(0);
+            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
+                args.remove(pos);
+                config = Config::Debug;
             }
-            Ok(Action::Run{ config, args })
+            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
+                args.remove(pos);
+                config = Config::Release;
+            }
+            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
+                args.remove(pos);
+                mingw = true;
+            }
+            Ok(Action::Run{ config, mingw, args })
         }
         "test"|"t" => {
-            let (config, count) = match args.get(1).map(|a| a.as_str()) {
-                Some("-debug"  |"-d") => (Config::Debug, 1),
-                Some("-release"|"-r") => (Config::Release, 1),
-                _ => (Config::Debug, 0)
-            };
+            let mut config = Config::Debug;
+            let mut mingw = false;
             args.remove(0);
-            if count == 1 {
-                args.remove(0);
+            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
+                args.remove(pos);
+                config = Config::Debug;
             }
-            Ok(Action::Test{ config, args })
+            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
+                args.remove(pos);
+                config = Config::Release;
+            }
+            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
+                args.remove(pos);
+                mingw = true;
+            }
+            Ok(Action::Test{ config, mingw, args })
         }
         _ => Err(Error::BadAction(args[1].clone())),
     }

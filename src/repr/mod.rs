@@ -31,6 +31,51 @@ impl ProjKind {
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolSet {
+    MSVC,
+    GNU,
+    CLANG,
+}
+
+#[allow(unused)]
+impl ToolSet {
+    pub fn is_msvc(&self) -> bool {
+        matches!(self, Self::MSVC)
+    }
+    pub fn is_gnu(&self) -> bool {
+        matches!(self, Self::GNU)
+    }
+    pub fn is_gnu_compat(&self) -> bool {
+        matches!(self, Self::GNU|Self::CLANG)
+    }
+    pub fn ext(&self, kind: ProjKind) -> String {
+        match kind {
+            ProjKind::App => self.app_ext(),
+            ProjKind::Lib => self.lib_ext(),
+        }
+    }
+    pub fn app_ext(&self) -> String {
+        match self {
+            Self::MSVC => ".exe".to_string(),
+            _ => String::new(),
+        }
+    }
+    pub fn lib_ext(&self) -> String {
+        match self {
+            Self::MSVC => ".lib".to_string(),
+            _ => ".a".to_string(),
+        }
+    }
+    pub fn lib_prefix(&self) -> String {
+        match self {
+            Self::MSVC => String::new(),
+            _ => "lib".to_string(),
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Config {
     Debug,
     Release,

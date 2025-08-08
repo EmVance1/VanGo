@@ -8,9 +8,6 @@ pub struct BuildFile {
     pub cpp: String,
     pub dependencies: Vec<String>,
 
-    #[serde(default)]
-    pub mingw: bool,
-
     #[serde(default = "src_default")]
     pub srcdir: String,
     #[serde(default)]

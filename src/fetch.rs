@@ -120,7 +120,7 @@ pub struct Dependencies {
 }
 
 
-pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Result<Dependencies, Error> {
+pub fn get_libraries(libraries: Vec<String>, config: Config, mingw: bool, maxcpp: &str) -> Result<Dependencies, Error> {
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
     let mut links = Vec::new();
@@ -159,18 +159,16 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
                 log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
                 let save = std::env::current_dir().unwrap();
                 std::env::set_current_dir(&dir).unwrap();
-                let output = std::process::Command::new("mscmp")
-                    .arg("build")
-                    .arg(format!("-{}", config))
-                    .status()
-                    .unwrap();
+                let mut cmd = std::process::Command::new("mscmp");
+                cmd.arg("build").arg(format!("-{}", config));
+                if mingw { cmd.arg("-mingw"); }
+                let output = cmd.status().unwrap();
                 if output.code() == Some(8) {
                     rebuilt = true;
                 } else {
                     println!();
                 }
                 std::env::set_current_dir(&save).unwrap();
-                let mingw = build.mingw;
                 let libinfo = LibFile::from(build)
                     .validate(maxcpp)?
                     .linearise(config, version)?;
@@ -179,13 +177,14 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
                 if cfg!(target_os = "windows") && !mingw {
                     for l in &libinfo.links {
                         relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
+                        links.push(format!("{}.lib", l));
                     }
                 } else {
                     for l in &libinfo.links {
-                        relink.push(FileInfo::from_str(&format!("{dir}/{}/lib{}.a", libinfo.libdir, l)));
+                        relink.push(FileInfo::from_str(&format!("{name}/{}/lib{}.a", libinfo.libdir, l)));
+                        links.push(l.to_string());
                     }
                 }
-                links.extend(libinfo.links);
                 defines.extend(libinfo.defines);
             }
         }
@@ -211,18 +210,16 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(&name).unwrap();
-            let output = std::process::Command::new("mscmp")
-                .arg("build")
-                .arg(format!("-{}", config))
-                .status()
-                .unwrap();
+            let mut cmd = std::process::Command::new("mscmp");
+            cmd.arg("build").arg(format!("-{}", config));
+            if mingw { cmd.arg("-mingw"); }
+            let output = cmd.status().unwrap();
             if output.code() == Some(8) {
                 rebuilt = true;
             } else {
                 println!();
             }
             std::env::set_current_dir(&save).unwrap();
-            let mingw = build.mingw;
             let libinfo = LibFile::from(build)
                 .validate(maxcpp)?
                 .linearise(config, version)?;
@@ -230,14 +227,15 @@ pub fn get_libraries(libraries: Vec<String>, config: Config, maxcpp: &str) -> Re
             libdirs.push(format!("{name}/{}", libinfo.libdir));
             if cfg!(target_os = "windows") && !mingw {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{name}/{}/{}", libinfo.libdir, l)));
+                    relink.push(FileInfo::from_str(&format!("{name}/{}/{}.lib", libinfo.libdir, l)));
+                    links.push(format!("{}.lib", l));
                 }
             } else {
                 for l in &libinfo.links {
                     relink.push(FileInfo::from_str(&format!("{name}/{}/lib{}.a", libinfo.libdir, l)));
+                    links.push(l.to_string());
                 }
             }
-            links.extend(libinfo.links);
             defines.extend(libinfo.defines);
         }
     }

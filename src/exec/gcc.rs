@@ -47,6 +47,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     cmd.args(objs.into_iter().map(|o| o.repr));
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
+    std::io::stderr().write_all(&output.stderr).unwrap();
     println!();
     if !output.status.success() { Err(Error::LinkerFail(info.outfile.repr)) } else { Ok(true) }
 }
@@ -54,14 +55,15 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
     let mut cmd = Command::new(if info.is_c { "gcc" } else { "g++" });
     cmd.args(objs.into_iter().map(|fi| fi.repr));
-    cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
-    cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args([
         "-o",
         &info.outfile.repr,
     ]);
+    cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
+    cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
     let output = cmd.output().unwrap();
     std::io::stdout().write_all(&output.stdout).unwrap();
+    std::io::stderr().write_all(&output.stderr).unwrap();
     println!();
     if !output.status.success() {
         Err(Error::LinkerFail(info.outfile.repr))
@@ -102,11 +104,9 @@ pub mod prep {
                 cmd.arg("-O2");
             }
             log_info_noline!("compiling precompiled header: {}\n", cmpd);
-            println!("{:#?}", cmd);
             let output = cmd.output().unwrap();
             if !output.status.success() {
-                println!("failed");
-                std::io::stdout().write_all(&output.stdout).unwrap();
+                std::io::stderr().write_all(&output.stderr).unwrap();
             }
             println!();
         }

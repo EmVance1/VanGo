@@ -59,21 +59,29 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn action_build(build: BuildFile, config: Config, test: bool) -> Result<(bool, String), Error> {
+fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Result<(bool, String), Error> {
     let kind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
-    let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
+    let toolset = if cfg!(target_os = "windows") && !mingw {
+        ToolSet::MSVC
+    } else if cfg!(target_os = "linux") || mingw {
+        ToolSet::GNU
+    } else {
+        ToolSet::CLANG
+    };
+
+    let mut deps = fetch::get_libraries(build.dependencies, config, mingw, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
     let outpath = if let ProjKind::App = kind {
-        format!("bin/{}/{}{}", config, build.project, kind.ext(build.mingw))
+        format!("bin/{}/{}{}", config, build.project, kind.ext(mingw))
     } else {
-        format!("bin/{}/{}{}{}", config, if cfg!(target_os = "windows") && !build.mingw { "" } else { "lib" }, build.project, kind.ext(build.mingw))
+        format!("bin/{}/{}{}{}", config, toolset.lib_prefix(), build.project, toolset.ext(kind))
     };
     let outfile = FileInfo::from_str(&outpath);
 
@@ -104,7 +112,7 @@ fn action_build(build: BuildFile, config: Config, test: bool) -> Result<(bool, S
         cppstd,
         is_c,
         config,
-        mingw: build.mingw,
+        toolset,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
@@ -134,9 +142,17 @@ fn main() -> std::process::ExitCode {
     } else if let input::Action::Set{ .. } = &cmd {
         0.into()
     } else {
-        let bfile = std::fs::read_to_string("build.json")
-            .map_err(|_| Error::FileNotFound("build.json".to_string()))
-            .unwrap_or_else(|e| exit_with!("{}", e));
+        let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {
+            std::fs::read_to_string("win.build.json").unwrap()
+        } else if cfg!(target_os = "linux") && std::fs::exists("linux.build.json").unwrap() {
+            std::fs::read_to_string("linux.build.json").unwrap()
+        } else if cfg!(target_os = "macos") && std::fs::exists("macos.build.json").unwrap() {
+            std::fs::read_to_string("macos.build.json").unwrap()
+        } else {
+            std::fs::read_to_string("build.json")
+                .map_err(|_| Error::FileNotFound("build.json".to_string()))
+                .unwrap_or_else(|e| exit_with!("{}", e))
+        };
         let build = BuildFile::from_str(&bfile)
             .map_err(Error::JsonParse)
             .unwrap_or_else(|e| exit_with!("{}", e));
@@ -146,24 +162,24 @@ fn main() -> std::process::ExitCode {
                 action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
-            input::Action::Build{ config } => {
+            input::Action::Build{ config, mingw } => {
                 let build = build.finalise(config);
-                let (rebuilt, _) = action_build(build, config, false).unwrap_or_else(|e| exit_with!("{}", e));
+                let (rebuilt, _) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
                 if rebuilt {
                     8.into()
                 } else {
                     0.into()
                 }
             }
-            input::Action::Run{ config, args } => {
+            input::Action::Run{ config, mingw, args } => {
                 let build = build.finalise(config);
-                let (_, outfile) = action_build(build, config, false).unwrap_or_else(|e| exit_with!("{}", e));
+                let (_, outfile) = action_build(build, config, mingw, false).unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args).into()
             }
-            input::Action::Test{ config, args } => {
+            input::Action::Test{ config, mingw, args } => {
                 let build = build.finalise(config);
-                action_build(build.clone(), config, true).unwrap_or_else(|e| exit_with!("{}", e));
-                testfw::test_lib(build, config, args).unwrap_or_else(|e| exit_with!("{}", e));
+                action_build(build.clone(), config, mingw, true).unwrap_or_else(|e| exit_with!("{}", e));
+                testfw::test_lib(build, config, mingw, args).unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
             _ => 0.into(),
@@ -178,13 +194,21 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
-    let mut deps = fetch::get_libraries(build.dependencies, config, &build.cpp)?;
+    let toolset = if cfg!(target_os = "windows") && !mingw {
+        ToolSet::MSVC
+    } else if cfg!(target_os = "linux") || mingw {
+        ToolSet::GNU
+    } else {
+        ToolSet::CLANG
+    };
+
+    let mut deps = fetch::get_libraries(build.dependencies, config, mingw, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
-    let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext(build.mingw));
+    let outpath = format!("bin/{}/{}{}", config, build.project, kind.ext(mingw));
     let outfile = FileInfo::from_str(&outpath);
 
     let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
@@ -214,7 +238,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
         cppstd,
         is_c,
         config,
-        mingw,
+        toolset,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };

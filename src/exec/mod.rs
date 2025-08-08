@@ -4,7 +4,7 @@ mod msvc;
 mod gcc;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{repr::Config, fetch::FileInfo, error::Error, log_info};
+use crate::{repr::{Config, ToolSet}, fetch::FileInfo, error::Error, log_info};
 use incremental::BuildLevel;
 
 
@@ -24,7 +24,7 @@ pub struct BuildInfo {
     pub cppstd: String,
     pub is_c: bool,
     pub config: Config,
-    pub mingw: bool,
+    pub toolset: ToolSet,
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
 }
@@ -62,7 +62,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if cfg!(target_os = "windows") && !info.mingw {
+        if info.toolset.is_msvc() {
             msvc::prep::precompile_header(pch, &info)
         } else {
             gcc::prep::precompile_header(pch, &info)
@@ -84,7 +84,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             let mut batch = 0;
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
-                if cfg!(target_os = "windows") && !info.mingw {
+                if info.toolset.is_msvc() {
                     let args = msvc::compile_cmd(src, &obj, info.compile_info());
                     handles.push((src, std::process::Command::new("cl")
                         .args(args)
@@ -117,6 +117,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                         let output = proc.wait_with_output().unwrap();
                         if !output.status.success() {
                             std::io::stdout().write_all(&output.stdout).unwrap();
+                            std::io::stderr().write_all(&output.stderr).unwrap();
                             return Err(Error::CompilerFail(src.to_string()))
                         }
                     }
@@ -129,6 +130,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                 let output = proc.wait_with_output().unwrap();
                 if !output.status.success() {
                     std::io::stdout().write_all(&output.stdout).unwrap();
+                    std::io::stdout().write_all(&output.stderr).unwrap();
                     return Err(Error::CompilerFail(src.to_string()))
                 }
             }
@@ -136,7 +138,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     }
 
     log_info!("linking:   {}", info.outfile.repr);
-    if cfg!(target_os = "windows") && !info.mingw {
+    if info.toolset.is_msvc() {
         let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
         if info.outfile.repr.ends_with(".lib") {
             msvc::link_lib(all_objs, info)
@@ -153,14 +155,13 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     }
 }
 
-#[cfg(target_os = "windows")]
 #[allow(unused)]
 pub fn run_check_outdated(info: BuildInfo) -> bool {
     log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if cfg!(target_os = "windows") && !info.mingw {
+        if info.toolset.is_msvc() {
             msvc::prep::precompile_header(pch, &info)
         } else {
             gcc::prep::precompile_header(pch, &info)

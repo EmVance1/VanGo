@@ -38,11 +38,15 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     cmd.arg("rcs");
     cmd.arg(format!("{}", info.outfile.repr));
     cmd.args(objs.into_iter().map(|o| o.repr));
-    let output = cmd.output().unwrap();
-    std::io::stdout().write_all(&output.stdout).unwrap();
-    std::io::stderr().write_all(&output.stderr).unwrap();
     println!();
-    if !output.status.success() { Err(Error::LinkerFail(info.outfile.repr)) } else { Ok(true) }
+    let output = cmd.output().unwrap();
+    if !output.status.success() {
+        std::io::stderr().write_all(&output.stderr).unwrap();
+        Err(Error::LinkerFail(info.outfile.repr))
+    } else {
+        log_info!("successfully built project {}", info.outfile.repr);
+        Ok(true)
+    }
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
@@ -54,11 +58,10 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     ]);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
     cmd.args(info.links.iter().map(|l| format!("-l{}", l)));
-    let output = cmd.output().unwrap();
-    std::io::stdout().write_all(&output.stdout).unwrap();
-    std::io::stderr().write_all(&output.stderr).unwrap();
     println!();
+    let output = cmd.output().unwrap();
     if !output.status.success() {
+        std::io::stderr().write_all(&output.stderr).unwrap();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
         log_info!("successfully built project {}", info.outfile.repr);
@@ -68,7 +71,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 
 
 pub mod prep {
-    use crate::{fetch::FileInfo, log_info_noline};
+    use crate::{fetch::FileInfo, log_error, log_info_noline};
     use super::BuildInfo;
     use std::{
         process::Command,
@@ -102,7 +105,7 @@ pub mod prep {
                 cmd.arg("-g");
             }
             log_info_noline!("compiling precompiled header: {}\n", cmpd);
-            let output = cmd.output().unwrap();
+            let output = cmd.output().unwrap_or_else(|_| { println!(); log_error!("compiler not found for current target"); std::process::exit(1) });
             if !output.status.success() {
                 std::io::stderr().write_all(&output.stderr).unwrap();
             }

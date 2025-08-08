@@ -58,12 +58,10 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     cmd.args(info.link_args);
     let output = cmd.output().unwrap();
     if !output.status.success() {
-        std::io::stdout().write_all(&output.stdout).unwrap();
+        std::io::stderr().write_all(&output.stdout).unwrap();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
-        println!();
         log_info!("successfully built project {}", info.outfile.repr);
-        println!();
         Ok(true)
     }
 }
@@ -87,19 +85,18 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     }
     let output = cmd.output().unwrap();
     if !output.status.success() {
-        std::io::stdout().write_all(&output.stdout).unwrap();
+        std::io::stderr().write_all(&output.stdout).unwrap();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
         println!();
         log_info!("successfully built project {}", info.outfile.repr);
-        println!();
         Ok(true)
     }
 }
 
 
 pub mod prep {
-    use crate::{fetch::FileInfo, log_info_noline};
+    use crate::{fetch::FileInfo, log_error, log_info_noline};
     use super::BuildInfo;
     use std::{
         process::Command,
@@ -147,7 +144,11 @@ pub mod prep {
             }
             log_info_noline!("compiling precompiled header: ");
             let _ = std::io::stdout().flush();
-            std::io::stdout().write_all(&cmd.output().unwrap().stdout).unwrap();
+            let output = cmd.output().unwrap_or_else(|_| { println!(); log_error!("compiler not found for current target"); std::process::exit(1) });
+            if !output.status.success() {
+                // std::io::stdout().write_all(&output.stdout).unwrap();
+                std::io::stderr().write_all(&output.stdout).unwrap();
+            }
             println!();
         }
     }

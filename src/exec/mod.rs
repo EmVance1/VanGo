@@ -4,7 +4,7 @@ mod msvc;
 mod posix;
 
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{error::Error, fetch::FileInfo, log_info, repr::{Config, ProjKind, ToolSet}};
+use crate::{error::Error, fetch::FileInfo, repr::{Config, ProjKind, ToolSet}, log_info, log_error };
 use incremental::BuildLevel;
 
 
@@ -78,28 +78,38 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             return Ok(false)
         }
         BuildLevel::LinkOnly => {
-            let _ = std::fs::remove_file(&info.outfile.repr); // .unwrap();
+            let _ = std::fs::remove_file(&info.outfile.repr);
         }
         BuildLevel::CompileAndLink(elems) => {
             let _ = std::fs::remove_file(&info.outfile.repr);
             let mut handles = Vec::new();
+            let mut failure = false;
             const LIMIT: u32 = 12;
             let mut batch = 0;
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
                 if info.toolset.is_msvc() {
-                    handles.push((src, msvc::compile_cmd(src, &obj, info.compile_info()).spawn().unwrap()));
+                    handles.push((src, msvc::compile_cmd(src, &obj, info.compile_info())
+                            .stdout(std::process::Stdio::piped())
+                            .stderr(std::process::Stdio::null())
+                            .spawn()
+                            .unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) })));
                 } else {
-                    handles.push((src, posix::compile_cmd(src, &obj, info.compile_info()).spawn().unwrap()));
+                    handles.push((src, posix::compile_cmd(src, &obj, info.compile_info())
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::piped())
+                            .spawn()
+                            .unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) })));
                 };
                 batch += 1;
                 if batch == LIMIT {
                     for (src, proc) in handles {
                         let output = proc.wait_with_output().unwrap();
                         if !output.status.success() {
-                            std::io::stdout().write_all(&output.stdout).unwrap();
+                            log_error!("failed to compile file '{src}'");
+                            std::io::stderr().write_all(&output.stdout).unwrap();
                             std::io::stderr().write_all(&output.stderr).unwrap();
-                            return Err(Error::CompilerFail(src.to_string()))
+                            failure = true;
                         }
                     }
                     batch = 0;
@@ -110,10 +120,15 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             for (src, proc) in handles {
                 let output = proc.wait_with_output().unwrap();
                 if !output.status.success() {
-                    std::io::stdout().write_all(&output.stdout).unwrap();
-                    std::io::stdout().write_all(&output.stderr).unwrap();
-                    return Err(Error::CompilerFail(src.to_string()))
+                    log_error!("failed to compile file '{src}'");
+                    std::io::stderr().write_all(&output.stdout).unwrap();
+                    std::io::stderr().write_all(&output.stderr).unwrap();
+                    failure = true;
                 }
+            }
+
+            if failure {
+                return Err(Error::CompilerFail(info.outfile.repr))
             }
         }
     }

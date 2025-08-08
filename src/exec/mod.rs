@@ -65,9 +65,9 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
         if info.toolset.is_msvc() {
             if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
+                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
@@ -78,6 +78,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             }
         } else {
             if let Some(mut cmd) = posix::precompile_header(pch, &info) {
+                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
@@ -183,39 +184,40 @@ pub fn run_app(outfile: &str,  runargs: Vec<String>) -> u8 {
 
 
 #[allow(unused)]
-pub fn run_check_outdated(info: BuildInfo) -> bool {
+pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
     log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
         if info.toolset.is_msvc() {
             if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
-                let output = cmd.output().unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) });
+                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
+                let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stdout).unwrap();
                     eprintln!();
-                    return false;
+                    return Err(Error::CompilerFail(info.outfile.repr))
                 }
             }
         } else {
             if let Some(mut cmd) = posix::precompile_header(pch, &info) {
-                let output = cmd.output().unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) });
+                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
+                let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stderr).unwrap();
                     eprintln!();
-                    return false;
+                    return Err(Error::CompilerFail(info.outfile.repr))
                 }
             }
         }
     }
 
     if let BuildLevel::UpToDate = incremental::get_build_level(&info) {
-        return false
+        return Ok(false)
     } else {
-        return true
+        return Ok(true)
     }
 }
 

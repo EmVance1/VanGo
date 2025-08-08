@@ -39,13 +39,13 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     cmd.arg("rcs");
     cmd.arg(format!("{}", info.outfile.repr));
     cmd.args(objs.into_iter().map(|o| o.repr));
-    println!();
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
+        eprintln!();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
-        log_info!("successfully built project {}", info.outfile.repr);
+        log_info!("successfully built project {}\n", info.outfile.repr);
         Ok(true)
     }
 }
@@ -63,9 +63,10 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
+        eprintln!();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
-        log_info!("successfully built project {}", info.outfile.repr);
+        log_info!("successfully built project {}\n", info.outfile.repr);
         Ok(true)
     }
 }

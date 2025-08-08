@@ -247,7 +247,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
-    let rebuilt = exec::run_check_outdated(info);
+    let rebuilt = exec::run_check_outdated(info)?;
     Ok(rebuilt_dep || rebuilt)
 }
 

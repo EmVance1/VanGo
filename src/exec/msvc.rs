@@ -57,13 +57,13 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
         "/MACHINE:X64".to_string(),
     ]);
     cmd.args(info.link_args);
-    eprintln!();
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
+        eprintln!();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
-        log_info!("successfully built project {}", info.outfile.repr);
+        log_info!("successfully built project {}\n", info.outfile.repr);
         Ok(true)
     }
 }
@@ -85,13 +85,13 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
     if info.config.is_debug() {
         cmd.arg("/DEBUG");
     }
-    println!();
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
+        eprintln!();
         Err(Error::LinkerFail(info.outfile.repr))
     } else {
-        log_info!("successfully built project {}", info.outfile.repr);
+        log_info!("successfully built project {}\n", info.outfile.repr);
         Ok(true)
     }
 }

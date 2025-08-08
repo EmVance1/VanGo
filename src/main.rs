@@ -70,7 +70,7 @@ fn action_build(build: BuildFile, config: Config, mingw: bool, test: bool) -> Re
     let toolset = if cfg!(target_os = "windows") && !mingw {
         ToolSet::MSVC
     } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU
+        ToolSet::GNU{ mingw }
     } else {
         ToolSet::CLANG
     };
@@ -201,7 +201,7 @@ fn action_check_outdated(build: BuildFile, config: Config, mingw: bool, test: bo
     let toolset = if cfg!(target_os = "windows") && !mingw {
         ToolSet::MSVC
     } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU
+        ToolSet::GNU{ mingw }
     } else {
         ToolSet::CLANG
     };

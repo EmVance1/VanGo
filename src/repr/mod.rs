@@ -33,7 +33,7 @@ impl ProjKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolSet {
     MSVC,
-    GNU,
+    GNU{ mingw: bool },
     CLANG,
 }
 
@@ -43,13 +43,13 @@ impl ToolSet {
         matches!(self, Self::MSVC)
     }
     pub fn is_gnu(&self) -> bool {
-        matches!(self, Self::GNU)
+        matches!(self, Self::GNU{..})
     }
     pub fn is_clang(&self) -> bool {
         matches!(self, Self::CLANG)
     }
     pub fn is_posix(&self) -> bool {
-        matches!(self, Self::GNU|Self::CLANG)
+        matches!(self, Self::GNU{..}|Self::CLANG)
     }
     pub fn is_llvm(&self) -> bool {
         matches!(self, Self::CLANG)
@@ -81,21 +81,31 @@ impl ToolSet {
     pub fn compiler(&self, is_c: bool) -> String {
         match self {
             Self::MSVC => "cl".to_string(),
-            Self::GNU => if is_c { "gcc".to_string() } else { "g++".to_string() },
+            Self::GNU{..} => if is_c { "gcc".to_string() } else { "g++".to_string() },
             Self::CLANG => if is_c { "clang".to_string() } else { "clang++".to_string() },
         }
     }
     pub fn linker(&self, is_c: bool) -> String {
         match self {
             Self::MSVC => "LINK".to_string(),
-            Self::GNU|Self::CLANG => self.compiler(is_c),
+            Self::GNU{..}|Self::CLANG => self.compiler(is_c),
         }
     }
     pub fn archiver(&self) -> String {
         match self {
             Self::MSVC => "LIB".to_string(),
-            Self::GNU => "ar".to_string(),
+            Self::GNU{..} => "ar".to_string(),
             Self::CLANG => "llvm-ar".to_string(),
+        }
+    }
+}
+
+impl Display for ToolSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MSVC   => write!(f, "MSVC"),
+            Self::GNU{ mingw } => write!(f, "{}", if *mingw { "MinGW" } else { "GNU" }),
+            Self::CLANG => write!(f, "Clang/LLVM")
         }
     }
 }

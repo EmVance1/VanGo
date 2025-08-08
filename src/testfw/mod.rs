@@ -34,7 +34,7 @@ pub fn test_lib(build: BuildFile, config: Config, mingw: bool, args: Vec<String>
     let toolset = if cfg!(target_os = "windows") && !mingw {
         ToolSet::MSVC
     } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU
+        ToolSet::GNU{ mingw }
     } else {
         ToolSet::CLANG
     };

@@ -68,7 +68,8 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
         log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
         if info.toolset.is_msvc() {
             if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
-                let output = cmd.output().unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) });
+                let output = cmd.output()
+                    .unwrap_or_else(|_| { log_error!("compiler not found for current toolchain: {}", info.toolset); std::process::exit(1) });
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stdout).unwrap();
@@ -78,7 +79,8 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             }
         } else {
             if let Some(mut cmd) = posix::precompile_header(pch, &info) {
-                let output = cmd.output().unwrap_or_else(|_| { log_error!("compiler not found for current target"); std::process::exit(1) });
+                let output = cmd.output()
+                    .unwrap_or_else(|_| { log_error!("compiler not found for current toolchain: {}", info.toolset); std::process::exit(1) });
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stderr).unwrap();

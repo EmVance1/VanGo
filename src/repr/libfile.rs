@@ -145,7 +145,7 @@ pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
             .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
         if !matches!(num, 98 | 3 | 11 | 14 | 17 | 20 | 23) {
             Err(Error::InvalidCppStd(cpp.to_string()))
-        } else if num < 50 {
+        } else if num < 80 {
             Ok(Lang::Cpp(100 + num))
         } else {
             Ok(Lang::Cpp(num))
@@ -160,7 +160,7 @@ pub fn u32_from_cppstd(cpp: &str) -> Result<Lang, Error> {
             .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
         if !matches!(num, 89 | 99 | 11 | 17 | 20) {
             Err(Error::InvalidCppStd(cpp.to_string()))
-        } else if num < 50 {
+        } else if num < 80 {
             Ok(Lang::C(100 + num))
         } else {
             Ok(Lang::C(num))
@@ -185,6 +185,7 @@ mod tests {
 
     #[test]
     pub fn test_u32_from_cstd() {
+        assert_eq!(u32_from_cppstd("c").unwrap(),   Lang::C(0));
         assert_eq!(u32_from_cppstd("c89").unwrap(), Lang::C(89));
         assert_eq!(u32_from_cppstd("c99").unwrap(), Lang::C(99));
         assert_eq!(u32_from_cppstd("C11").unwrap(), Lang::C(111));

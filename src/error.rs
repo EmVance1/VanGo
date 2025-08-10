@@ -1,11 +1,14 @@
 use thiserror::Error;
 
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("no action provided [build, run, clean]")]
     MissingAction,
     #[error("invalid action '{0}' provided [build, run, clean]")]
     BadAction(String),
+    #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
+    ExtraArgs(String, Vec<String>),
     #[error("file '{0}' not found")]
     FileNotFound(String),
     #[error("directory '{0}' not found")]
@@ -32,3 +35,4 @@ pub enum Error {
     #[allow(unused)]
     Unknown,
 }
+

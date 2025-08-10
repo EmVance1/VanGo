@@ -13,7 +13,8 @@ use fetch::FileInfo;
 use repr::*;
 use std::{io::Write, path::PathBuf};
 
-fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
+
+fn action_new(name: &str, library: bool, is_c: bool) -> Result<(), Error> {
     log_info!(
         "creating new {} project: {}",
         if library { "library" } else { "application" },
@@ -21,13 +22,13 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
     );
     std::fs::create_dir(name).unwrap();
     std::fs::create_dir(format!("{}/src", name)).unwrap();
-    let ext = if isc { "c" } else { "cpp" };
-    let header = if isc { "stdio.h" } else { "cstdio" };
-    let cstd = if isc { "c11" } else { "c++17" };
+    let ext = if is_c { "c" } else { "cpp" };
+    let header = if is_c { "stdio.h" } else { "cstdio" };
+    let cstd = if is_c { "c11" } else { "c++17" };
     if library {
         std::fs::create_dir(format!("{}/include", name)).unwrap();
         std::fs::create_dir(format!("{}/include/{}", name, name)).unwrap();
-        if isc {
+        if is_c {
             std::fs::write(
                 format!("{}/include/{}/lib.h", name, name),
                 "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif",
@@ -52,7 +53,7 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
         std::fs::write(format!("{}/build.json", name), json).unwrap();
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc\n-Iinclude/{}",
-            if !isc { "-xc++\n" } else { "" },
+            if !is_c { "-xc++\n" } else { "" },
             name
         );
         std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
@@ -71,7 +72,7 @@ fn action_new(name: &str, library: bool, isc: bool) -> Result<(), Error> {
         std::fs::write(format!("{}/build.json", name), json).unwrap();
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc",
-            if !isc { "-xc++\n" } else { "" }
+            if !is_c { "-xc++\n" } else { "" }
         );
         std::fs::write(format!("{}/compile_flags.txt", name), flags).unwrap();
     }
@@ -177,13 +178,11 @@ macro_rules! exit_with {
 }
 
 fn main() -> std::process::ExitCode {
-    let args: Vec<_> = std::env::args().collect();
+    let args: Vec<_> = std::env::args().skip(1).collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_with!("{}", e));
 
-    if let input::Action::New { name, library, isc } = &cmd {
-        action_new(name, *library, *isc).unwrap_or_else(|e| exit_with!("{}", e));
-        0.into()
-    } else if let input::Action::Set { .. } = &cmd {
+    if let input::Action::New { name, library, is_c } = &cmd {
+        action_new(name, *library, *is_c).unwrap_or_else(|e| exit_with!("{}", e));
         0.into()
     } else {
         let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {

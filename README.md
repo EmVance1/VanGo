@@ -54,9 +54,9 @@ Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everyt
 The build system is invoked like so:
 
 - `vango n[ew]   [-lib] [-c] name`
-- `vango b[uild] [-r[elease]]`
-- `vango r[un]   [-r[elease]] [args...]`
-- `vango t[est]  [-r[elease]] [tests...]`
+- `vango b[uild] [-r[elease]] [-mingw]`
+- `vango r[un]   [-r[elease]] [-mingw] [-- args*]`
+- `vango t[est]  [-r[elease]] [-mingw] [tests*]`
 - `vango c[lean]`
 
 VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.

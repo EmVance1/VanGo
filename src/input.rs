@@ -1,16 +1,12 @@
 use crate::{error::Error, repr::Config};
 
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     New {
         name: String,
         library: bool,
-        isc: bool,
-    },
-    #[allow(unused)]
-    Set {
-        key: String,
-        val: String,
+        is_c: bool,
     },
     Clean,
     Build {
@@ -29,115 +25,170 @@ pub enum Action {
     },
 }
 
+
 pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
-    args.remove(0);
     if args.is_empty() {
         return Err(Error::MissingAction);
     }
 
-    match args[0].as_str() {
+    match args.remove(0).as_str() {
         "new" | "n" => {
-            if args.len() == 2 {
-                Ok(Action::New {
-                    name: args[1].clone(),
-                    library: false,
-                    isc: false,
-                })
+            let library = args.remove_if(|s| *s == "-lib").is_some();
+            let is_c = args.remove_if(|s| *s == "-c").is_some();
+            if args.len() == 1 {
+                let name = args.remove(0);
+                Ok(Action::New{ name, library, is_c })
             } else {
-                let mut library = false;
-                let mut isc = false;
-                let mut safety = 0;
-                while args.len() > 2 {
-                    if let Some(pos) = args.iter().position(|s| *s == "-lib") {
-                        args.remove(pos);
-                        library = true;
-                    } else if let Some(pos) = args.iter().position(|s| *s == "-c") {
-                        args.remove(pos);
-                        isc = true;
-                    } else if safety > 2 {
-                        return Err(Error::BadAction(args[1].clone()));
-                    }
-                    safety += 1;
-                }
-                Ok(Action::New {
-                    name: args[1].clone(),
-                    library,
-                    isc,
-                })
+                Err(Error::ExtraArgs("new".to_string(), args))
             }
         }
         "clean" | "c" => {
-            if args.len() == 1 {
+            if args.is_empty() {
                 Ok(Action::Clean)
             } else {
-                Err(Error::BadAction(args[2].clone()))
+                Err(Error::ExtraArgs("clean".to_string(), args))
             }
         }
         "build" | "b" => {
-            let mut config = Config::Debug;
-            let mut mingw = false;
-            args.remove(0);
-            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
-                args.remove(pos);
-                config = Config::Debug;
+            let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
+            let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
+            if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
+            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let config = if release { Config::Release } else { Config::Debug };
+            if args.is_empty() {
+                Ok(Action::Build{ config, mingw })
+            } else {
+                Err(Error::ExtraArgs("build".to_string(), args))
             }
-            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
-                args.remove(pos);
-                config = Config::Release;
-            }
-            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
-                args.remove(pos);
-                mingw = true;
-            }
-            if !args.is_empty() {
-                return Err(Error::BadAction(args[0].clone()));
-            }
-            Ok(Action::Build { config, mingw })
         }
         "run" | "r" => {
-            let mut config = Config::Debug;
-            let mut mingw = false;
-            args.remove(0);
-            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
-                args.remove(pos);
-                config = Config::Debug;
-            }
-            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
-                args.remove(pos);
-                config = Config::Release;
-            }
-            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
-                args.remove(pos);
-                mingw = true;
-            }
-            Ok(Action::Run {
-                config,
-                mingw,
-                args,
-            })
+            let user_args = if let Some(i) = args.iter().position(|a| *a == "--") {
+                let mut temp = args.split_off(i);
+                temp.remove(0);
+                temp
+            } else {
+                vec![]
+            };
+            let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
+            let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
+            if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
+            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let config = if release { Config::Release } else { Config::Debug };
+            Ok(Action::Run{ config, mingw, args: user_args })
         }
         "test" | "t" => {
-            let mut config = Config::Debug;
-            let mut mingw = false;
-            args.remove(0);
-            if let Some(pos) = args.iter().position(|s| *s == "-d" || *s == "-debug") {
-                args.remove(pos);
-                config = Config::Debug;
-            }
-            if let Some(pos) = args.iter().position(|s| *s == "-r" || *s == "-release") {
-                args.remove(pos);
-                config = Config::Release;
-            }
-            if let Some(pos) = args.iter().position(|s| *s == "-mingw") {
-                args.remove(pos);
-                mingw = true;
-            }
-            Ok(Action::Test {
-                config,
-                mingw,
-                args,
-            })
+            let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
+            let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
+            if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
+            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let config = if release { Config::Release } else { Config::Debug };
+            Ok(Action::Test{ config, mingw, args })
         }
         _ => Err(Error::BadAction(args[1].clone())),
     }
 }
+
+
+trait RemoveIf {
+    type Item;
+
+    fn remove_if<P: FnMut(&Self::Item) -> bool>(&mut self, p: P) -> Option<Self::Item>;
+}
+
+impl<T> RemoveIf for Vec<T> {
+    type Item = T;
+
+    fn remove_if<P: FnMut(&Self::Item) -> bool>(&mut self, p: P) -> Option<Self::Item> {
+        self.iter().position(p).and_then(|i| Some(self.remove(i)))
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn parse_action_new_1() {
+        let name = "foo".to_string();
+        let action = vec![ "new".to_string(), name.clone() ];
+        let result = parse_input(action);
+        assert_eq!(result.unwrap(), Action::New{ name, library: false, is_c: false });
+    }
+
+    #[test]
+    pub fn parse_action_new_2() {
+        let name = "foo".to_string();
+        let action = vec![ "new".to_string(), name.clone(), "-lib".to_string() ];
+        let result = parse_input(action);
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false });
+    }
+
+    #[test]
+    pub fn parse_action_new_3() {
+        let name = "foo".to_string();
+        let action = vec![ "new".to_string(), "-lib".to_string(), name.clone() ];
+        let result = parse_input(action);
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false });
+    }
+
+    #[test]
+    pub fn parse_action_new_4() {
+        let name = "foo".to_string();
+        let action = vec![ "new".to_string(), "-lib".to_string(), name.clone(), "-c".to_string() ];
+        let result = parse_input(action);
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: true });
+    }
+
+
+    #[test]
+    pub fn parse_action_build_1() {
+        let result = parse_input(vec![ "build".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Debug, mingw: false });
+    }
+
+    #[test]
+    pub fn parse_action_build_2() {
+        let result = parse_input(vec![ "build".to_string(), "-r".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, mingw: false });
+    }
+
+    #[test]
+    pub fn parse_action_build_3() {
+        let result = parse_input(vec![ "build".to_string(), "-mingw".to_string(), "-release".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, mingw: true });
+    }
+
+
+    #[test]
+    pub fn parse_action_run_1() {
+        let result = parse_input(vec![ "run".to_string(), "--".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, mingw: false, args: vec![] });
+    }
+
+    #[test]
+    pub fn parse_action_run_2() {
+        let result = parse_input(vec![ "run".to_string(), "-r".to_string(), "--".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Release, mingw: false, args: vec![] });
+    }
+
+    #[test]
+    pub fn parse_action_run_3() {
+        let result = parse_input(vec![ "run".to_string(), "--".to_string(), "-r".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, mingw: false, args: vec![ "-r".to_string() ] });
+    }
+
+
+    #[test]
+    pub fn parse_action_error_1() {
+        let result = parse_input(vec![ "build".to_string(), "-dummy".to_string() ]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    pub fn parse_action_error_2() {
+        let result = parse_input(vec![ "build".to_string(), "-release".to_string(), "-dummy".to_string() ]);
+        assert!(result.is_err());
+    }
+}
+

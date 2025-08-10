@@ -12,6 +12,7 @@ use crate::{
 use incremental::BuildLevel;
 use std::{io::Write, path::PathBuf, process::Command};
 
+
 #[derive(Debug)]
 pub struct BuildInfo {
     pub sources: Vec<FileInfo>,
@@ -237,43 +238,3 @@ pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[cfg(target_os = "windows")]
-    pub fn test_compile_cmd() {
-        let src = "src/main.cpp";
-        let obj = "bin/debug/obj/main.obj";
-        let empty = vec![];
-        let incdirs = vec!["src/".to_string()];
-        let pch = None;
-        let info = CompileInfo {
-            cppstd: "c++20",
-            is_c: false,
-            config: Config::Debug,
-            toolset: ToolSet::MSVC,
-            outdir: "bin/debug/obj/",
-            defines: &empty,
-            incdirs: &incdirs,
-            pch: &pch,
-            comp_args: &empty,
-        };
-
-        let cmd = msvc::compile_cmd(src, obj, info);
-        assert_eq!(cmd.get_args().collect::<Vec<_>>(), [
-                "/std:c++20",
-                "/c",
-                "src/main.cpp",
-                "/Fo:bin/debug/obj/main.obj",
-                "/EHsc",
-                "/Isrc/",
-                "/MDd",
-                "/Od",
-                "/Zi",
-                "/FS",
-            ]
-        );
-    }
-}

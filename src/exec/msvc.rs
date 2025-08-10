@@ -2,6 +2,7 @@ use super::{BuildInfo, CompileInfo};
 use crate::{Error, fetch::FileInfo, log_info};
 use std::{io::Write, path::PathBuf, process::Command};
 
+
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
     let mut cmd = std::process::Command::new("cl");
     if info.cppstd.ends_with("23") {
@@ -31,7 +32,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::proce
             "/MDd".to_string(),
             "/Od".to_string(),
             "/Zi".to_string(),
-            format!("/Fd:{}/vc143.pdb", info.outdir),
+            format!("/Fd:{}vc143.pdb", info.outdir),
             "/FS".to_string(),
         ]);
     }
@@ -131,7 +132,7 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::p
             cmd.args(["/MD", "/O2"]);
         } else {
             cmd.args(["/MDd", "/Od", "/Zi", "/FS"]);
-            cmd.arg(format!("/Fd:{}/vc143.pdb", info.outdir));
+            cmd.arg(format!("/Fd:{}vc143.pdb", info.outdir));
         }
         Some(cmd)
     } else {
@@ -153,3 +154,77 @@ const DEFAULT_LIBS: &[&str] = &[
     "odbccp32.lib",
     "gdi32.lib",
 ];
+
+
+#[cfg(test)]
+mod tests {
+    use crate::repr::{ToolSet, Config};
+
+    #[test]
+    pub fn compile_cmd_msvc_1() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.obj";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            cppstd: "c++20",
+            is_c: false,
+            config: Config::Debug,
+            toolset: ToolSet::MSVC,
+            outdir: "bin/debug/obj/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        });
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "/std:c++20",
+                "/c",
+                src,
+                &format!("/Fo:{obj}"),
+                "/EHsc",
+                "/Isrc/",
+                "/MDd",
+                "/Od",
+                "/Zi",
+                "/Fd:bin/debug/obj/vc143.pdb",
+                "/FS",
+            ]
+        );
+    }
+
+    #[test]
+    pub fn compile_cmd_msvc_2() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.obj";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            cppstd: "c++23",
+            is_c: false,
+            config: Config::Debug,
+            toolset: ToolSet::MSVC,
+            outdir: "bin/debug/obj/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        });
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "/std:c++latest",
+                "/c",
+                src,
+                &format!("/Fo:{obj}"),
+                "/EHsc",
+                "/Isrc/",
+                "/MDd",
+                "/Od",
+                "/Zi",
+                "/Fd:bin/debug/obj/vc143.pdb",
+                "/FS",
+            ]
+        );
+    }
+}

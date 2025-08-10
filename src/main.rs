@@ -93,36 +93,28 @@ fn action_clean(build: BuildFile) -> Result<(), Error> {
 fn action_build(
     build: BuildFile,
     config: Config,
-    mingw: bool,
+    toolchain: ToolChain,
     test: bool,
 ) -> Result<(bool, String), Error> {
     let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
-    let toolset = if cfg!(target_os = "windows") && !mingw {
-        ToolSet::MSVC
-    } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU { mingw }
-    } else {
-        ToolSet::CLANG
-    };
-
-    let mut deps = fetch::get_libraries(build.dependencies, config, mingw, &build.cpp)?;
+    let mut deps = fetch::get_libraries(build.dependencies, config, toolchain, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
     let outpath = if let ProjKind::App = projkind {
-        format!("bin/{}/{}{}", config, build.project, projkind.ext(mingw))
+        format!("bin/{}/{}{}", config, build.project, projkind.ext(toolchain))
     } else {
         format!(
             "bin/{}/{}{}{}",
             config,
-            toolset.lib_prefix(),
+            toolchain.lib_prefix(),
             build.project,
-            toolset.ext(projkind)
+            toolchain.ext(projkind)
         )
     };
     let outfile = FileInfo::from_str(&outpath);
@@ -158,7 +150,7 @@ fn action_build(
         cppstd,
         is_c,
         config,
-        toolset,
+        toolchain,
         projkind,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
@@ -205,31 +197,23 @@ fn main() -> std::process::ExitCode {
                 action_clean(build).unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
-            input::Action::Build { config, mingw } => {
+            input::Action::Build{ config, toolchain } => {
                 let build = build.finalise(config);
-                let (rebuilt, _) = action_build(build, config, mingw, false)
+                let (rebuilt, _) = action_build(build, config, toolchain, false)
                     .unwrap_or_else(|e| exit_with!("{}", e));
                 if rebuilt { 8.into() } else { 0.into() }
             }
-            input::Action::Run {
-                config,
-                mingw,
-                args,
-            } => {
+            input::Action::Run{ config, toolchain, args } => {
                 let build = build.finalise(config);
-                let (_, outfile) = action_build(build, config, mingw, false)
+                let (_, outfile) = action_build(build, config, toolchain, false)
                     .unwrap_or_else(|e| exit_with!("{}", e));
                 exec::run_app(&outfile, args).into()
             }
-            input::Action::Test {
-                config,
-                mingw,
-                args,
-            } => {
+            input::Action::Test{ config, toolchain, args } => {
                 let build = build.finalise(config);
-                action_build(build.clone(), config, mingw, true)
+                action_build(build.clone(), config, toolchain, true)
                     .unwrap_or_else(|e| exit_with!("{}", e));
-                testfw::test_lib(build, config, mingw, args)
+                testfw::test_lib(build, config, toolchain, args)
                     .unwrap_or_else(|e| exit_with!("{}", e));
                 0.into()
             }
@@ -242,28 +226,20 @@ fn main() -> std::process::ExitCode {
 fn action_check_outdated(
     build: BuildFile,
     config: Config,
-    mingw: bool,
+    toolchain: ToolChain,
     test: bool,
 ) -> Result<bool, Error> {
     let projkind = fetch::get_project_kind(&build.srcdir, &build.inc_public)?;
 
     let _ = repr::u32_from_cppstd(&build.cpp)?;
 
-    let toolset = if cfg!(target_os = "windows") && !mingw {
-        ToolSet::MSVC
-    } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU { mingw }
-    } else {
-        ToolSet::CLANG
-    };
-
-    let mut deps = fetch::get_libraries(build.dependencies, config, mingw, &build.cpp)?;
+    let mut deps = fetch::get_libraries(build.dependencies, config, toolchain, &build.cpp)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
     }
     let rebuilt_dep = deps.rebuilt;
-    let outpath = format!("bin/{}/{}{}", config, build.project, projkind.ext(mingw));
+    let outpath = format!("bin/{}/{}{}", config, build.project, projkind.ext(toolchain));
     let outfile = FileInfo::from_str(&outpath);
 
     let mut headers = fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
@@ -278,7 +254,7 @@ fn action_check_outdated(
     let cppstd = build.cpp.to_ascii_lowercase();
     let is_c = !cppstd.starts_with("c++");
 
-    let info = BuildInfo {
+    let info = BuildInfo{
         sources: fetch::get_source_files(
             &PathBuf::from(&build.srcdir),
             if is_c { ".c" } else { ".cpp" },
@@ -297,7 +273,7 @@ fn action_check_outdated(
         cppstd,
         is_c,
         config,
-        toolset,
+        toolchain,
         projkind,
         comp_args: build.compiler_options,
         link_args: build.linker_options,
@@ -305,3 +281,4 @@ fn action_check_outdated(
     let rebuilt = exec::run_check_outdated(info)?;
     Ok(rebuilt_dep || rebuilt)
 }
+

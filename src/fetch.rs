@@ -1,4 +1,4 @@
-use crate::{BuildFile, Config, LibFile, ProjKind, error::Error, log_info};
+use crate::{error::Error, log_info, repr::ToolChain, BuildFile, Config, LibFile, ProjKind};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -121,7 +121,7 @@ pub struct Dependencies {
 pub fn get_libraries(
     libraries: Vec<String>,
     config: Config,
-    mingw: bool,
+    toolchain: ToolChain,
     maxcpp: &str,
 ) -> Result<Dependencies, Error> {
     let mut incdirs = Vec::new();
@@ -166,10 +166,9 @@ pub fn get_libraries(
                 let save = std::env::current_dir().unwrap();
                 std::env::set_current_dir(&dir).unwrap();
                 let mut cmd = std::process::Command::new("vango");
-                cmd.arg("build").arg(format!("-{}", config));
-                if mingw {
-                    cmd.arg("-mingw");
-                }
+                cmd.arg("build")
+                    .arg(format!("-{}", config))
+                    .arg(toolchain.as_arg());
                 let output = cmd.status().unwrap();
                 if output.code() == Some(8) {
                     rebuilt = true;
@@ -182,7 +181,7 @@ pub fn get_libraries(
                     .linearise(config, version)?;
                 incdirs.push(format!("{dir}/{}", libinfo.incdir));
                 libdirs.push(format!("{dir}/{}", libinfo.libdir));
-                if cfg!(target_os = "windows") && !mingw {
+                if toolchain.is_msvc() {
                     for l in &libinfo.links {
                         relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
                         links.push(format!("{}.lib", l));
@@ -264,10 +263,9 @@ pub fn get_libraries(
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(&name).unwrap();
             let mut cmd = std::process::Command::new("vango");
-            cmd.arg("build").arg(format!("-{}", config));
-            if mingw {
-                cmd.arg("-mingw");
-            }
+            cmd.arg("build")
+                .arg(format!("-{}", config))
+                .arg(toolchain.as_arg());
             let output = cmd.status().unwrap();
             if output.code() == Some(8) {
                 rebuilt = true;
@@ -280,7 +278,7 @@ pub fn get_libraries(
                 .linearise(config, version)?;
             incdirs.push(format!("{name}/{}", libinfo.incdir));
             libdirs.push(format!("{name}/{}", libinfo.libdir));
-            if cfg!(target_os = "windows") && !mingw {
+            if toolchain.is_msvc() {
                 for l in &libinfo.links {
                     relink.push(FileInfo::from_str(&format!("{name}/{}/{}.lib", libinfo.libdir, l)));
                     links.push(format!("{}.lib", l));

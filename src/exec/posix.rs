@@ -3,7 +3,7 @@ use crate::{Error, fetch::FileInfo, log_info};
 use std::{io::Write, path::PathBuf, process::Command};
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::process::Command {
-    let mut cmd = std::process::Command::new(info.toolset.compiler(info.is_c));
+    let mut cmd = std::process::Command::new(info.toolchain.compiler(info.is_c));
     if !info.is_c {
         cmd.arg("-xc++");
     }
@@ -31,7 +31,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo) -> std::proce
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new(info.toolset.archiver());
+    let mut cmd = Command::new(info.toolchain.archiver());
     cmd.arg("rcs");
     cmd.arg(format!("{}", info.outfile.repr));
     cmd.args(objs.into_iter().map(|o| o.repr));
@@ -47,7 +47,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Err
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo) -> Result<bool, Error> {
-    let mut cmd = Command::new(info.toolset.linker(info.is_c));
+    let mut cmd = Command::new(info.toolchain.linker(info.is_c));
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(["-o", &info.outfile.repr]);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l)));
@@ -70,7 +70,7 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::p
     let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
 
     if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
-        let mut cmd = Command::new(info.toolset.compiler(info.is_c));
+        let mut cmd = Command::new(info.toolchain.compiler(info.is_c));
         if !info.is_c {
             cmd.arg("-xc++-header");
         }
@@ -93,3 +93,4 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo) -> Option<std::p
         None
     }
 }
+

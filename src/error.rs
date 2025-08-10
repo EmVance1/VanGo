@@ -7,6 +7,10 @@ pub enum Error {
     MissingAction,
     #[error("invalid action '{0}' provided [build, run, clean]")]
     BadAction(String),
+    #[error("toolchain 'MSVC' unavailable on non-windows platforms")]
+    MSVCUnavailable,
+    #[error("unknown toolchain argument '{0}'")]
+    UnknownToolChain(String),
     #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
     ExtraArgs(String, Vec<String>),
     #[error("file '{0}' not found")]

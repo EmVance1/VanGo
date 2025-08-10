@@ -10,7 +10,7 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 
-The system supports most popular toolchains, specifically: MSVC and MinGW on windows, GNU on Linux, and Clang/LLVM on MacOS. It does of course assume that you have all relevant compiler tools installed. It is not in itself a compiler.
+The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed. It is not in itself a compiler.
 
 ### Features supported so far
 - New, Build, Run, Test, and Clean actions
@@ -54,14 +54,14 @@ Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everyt
 The build system is invoked like so:
 
 - `vango n[ew]   [-lib] [-c] name`
-- `vango b[uild] [-r[elease]] [-mingw]`
-- `vango r[un]   [-r[elease]] [-mingw] [-- args*]`
-- `vango t[est]  [-r[elease]] [-mingw] [tests*]`
+- `vango b[uild] [-r[elease]] [-t=(msvc|gnu|clang)]`
+- `vango r[un]   [-r[elease]] [-t=(msvc|gnu|clang)] [-- args*]`
+- `vango t[est]  [-r[elease]] [-t=(msvc|gnu|clang)] [tests*]`
 - `vango c[lean]`
 
-VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all extraneous arguments are passed to the invoked executable.
+VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all arguments passed after the `--` separator are forwared to the invoked executable.
 
-All platforms have a compiler toolchain they default to, that being MSVC on windows. To use MinGW GCC instead, you can just pass `-mingw` to the build, run or test commands.
+All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. Here, MSVC is provided for completeness as obviously it is unavailable on non-windows platforms.
 
 ### How-to: build.json
 All `build.json` files are expected to have 3 base declarations at the root:

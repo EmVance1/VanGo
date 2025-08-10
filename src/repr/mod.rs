@@ -5,6 +5,7 @@ pub use buildfile::*;
 pub use libfile::*;
 use std::fmt::Display;
 
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProjKind {
     App,
@@ -12,37 +13,42 @@ pub enum ProjKind {
 }
 
 impl ProjKind {
-    #[cfg(target_os = "windows")]
-    pub fn ext(&self, mingw: bool) -> String {
+    pub fn ext(&self, toolchain: ToolChain) -> String {
         match self {
             Self::App => ".exe".to_string(),
             Self::Lib => {
-                if mingw {
-                    ".a".to_string()
-                } else {
+                if toolchain.is_msvc() {
                     ".lib".to_string()
+                } else {
+                    ".a".to_string()
                 }
             }
         }
     }
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    pub fn ext(&self, _: bool) -> String {
-        match self {
-            Self::App => "".to_string(),
-            Self::Lib => ".a".to_string(),
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolChain {
+    MSVC,
+    GNU,
+    CLANG,
+}
+
+impl Default for ToolChain {
+    fn default() -> Self {
+        if cfg!(target_os = "windows") {
+            ToolChain::MSVC
+        } else if cfg!(target_os = "linux") {
+            ToolChain::GNU
+        } else {
+            ToolChain::CLANG
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ToolSet {
-    MSVC,
-    GNU { mingw: bool },
-    CLANG,
-}
-
 #[allow(unused)]
-impl ToolSet {
+impl ToolChain {
     pub fn is_msvc(&self) -> bool {
         matches!(self, Self::MSVC)
     }
@@ -53,7 +59,7 @@ impl ToolSet {
         matches!(self, Self::CLANG)
     }
     pub fn is_posix(&self) -> bool {
-        matches!(self, Self::GNU { .. } | Self::CLANG)
+        matches!(self, Self::GNU | Self::CLANG)
     }
     pub fn is_llvm(&self) -> bool {
         matches!(self, Self::CLANG)
@@ -85,7 +91,7 @@ impl ToolSet {
     pub fn compiler(&self, is_c: bool) -> String {
         match self {
             Self::MSVC => "cl".to_string(),
-            Self::GNU { .. } => {
+            Self::GNU => {
                 if is_c {
                     "gcc".to_string()
                 } else {
@@ -104,27 +110,35 @@ impl ToolSet {
     pub fn linker(&self, is_c: bool) -> String {
         match self {
             Self::MSVC => "LINK".to_string(),
-            Self::GNU { .. } | Self::CLANG => self.compiler(is_c),
+            Self::GNU | Self::CLANG => self.compiler(is_c),
         }
     }
     pub fn archiver(&self) -> String {
         match self {
             Self::MSVC => "LIB".to_string(),
-            Self::GNU { .. } => "ar".to_string(),
+            Self::GNU => "ar".to_string(),
             Self::CLANG => "llvm-ar".to_string(),
+        }
+    }
+    pub fn as_arg(&self) -> String {
+        match self {
+            Self::MSVC => "-t=msvc".to_string(),
+            Self::GNU => "-t=gnu".to_string(),
+            Self::CLANG => "-t=clang".to_string(),
         }
     }
 }
 
-impl Display for ToolSet {
+impl Display for ToolChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MSVC => write!(f, "MSVC"),
-            Self::GNU { mingw } => write!(f, "{}", if *mingw { "MinGW" } else { "GNU" }),
+            Self::GNU => write!(f, "GCC"),
             Self::CLANG => write!(f, "Clang/LLVM"),
         }
     }
 }
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Config {

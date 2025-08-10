@@ -1,4 +1,4 @@
-use crate::{BuildFile, Config, Error, exec::BuildInfo, fetch::FileInfo, log_info, repr::ToolSet};
+use crate::{BuildFile, Config, Error, exec::BuildInfo, fetch::FileInfo, log_info, repr::ToolChain};
 use std::{io::Write, path::PathBuf, process::Command};
 
 
@@ -8,9 +8,9 @@ struct TestInfo {
 }
 
 
-fn inherited(build: &BuildFile, config: Config, mingw: bool) -> TestInfo {
+fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain) -> TestInfo {
     let mut deps =
-        crate::fetch::get_libraries(build.dependencies.clone(), config, mingw, &build.cpp).unwrap();
+        crate::fetch::get_libraries(build.dependencies.clone(), config, toolchain, &build.cpp).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -23,20 +23,12 @@ fn inherited(build: &BuildFile, config: Config, mingw: bool) -> TestInfo {
 pub fn test_lib(
     build: BuildFile,
     config: Config,
-    mingw: bool,
+    toolchain: ToolChain,
     args: Vec<String>,
 ) -> Result<(), Error> {
     if !std::fs::exists("test/").unwrap() {
         return Err(Error::MissingTests);
     }
-
-    let toolset = if cfg!(target_os = "windows") && !mingw {
-        ToolSet::MSVC
-    } else if cfg!(target_os = "linux") || mingw {
-        ToolSet::GNU { mingw }
-    } else {
-        ToolSet::CLANG
-    };
 
     let inc = std::env::current_exe()
         .unwrap() // ./target/release/vango.exe
@@ -49,7 +41,7 @@ pub fn test_lib(
         .to_string_lossy()
         .to_string();
 
-    let mut partial = inherited(&build, config, mingw);
+    let mut partial = inherited(&build, config, toolchain);
     partial
         .defines
         .extend([config.as_arg(), "TEST".to_string()]);
@@ -96,7 +88,7 @@ pub fn test_lib(
         cppstd,
         is_c,
         config,
-        toolset,
+        toolchain,
         projkind: crate::repr::ProjKind::App,
         defines: partial.defines,
         comp_args: vec![],

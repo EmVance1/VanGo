@@ -1,4 +1,4 @@
-use crate::{error::Error, repr::Config};
+use crate::{error::Error, repr::{Config, ToolChain}};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,18 +11,40 @@ pub enum Action {
     Clean,
     Build {
         config: Config,
-        mingw: bool,
+        toolchain: ToolChain,
     },
     Run {
         config: Config,
-        mingw: bool,
+        toolchain: ToolChain,
         args: Vec<String>,
     },
     Test {
         config: Config,
-        mingw: bool,
+        toolchain: ToolChain,
         args: Vec<String>,
     },
+}
+
+
+fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
+    if let Some(tc) = toolchain {
+        let tc = tc.strip_prefix("-t=").unwrap();
+        if tc == "msvc" {
+            if cfg!(target_os = "windows") {
+                Ok(ToolChain::MSVC)
+            } else {
+                Err(Error::MSVCUnavailable)
+            }
+        } else if tc == "gnu" {
+            Ok(ToolChain::GNU)
+        } else if tc == "clang" {
+            Ok(ToolChain::CLANG)
+        } else {
+            Err(Error::UnknownToolChain(tc.to_string()))
+        }
+    } else {
+        Ok(ToolChain::default())
+    }
 }
 
 
@@ -53,10 +75,10 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
             if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
-            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             if args.is_empty() {
-                Ok(Action::Build{ config, mingw })
+                Ok(Action::Build{ config, toolchain })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -72,17 +94,17 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
             if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
-            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
             let config = if release { Config::Release } else { Config::Debug };
-            Ok(Action::Run{ config, mingw, args: user_args })
+            Ok(Action::Run{ config, toolchain, args: user_args })
         }
         "test" | "t" => {
             let debug = args.remove_if(|s| *s == "-d" || *s == "-debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "-release").is_some();
             if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "-release".to_string() ])) }
-            let mingw = args.remove_if(|s| *s == "-mingw").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
             let config = if release { Config::Release } else { Config::Debug };
-            Ok(Action::Test{ config, mingw, args })
+            Ok(Action::Test{ config, toolchain, args })
         }
         _ => Err(Error::BadAction(args[1].clone())),
     }
@@ -144,38 +166,44 @@ mod tests {
     #[test]
     pub fn parse_action_build_1() {
         let result = parse_input(vec![ "build".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Build{ config: Config::Debug, mingw: false });
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Debug, toolchain: ToolChain::default() });
     }
 
     #[test]
     pub fn parse_action_build_2() {
         let result = parse_input(vec![ "build".to_string(), "-r".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, mingw: false });
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, toolchain: ToolChain::default() });
     }
 
     #[test]
     pub fn parse_action_build_3() {
-        let result = parse_input(vec![ "build".to_string(), "-mingw".to_string(), "-release".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, mingw: true });
+        let result = parse_input(vec![ "build".to_string(), "-t=gnu".to_string(), "-release".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, toolchain: ToolChain::GNU });
+    }
+
+    #[test]
+    pub fn parse_action_build_4() {
+        let result = parse_input(vec![ "build".to_string(), "-t=clang".to_string(), "-release".to_string() ]);
+        assert_eq!(result.unwrap(), Action::Build{ config: Config::Release, toolchain: ToolChain::CLANG });
     }
 
 
     #[test]
     pub fn parse_action_run_1() {
         let result = parse_input(vec![ "run".to_string(), "--".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, mingw: false, args: vec![] });
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, toolchain: ToolChain::default(), args: vec![] });
     }
 
     #[test]
     pub fn parse_action_run_2() {
         let result = parse_input(vec![ "run".to_string(), "-r".to_string(), "--".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Run{ config: Config::Release, mingw: false, args: vec![] });
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Release, toolchain: ToolChain::default(), args: vec![] });
     }
 
     #[test]
     pub fn parse_action_run_3() {
         let result = parse_input(vec![ "run".to_string(), "--".to_string(), "-r".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, mingw: false, args: vec![ "-r".to_string() ] });
+        assert_eq!(result.unwrap(), Action::Run{ config: Config::Debug, toolchain: ToolChain::default(), args: vec![ "-r".to_string() ] });
     }
 
 
@@ -188,6 +216,12 @@ mod tests {
     #[test]
     pub fn parse_action_error_2() {
         let result = parse_input(vec![ "build".to_string(), "-release".to_string(), "-dummy".to_string() ]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    pub fn parse_action_error_3() {
+        let result = parse_input(vec![ "build".to_string(), "-d".to_string(), "-r".to_string() ]);
         assert!(result.is_err());
     }
 }

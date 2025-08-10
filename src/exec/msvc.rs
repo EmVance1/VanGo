@@ -158,7 +158,7 @@ const DEFAULT_LIBS: &[&str] = &[
 
 #[cfg(test)]
 mod tests {
-    use crate::repr::{ToolSet, Config};
+    use crate::repr::{ToolChain, Config};
 
     #[test]
     pub fn compile_cmd_msvc_1() {
@@ -169,7 +169,7 @@ mod tests {
             cppstd: "c++20",
             is_c: false,
             config: Config::Debug,
-            toolset: ToolSet::MSVC,
+            toolchain: ToolChain::MSVC,
             outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
@@ -203,7 +203,7 @@ mod tests {
             cppstd: "c++23",
             is_c: false,
             config: Config::Debug,
-            toolset: ToolSet::MSVC,
+            toolchain: ToolChain::MSVC,
             outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],

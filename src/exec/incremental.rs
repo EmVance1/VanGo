@@ -18,7 +18,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
                     &c.repr,
                     &info.srcdir,
                     &info.outdir,
-                    info.toolset.is_msvc(),
+                    info.toolchain.is_msvc(),
                 )),
             )
         })

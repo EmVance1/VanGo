@@ -7,7 +7,7 @@ use crate::{
     error::Error,
     fetch::FileInfo,
     log_error, log_info,
-    repr::{Config, ProjKind, ToolSet},
+    repr::{Config, ProjKind, ToolChain},
 };
 use incremental::BuildLevel;
 use std::{io::Write, path::PathBuf, process::Command};
@@ -29,7 +29,7 @@ pub struct BuildInfo {
     pub cppstd: String,
     pub is_c: bool,
     pub config: Config,
-    pub toolset: ToolSet,
+    pub toolchain: ToolChain,
     pub projkind: ProjKind,
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
@@ -40,7 +40,7 @@ impl BuildInfo {
         CompileInfo {
             cppstd: &self.cppstd,
             is_c: self.is_c,
-            toolset: self.toolset,
+            toolchain: self.toolchain,
             config: self.config,
             outdir: &self.outdir,
             defines: &self.defines,
@@ -55,7 +55,7 @@ impl BuildInfo {
 struct CompileInfo<'a> {
     cppstd: &'a str,
     is_c: bool,
-    toolset: ToolSet,
+    toolchain: ToolChain,
     config: Config,
     outdir: &'a str,
     defines: &'a [String],
@@ -69,12 +69,12 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if info.toolset.is_msvc() {
+        if info.toolchain.is_msvc() {
             if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
                 log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd
                     .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
+                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stdout).unwrap();
@@ -87,7 +87,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                 log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd
                     .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
+                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stderr).unwrap();
@@ -114,14 +114,14 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
             let mut batch = 0;
             for (src, obj) in elems {
                 log_info!("compiling: {}", src);
-                if info.toolset.is_msvc() {
+                if info.toolchain.is_msvc() {
                     handles.push((
                         src,
                         msvc::compile_cmd(src, &obj, info.compile_info())
                             .stdout(std::process::Stdio::piped())
                             .stderr(std::process::Stdio::null())
                             .spawn()
-                            .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?,
+                            .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
                     ));
                 } else {
                     handles.push((
@@ -130,7 +130,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                             .stdout(std::process::Stdio::null())
                             .stderr(std::process::Stdio::piped())
                             .spawn()
-                            .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?,
+                            .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
                     ));
                 };
                 batch += 1;
@@ -168,7 +168,7 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
     }
 
     log_info!("linking:   {}", info.outfile.repr);
-    if info.toolset.is_msvc() {
+    if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
         if info.projkind == ProjKind::App {
             msvc::link_exe(all_objs, info)
@@ -202,12 +202,12 @@ pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
     prep::assert_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if info.toolset.is_msvc() {
+        if info.toolchain.is_msvc() {
             if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
                 log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd
                     .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
+                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stdout).unwrap();
@@ -220,7 +220,7 @@ pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
                 log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
                 let output = cmd
                     .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolset.to_string()))?;
+                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
                 if !output.status.success() {
                     log_error!("failed to compile precompiled header");
                     std::io::stderr().write_all(&output.stderr).unwrap();

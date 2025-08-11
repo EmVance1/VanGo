@@ -7,7 +7,7 @@ use crate::{
     error::Error,
     fetch::FileInfo,
     log_error, log_info,
-    repr::{Config, ProjKind, ToolChain},
+    repr::{Config, ProjKind, ToolChain, Lang},
 };
 use incremental::BuildLevel;
 use std::{io::Write, path::PathBuf, process::Command};
@@ -15,6 +15,11 @@ use std::{io::Write, path::PathBuf, process::Command};
 
 #[derive(Debug)]
 pub struct BuildInfo {
+    pub projkind: ProjKind,
+    pub toolchain: ToolChain,
+    pub config: Config,
+    pub lang: Lang,
+
     pub sources: Vec<FileInfo>,
     pub headers: Vec<FileInfo>,
     pub relink: Vec<FileInfo>,
@@ -26,11 +31,7 @@ pub struct BuildInfo {
     pub libdirs: Vec<String>,
     pub links: Vec<String>,
     pub pch: Option<String>,
-    pub cppstd: String,
-    pub is_c: bool,
-    pub config: Config,
-    pub toolchain: ToolChain,
-    pub projkind: ProjKind,
+
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
 }
@@ -38,10 +39,9 @@ pub struct BuildInfo {
 impl BuildInfo {
     fn compile_info(&self) -> CompileInfo<'_> {
         CompileInfo {
-            cppstd: &self.cppstd,
-            is_c: self.is_c,
             toolchain: self.toolchain,
             config: self.config,
+            lang: self.lang,
             outdir: &self.outdir,
             defines: &self.defines,
             incdirs: &self.incdirs,
@@ -53,10 +53,9 @@ impl BuildInfo {
 
 #[derive(Debug)]
 struct CompileInfo<'a> {
-    cppstd: &'a str,
-    is_c: bool,
     toolchain: ToolChain,
     config: Config,
+    lang: Lang,
     outdir: &'a str,
     defines: &'a [String],
     incdirs: &'a [String],
@@ -64,36 +63,25 @@ struct CompileInfo<'a> {
     comp_args: &'a [String],
 }
 
-pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
+pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
-    prep::assert_out_dirs(&info.srcdir, &info.outdir);
+    prep::ensure_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if info.toolchain.is_msvc() {
-            if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
-                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
-                let output = cmd
-                    .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-                if !output.status.success() {
-                    log_error!("failed to compile precompiled header");
-                    std::io::stderr().write_all(&output.stdout).unwrap();
-                    eprintln!();
-                    return Err(Error::CompilerFail(info.outfile.repr));
-                }
-            }
+        let cmd = if info.toolchain.is_msvc() {
+            msvc::precompile_header(pch, &info, verbose)
         } else {
-            if let Some(mut cmd) = posix::precompile_header(pch, &info) {
-                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
-                let output = cmd
-                    .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-                if !output.status.success() {
-                    log_error!("failed to compile precompiled header");
-                    std::io::stderr().write_all(&output.stderr).unwrap();
-                    eprintln!();
-                    return Err(Error::CompilerFail(info.outfile.repr));
-                }
+            posix::precompile_header(pch, &info, verbose)
+        };
+        if let Some(mut cmd) = cmd {
+            log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
+            let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
+            if !output.status.success() {
+                log_error!("failed to compile precompiled header");
+                std::io::stderr().write_all(&output.stdout).unwrap();
+                std::io::stderr().write_all(&output.stderr).unwrap();
+                eprintln!();
+                return Err(Error::CompilerFail(info.outfile.repr));
             }
         }
     }
@@ -117,18 +105,14 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                 if info.toolchain.is_msvc() {
                     handles.push((
                         src,
-                        msvc::compile_cmd(src, &obj, info.compile_info())
-                            .stdout(std::process::Stdio::piped())
-                            .stderr(std::process::Stdio::null())
+                        msvc::compile_cmd(src, &obj, info.compile_info(), verbose)
                             .spawn()
                             .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
                     ));
                 } else {
                     handles.push((
                         src,
-                        posix::compile_cmd(src, &obj, info.compile_info())
-                            .stdout(std::process::Stdio::null())
-                            .stderr(std::process::Stdio::piped())
+                        posix::compile_cmd(src, &obj, info.compile_info(), verbose)
                             .spawn()
                             .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
                     ));
@@ -139,8 +123,8 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                         let output = proc.wait_with_output().unwrap();
                         if !output.status.success() {
                             log_error!("failed to compile file '{src}'");
-                            std::io::stderr().write_all(&output.stdout).unwrap();
                             std::io::stderr().write_all(&output.stderr).unwrap();
+                            std::io::stderr().write_all(&output.stdout).unwrap();
                             eprintln!();
                             failure = true;
                         }
@@ -154,8 +138,8 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
                 let output = proc.wait_with_output().unwrap();
                 if !output.status.success() {
                     log_error!("failed to compile file '{src}'");
-                    std::io::stderr().write_all(&output.stdout).unwrap();
                     std::io::stderr().write_all(&output.stderr).unwrap();
+                    std::io::stderr().write_all(&output.stdout).unwrap();
                     eprintln!();
                     failure = true;
                 }
@@ -169,25 +153,25 @@ pub fn run_build(info: BuildInfo) -> Result<bool, Error> {
 
     log_info!("linking:   {}", info.outfile.repr);
     if info.toolchain.is_msvc() {
-        let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
+        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
         if info.projkind == ProjKind::App {
-            msvc::link_exe(all_objs, info)
+            msvc::link_exe(all_objs, info, verbose)
         } else {
-            msvc::link_lib(all_objs, info)
+            msvc::link_lib(all_objs, info, verbose)
         }
     } else {
-        let all_objs = crate::fetch::get_source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
+        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
         if info.projkind == ProjKind::App {
-            posix::link_exe(all_objs, info)
+            posix::link_exe(all_objs, info, verbose)
         } else {
-            posix::link_lib(all_objs, info)
+            posix::link_lib(all_objs, info, verbose)
         }
     }
 }
 
 pub fn run_app(outfile: &str, runargs: Vec<String>) -> u8 {
-    log_info!("running application {:=<63}", format!("\"{}\" ", outfile));
-    Command::new(format!("./{}", outfile))
+    log_info!("running application {:=<63}", format!("\"{outfile}\" "));
+    Command::new(format!("./{outfile}"))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
@@ -199,42 +183,31 @@ pub fn run_app(outfile: &str, runargs: Vec<String>) -> u8 {
 #[allow(unused)]
 pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
     log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
-    prep::assert_out_dirs(&info.srcdir, &info.outdir);
+    prep::ensure_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        if info.toolchain.is_msvc() {
-            if let Some(mut cmd) = msvc::precompile_header(pch, &info) {
-                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
-                let output = cmd
-                    .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-                if !output.status.success() {
-                    log_error!("failed to compile precompiled header");
-                    std::io::stderr().write_all(&output.stdout).unwrap();
-                    eprintln!();
-                    return Err(Error::CompilerFail(info.outfile.repr));
-                }
-            }
+        let cmd = if info.toolchain.is_msvc() {
+            msvc::precompile_header(pch, &info, false)
         } else {
-            if let Some(mut cmd) = posix::precompile_header(pch, &info) {
-                log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
-                let output = cmd
-                    .output()
-                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-                if !output.status.success() {
-                    log_error!("failed to compile precompiled header");
-                    std::io::stderr().write_all(&output.stderr).unwrap();
-                    eprintln!();
-                    return Err(Error::CompilerFail(info.outfile.repr));
-                }
+            posix::precompile_header(pch, &info, false)
+        };
+        if let Some(mut cmd) = cmd {
+            log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
+            let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
+            if !output.status.success() {
+                log_error!("failed to compile precompiled header");
+                std::io::stderr().write_all(&output.stdout).unwrap();
+                std::io::stderr().write_all(&output.stderr).unwrap();
+                eprintln!();
+                return Err(Error::CompilerFail(info.outfile.repr));
             }
         }
     }
 
     if let BuildLevel::UpToDate = incremental::get_build_level(&info) {
-        return Ok(false);
+        Ok(false)
     } else {
-        return Ok(true);
+        Ok(true)
     }
 }
 

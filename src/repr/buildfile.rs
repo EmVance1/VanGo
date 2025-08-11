@@ -2,9 +2,11 @@ use super::Config;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct BuildFile {
     pub project: String,
-    pub cpp: String,
+    #[serde(alias = "cpp")]
+    pub lang: String,
     pub dependencies: Vec<String>,
 
     #[serde(default = "src_default")]
@@ -17,15 +19,12 @@ pub struct BuildFile {
     pub pch: Option<String>,
 
     #[serde(default)]
-    #[serde(rename = "compiler-options")]
     pub compiler_options: Vec<String>,
     #[serde(default)]
-    #[serde(rename = "linker-options")]
     pub linker_options: Vec<String>,
 
     #[serde(default)]
-    #[serde(rename = "include-public")]
-    pub inc_public: Option<String>,
+    pub include_public: Option<String>,
 }
 
 impl BuildFile {
@@ -34,7 +33,7 @@ impl BuildFile {
     }
 
     pub fn finalise(mut self, config: Config) -> Self {
-        self.defines.push(config.as_arg());
+        self.defines.push(config.as_define().to_string());
         self.incdirs.push(self.srcdir.clone());
         self
     }

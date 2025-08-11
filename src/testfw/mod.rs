@@ -1,4 +1,4 @@
-use crate::{BuildFile, Config, Error, exec::BuildInfo, fetch::FileInfo, log_info, repr::ToolChain};
+use crate::{BuildFile, Config, Lang, Error, exec::BuildInfo, fetch::FileInfo, log_info, repr::ToolChain};
 use std::{io::Write, path::PathBuf, process::Command};
 
 
@@ -9,8 +9,7 @@ struct TestInfo {
 
 
 fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain) -> TestInfo {
-    let mut deps =
-        crate::fetch::get_libraries(build.dependencies.clone(), config, toolchain, &build.cpp).unwrap();
+    let mut deps = crate::fetch::libraries(build.dependencies.clone(), config, toolchain, &build.lang).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -20,15 +19,8 @@ fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain) -> TestInf
     }
 }
 
-pub fn test_lib(
-    build: BuildFile,
-    config: Config,
-    toolchain: ToolChain,
-    args: Vec<String>,
-) -> Result<(), Error> {
-    if !std::fs::exists("test/").unwrap() {
-        return Err(Error::MissingTests);
-    }
+pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, args: Vec<String>) -> Result<(), Error> {
+    if !std::fs::exists("test/").unwrap() { return Err(Error::MissingTests); }
 
     let inc = std::env::current_exe()
         .unwrap() // ./target/release/vango.exe
@@ -42,36 +34,20 @@ pub fn test_lib(
         .to_string();
 
     let mut partial = inherited(&build, config, toolchain);
-    partial
-        .defines
-        .extend([config.as_arg(), "TEST".to_string()]);
-    partial
-        .incdirs
-        .extend(["test/".to_string(), format!("{}/testframework/", inc)]);
-    let mut headers = if let Some(inc) = build.inc_public {
-        crate::fetch::get_source_files(&PathBuf::from(&inc), ".h").unwrap()
+    partial.defines.extend([ config.as_define().to_string(), "TEST".to_string() ]);
+    partial.incdirs.extend([ "test/".to_string(), format!("{inc}/testframework/") ]);
+    let mut headers = if let Some(inc) = build.include_public {
+        crate::fetch::source_files(&PathBuf::from(&inc), ".h").unwrap()
     } else {
-        crate::fetch::get_source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
+        crate::fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap()
     };
-    headers.push(FileInfo::from_str(&format!(
-        "{}/testframework/vangotest/asserts.h",
-        inc
-    )));
-    headers.push(FileInfo::from_str(&format!(
-        "{}/testframework/vangotest/casserts.h",
-        inc
-    )));
-    let relink = vec![FileInfo::from_str(&format!(
-        "bin/{}/{}.lib",
-        config, build.project
-    ))];
+    headers.push(FileInfo::from_str(&format!("{inc}/testframework/vangotest/asserts.h")));
+    headers.push(FileInfo::from_str(&format!("{inc}/testframework/vangotest/casserts.h")));
+    let relink = vec![ FileInfo::from_str(&format!( "bin/{}/{}{}{}", config, toolchain.lib_prefix(), build.project, toolchain.lib_ext())) ];
 
-    let cppstd = build.cpp.to_ascii_lowercase();
-    let is_c = !build.cpp.starts_with("c++");
+    let lang = Lang::try_from(&build.lang)?;
 
-    let sources =
-        crate::fetch::get_source_files(&PathBuf::from("test/"), if is_c { ".c" } else { ".cpp" })
-            .unwrap();
+    let sources = crate::fetch::source_files(&PathBuf::from("test/"), lang.src_ext()).unwrap();
     let outpath = format!("bin/{}/test_{}.exe", config, build.project);
     let outfile = FileInfo::from_str(&outpath);
     let info = BuildInfo {
@@ -79,14 +55,13 @@ pub fn test_lib(
         headers,
         relink,
         srcdir: "test/".to_string(),
-        outdir: format!("bin/{}/obj/", config),
+        outdir: format!("bin/{config}/obj/"),
         outfile,
         incdirs: partial.incdirs,
-        libdirs: vec![format!("bin/{}/", config)],
+        libdirs: vec![format!("bin/{config}/")],
         links: vec![format!("{}.lib", build.project)],
         pch: None,
-        cppstd,
-        is_c,
+        lang,
         config,
         toolchain,
         projkind: crate::repr::ProjKind::App,
@@ -94,7 +69,7 @@ pub fn test_lib(
         comp_args: vec![],
         link_args: vec![],
     };
-    crate::exec::run_build(info)?;
+    crate::exec::run_build(info, false)?;
     log_info!(
         "running tests for project {:=<57}",
         format!("\"{}\" ", build.project)

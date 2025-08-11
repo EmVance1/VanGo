@@ -3,12 +3,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("no action provided [build, run, clean]")]
-    MissingAction,
-    #[error("invalid action '{0}' provided [build, run, clean]")]
+    #[error("invalid action '{0}' provided")]
     BadAction(String),
     #[error("toolchain 'MSVC' unavailable on non-windows platforms")]
-    MSVCUnavailable,
+    MsvcUnavailable,
     #[error("unknown toolchain argument '{0}'")]
     UnknownToolChain(String),
     #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
@@ -16,6 +14,7 @@ pub enum Error {
     #[error("file '{0}' not found")]
     FileNotFound(String),
     #[error("directory '{0}' not found")]
+    #[allow(unused)]
     DirNotFound(String),
     #[error("parse json error: {0}")]
     JsonParse(#[from] serde_json::Error),
@@ -25,16 +24,18 @@ pub enum Error {
     IncompatibleCppStd(String),
     #[error("library '{0}' does not have config '{1}'")]
     ConfigUnavailable(String, String),
-    #[error("no project signifier 'main.cpp' or 'lib.h' found")]
-    MissingEntryPoint,
     #[error("compiler unavailable for current toolchain: '{0}'")]
     MissingCompiler(String),
     #[error("failed to compile project '{0}'")]
     CompilerFail(String),
-    #[error("failed to link project '{0}'")]
+    #[error("failed to link application '{0}'")]
     LinkerFail(String),
+    #[error("failed to link library '{0}'")]
+    ArchiverFail(String),
     #[error("missing  'test' directory in this project")]
     MissingTests,
+    #[error("filesystem error: {0}")]
+    FileSystem(#[from] std::io::Error),
     #[error("build failed")]
     #[allow(unused)]
     Unknown,

@@ -4,6 +4,7 @@ mod libfile;
 pub use buildfile::*;
 pub use libfile::*;
 use std::fmt::Display;
+use crate::Error;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,37 +13,22 @@ pub enum ProjKind {
     Lib,
 }
 
-impl ProjKind {
-    pub fn ext(&self, toolchain: ToolChain) -> String {
-        match self {
-            Self::App => ".exe".to_string(),
-            Self::Lib => {
-                if toolchain.is_msvc() {
-                    ".lib".to_string()
-                } else {
-                    ".a".to_string()
-                }
-            }
-        }
-    }
-}
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolChain {
-    MSVC,
-    GNU,
-    CLANG,
+    Msvc,
+    Gnu,
+    Clang,
 }
 
 impl Default for ToolChain {
     fn default() -> Self {
         if cfg!(target_os = "windows") {
-            ToolChain::MSVC
+            ToolChain::Msvc
         } else if cfg!(target_os = "linux") {
-            ToolChain::GNU
+            ToolChain::Gnu
         } else {
-            ToolChain::CLANG
+            ToolChain::Clang
         }
     }
 }
@@ -50,81 +36,73 @@ impl Default for ToolChain {
 #[allow(unused)]
 impl ToolChain {
     pub fn is_msvc(&self) -> bool {
-        matches!(self, Self::MSVC)
+        matches!(self, Self::Msvc)
     }
     pub fn is_gnu(&self) -> bool {
-        matches!(self, Self::GNU { .. })
+        matches!(self, Self::Gnu)
     }
     pub fn is_clang(&self) -> bool {
-        matches!(self, Self::CLANG)
+        matches!(self, Self::Clang)
     }
+
     pub fn is_posix(&self) -> bool {
-        matches!(self, Self::GNU | Self::CLANG)
+        matches!(self, Self::Gnu|Self::Clang)
     }
     pub fn is_llvm(&self) -> bool {
-        matches!(self, Self::CLANG)
+        matches!(self, Self::Clang)
     }
-    pub fn ext(&self, kind: ProjKind) -> String {
+
+    pub fn lib_prefix(&self) -> &'static str {
+        match self {
+            Self::Msvc => "",
+            _ => "lib",
+        }
+    }
+    pub fn ext(&self, kind: ProjKind) -> &'static str {
         match kind {
             ProjKind::App => self.app_ext(),
             ProjKind::Lib => self.lib_ext(),
         }
     }
-    pub fn app_ext(&self) -> String {
+    pub fn app_ext(&self) -> &'static str {
         match self {
-            Self::MSVC => ".exe".to_string(),
-            _ => String::new(),
+            Self::Msvc => ".exe",
+            _ => "",
         }
     }
-    pub fn lib_ext(&self) -> String {
+    pub fn lib_ext(&self) -> &'static str {
         match self {
-            Self::MSVC => ".lib".to_string(),
-            _ => ".a".to_string(),
+            Self::Msvc => ".lib",
+            _ => ".a",
         }
     }
-    pub fn lib_prefix(&self) -> String {
+
+    pub fn compiler(&self, cpp: bool) -> &'static str {
         match self {
-            Self::MSVC => String::new(),
-            _ => "lib".to_string(),
+            Self::Msvc  => "cl",
+            Self::Gnu   => if cpp { "g++" } else { "gcc" }
+            Self::Clang => if cpp { "clang++" } else { "clang" }
         }
     }
-    pub fn compiler(&self, is_c: bool) -> String {
+    pub fn linker(&self, cpp: bool) -> &'static str {
         match self {
-            Self::MSVC => "cl".to_string(),
-            Self::GNU => {
-                if is_c {
-                    "gcc".to_string()
-                } else {
-                    "g++".to_string()
-                }
-            }
-            Self::CLANG => {
-                if is_c {
-                    "clang".to_string()
-                } else {
-                    "clang++".to_string()
-                }
-            }
+            Self::Msvc => "LINK",
+            Self::Gnu|Self::Clang => self.compiler(cpp),
         }
     }
-    pub fn linker(&self, is_c: bool) -> String {
+    pub fn archiver(&self) -> &'static str {
         match self {
-            Self::MSVC => "LINK".to_string(),
-            Self::GNU | Self::CLANG => self.compiler(is_c),
+            Self::Msvc  => "LIB",
+            Self::Gnu   => "ar",
+            Self::Clang => "llvm-ar",
         }
     }
-    pub fn archiver(&self) -> String {
+
+    pub fn as_arg(&self) -> &'static str {
         match self {
-            Self::MSVC => "LIB".to_string(),
-            Self::GNU => "ar".to_string(),
-            Self::CLANG => "llvm-ar".to_string(),
-        }
-    }
-    pub fn as_arg(&self) -> String {
-        match self {
-            Self::MSVC => "-t=msvc".to_string(),
-            Self::GNU => "-t=gnu".to_string(),
-            Self::CLANG => "-t=clang".to_string(),
+            Self::Msvc  => "-t=msvc",
+            Self::Gnu   => "-t=gnu",
+            Self::Clang => "-t=clang",
         }
     }
 }
@@ -132,9 +110,9 @@ impl ToolChain {
 impl Display for ToolChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::MSVC => write!(f, "MSVC"),
-            Self::GNU => write!(f, "GCC"),
-            Self::CLANG => write!(f, "Clang/LLVM"),
+            Self::Msvc  => write!(f, "MSVC"),
+            Self::Gnu   => write!(f, "GCC"),
+            Self::Clang => write!(f, "Clang/LLVM"),
         }
     }
 }
@@ -146,18 +124,18 @@ pub enum Config {
     Release,
 }
 
+#[allow(unused)]
 impl Config {
-    #[allow(unused)]
     pub fn is_debug(&self) -> bool {
         *self == Config::Debug
     }
     pub fn is_release(&self) -> bool {
         *self == Config::Release
     }
-    pub fn as_arg(&self) -> String {
+    pub fn as_define(&self) -> &'static str {
         match self {
-            Self::Debug => "DEBUG".to_string(),
-            Self::Release => "RELEASE".to_string(),
+            Self::Debug   => "DEBUG",
+            Self::Release => "RELEASE",
         }
     }
 }
@@ -165,9 +143,138 @@ impl Config {
 impl Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Debug => write!(f, "debug"),
+            Self::Debug   => write!(f, "debug"),
             Self::Release => write!(f, "release"),
         }
     }
 }
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lang {
+    Cpp(u32),
+    C(u32),
+}
+
+impl Lang {
+    pub fn is_cpp(&self) -> bool {
+        matches!(self, Self::Cpp(_))
+    }
+    pub fn is_latest(&self) -> bool {
+        match *self {
+            Self::Cpp(n) => n == 123,
+            Self::C(n)   => n == 123,
+        }
+    }
+
+    pub fn src_ext(&self) -> &'static str {
+        match self {
+            Self::Cpp(..) => ".cpp",
+            Self::C(..)   => ".c",
+        }
+    }
+}
+
+impl Display for Lang {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Cpp(n) => write!(f, "c++{}", if n >= 100 { n - 100 } else { n }),
+            Self::C(n)   => write!(f, "c{}",   if n >= 100 { n - 100 } else { n }),
+        }
+    }
+}
+
+impl Ord for Lang {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Lang::Cpp(a), Lang::Cpp(b)) => a.cmp(b),
+            (Lang::Cpp(_), Lang::C(_)) => 1.cmp(&0),
+            (Lang::C(_), Lang::Cpp(_)) => 0.cmp(&1),
+            (Lang::C(a), Lang::C(b)) => a.cmp(b),
+        }
+    }
+}
+
+impl PartialOrd for Lang {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl TryFrom<&str> for Lang {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let cpp = value.to_ascii_lowercase();
+        if cpp.starts_with("c++") {
+            let num: u32 = cpp.strip_prefix("c++")
+                .unwrap()
+                .parse()
+                .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
+            if !matches!(num, 98 | 3 | 11 | 14 | 17 | 20 | 23) {
+                Err(Error::InvalidCppStd(cpp.to_string()))
+            } else if num < 80 {
+                Ok(Lang::Cpp(100 + num))
+            } else {
+                Ok(Lang::Cpp(num))
+            }
+        } else {
+            let num: u32 = cpp.strip_prefix("c")
+                .ok_or(Error::InvalidCppStd(cpp.to_string()))?
+                .parse()
+                .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
+            if !matches!(num, 89 | 99 | 11 | 17 | 20 | 23) {
+                Err(Error::InvalidCppStd(cpp.to_string()))
+            } else if num < 80 {
+                Ok(Lang::C(100 + num))
+            } else {
+                Ok(Lang::C(num))
+            }
+        }
+    }
+}
+
+impl TryFrom<&String> for Lang {
+    type Error = Error;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn parse_lang_cpp() {
+        assert_eq!(Lang::try_from("c++98").unwrap(), Lang::Cpp(98));
+        assert_eq!(Lang::try_from("c++03").unwrap(), Lang::Cpp(103));
+        assert_eq!(Lang::try_from("c++11").unwrap(), Lang::Cpp(111));
+        assert_eq!(Lang::try_from("c++14").unwrap(), Lang::Cpp(114));
+        assert_eq!(Lang::try_from("C++17").unwrap(), Lang::Cpp(117));
+        assert_eq!(Lang::try_from("C++20").unwrap(), Lang::Cpp(120));
+        assert_eq!(Lang::try_from("C++23").unwrap(), Lang::Cpp(123));
+    }
+
+    #[test]
+    pub fn parse_lang_c() {
+        assert_eq!(Lang::try_from("c89").unwrap(), Lang::C(89));
+        assert_eq!(Lang::try_from("c99").unwrap(), Lang::C(99));
+        assert_eq!(Lang::try_from("C11").unwrap(), Lang::C(111));
+        assert_eq!(Lang::try_from("C17").unwrap(), Lang::C(117));
+        assert_eq!(Lang::try_from("C20").unwrap(), Lang::C(120));
+        assert_eq!(Lang::try_from("C23").unwrap(), Lang::C(123));
+    }
+
+    #[test]
+    pub fn parse_lang_err() {
+        assert!(Lang::try_from("c++24").is_err());
+        assert!(Lang::try_from("c++").is_err());
+        assert!(Lang::try_from("c14").is_err());
+        assert!(Lang::try_from("c4").is_err());
+        assert!(Lang::try_from("c").is_err());
+        assert!(Lang::try_from("3").is_err());
+    }
+}

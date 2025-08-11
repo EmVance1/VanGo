@@ -4,7 +4,7 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
 ```json
 {
     "project": "example",
-    "cpp": "C++20",
+    "lang": "C++20",
     "dependencies": []
 }
 ```
@@ -18,7 +18,7 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 ```json
 {
     "library": "SFML",
-    "minstd" : "C++11",
+    "lang" : "C++11",
     "include": "include/",
     "configs": {
         ...
@@ -51,14 +51,17 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard C++ standards commitee?
 
 ## How-to:
-The build system is invoked like so:
+The build system is invoked as follows:
 
 - `vango n[ew]   [-lib] [-c] name`
-- `vango b[uild] [-r[elease]] [-t=(msvc|gnu|clang)]`
-- `vango r[un]   [-r[elease]] [-t=(msvc|gnu|clang)] [-- args*]`
-- `vango t[est]  [-r[elease]] [-t=(msvc|gnu|clang)] [tests*]`
+- `vango init    [-lib] [-c]`
+- `vango b[uild] [-r|--release] [-t=(msvc|gnu|clang)]`
+- `vango r[un]   [-r|--release] [-t=(msvc|gnu|clang)] [-- args*]`
+- `vango t[est]  [-r|--release] [-t=(msvc|gnu|clang)] [tests*]`
 - `vango c[lean]`
+- `vango help    [action]`
 
+For more, see the help action.
 VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all arguments passed after the `--` separator are forwared to the invoked executable.
 
 All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. Here, MSVC is provided for completeness as obviously it is unavailable on non-windows platforms.
@@ -68,12 +71,12 @@ All `build.json` files are expected to have 3 base declarations at the root:
 ```json
 {
     "project": "foobar"
-    "cpp": "C++XX",
+    "lang": "C++XX",
     "dependencies": [ ... ],
     ...
 }
 ```
-`project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `cpp` takes any valid C++ standard, prefixed by `"C++"` (case insensitive). It also takes `"CXX"` if you want to build pure C projects.
+`project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later). `lang` takes any valid C or C++ standard, case insensitive.
 
 
 `dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in `./lib`. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
@@ -100,12 +103,12 @@ A `lib.json` file specifies for prebuilt libraries how they should be correctly 
 ```json
 {
     "library": "foobar",
-    "minstd": "C++XX",
+    "lang": "C++XX",
     "include": "include/"
     ..
 }
 ```
-`minstd` declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. no designated initializers in header files etc.).
+`lang` in this case declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. that header files use 'clean' C).
 
 In addition, all libraries must have one of the following (but not both):
 ```json

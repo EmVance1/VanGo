@@ -1,8 +1,9 @@
-use crate::{error::Error, log_info, repr::ToolChain, BuildFile, Config, LibFile, ProjKind};
+use crate::{error::Error, log_info, repr::ToolChain, BuildFile, Config, LibFile};
 use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileInfo {
@@ -47,13 +48,14 @@ impl FileInfo {
     }
 }
 
-pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
+
+pub fn source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     let mut res = Vec::new();
 
     for e in std::fs::read_dir(sdir).ok()? {
         let e = e.ok()?;
         if e.path().is_dir() {
-            res.extend(get_source_files(&e.path(), ext)?);
+            res.extend(source_files(&e.path(), ext)?);
         } else {
             let filename = e.path().file_name()?.to_str()?.to_string();
             if filename.ends_with(ext) && filename != "pch.cpp" {
@@ -65,48 +67,6 @@ pub fn get_source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
     Some(res)
 }
 
-pub fn get_project_kind(srcdir: &str, incpub: &Option<String>) -> Result<ProjKind, Error> {
-    let sig = find_project_signifier(srcdir)?;
-    if let Some(sig) = sig {
-        return Ok(sig);
-    }
-    if let Some(inc) = incpub {
-        let sig = find_project_signifier(inc)?;
-        if let Some(sig) = sig {
-            return Ok(sig);
-        }
-    }
-    println!("not found, searched {:#?}", incpub);
-    Err(Error::MissingEntryPoint)
-}
-
-fn find_project_signifier(sdir: &str) -> Result<Option<ProjKind>, Error> {
-    for e in std::fs::read_dir(sdir).map_err(|_| Error::DirNotFound(sdir.to_string()))? {
-        // let e = e.map_err(|_| Error::MissingEntryPoint)?;
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            let sig = find_project_signifier(e.path().to_str().unwrap())?;
-            if sig.is_some() {
-                return Ok(sig);
-            }
-        } else if e.path().is_file() {
-            let filename = e.path().file_name().unwrap().to_str().unwrap().to_string();
-            if filename.ends_with("main.cpp") {
-                return Ok(Some(ProjKind::App));
-            }
-            if filename.ends_with("main.c") {
-                return Ok(Some(ProjKind::App));
-            }
-            if filename.ends_with("lib.hpp") {
-                return Ok(Some(ProjKind::Lib));
-            }
-            if filename.ends_with("lib.h") {
-                return Ok(Some(ProjKind::Lib));
-            }
-        }
-    }
-    Ok(None)
-}
 
 #[derive(Debug, Clone)]
 pub struct Dependencies {
@@ -118,12 +78,7 @@ pub struct Dependencies {
     pub rebuilt: bool,
 }
 
-pub fn get_libraries(
-    libraries: Vec<String>,
-    config: Config,
-    toolchain: ToolChain,
-    maxcpp: &str,
-) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, maxcpp: &str) -> Result<Dependencies, Error> {
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
     let mut links = Vec::new();
@@ -167,7 +122,7 @@ pub fn get_libraries(
                 std::env::set_current_dir(&dir).unwrap();
                 let mut cmd = std::process::Command::new("vango");
                 cmd.arg("build")
-                    .arg(format!("-{}", config))
+                    .arg(format!("--{config}"))
                     .arg(toolchain.as_arg());
                 let output = cmd.status().unwrap();
                 if output.code() == Some(8) {
@@ -184,7 +139,7 @@ pub fn get_libraries(
                 if toolchain.is_msvc() {
                     for l in &libinfo.links {
                         relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
-                        links.push(format!("{}.lib", l));
+                        links.push(format!("{l}.lib"));
                     }
                 } else {
                     for l in &libinfo.links {
@@ -261,10 +216,10 @@ pub fn get_libraries(
                 format!("{} ", build.project)
             );
             let save = std::env::current_dir().unwrap();
-            std::env::set_current_dir(&name).unwrap();
+            std::env::set_current_dir(name).unwrap();
             let mut cmd = std::process::Command::new("vango");
             cmd.arg("build")
-                .arg(format!("-{}", config))
+                .arg(format!("--{config}"))
                 .arg(toolchain.as_arg());
             let output = cmd.status().unwrap();
             if output.code() == Some(8) {
@@ -281,7 +236,7 @@ pub fn get_libraries(
             if toolchain.is_msvc() {
                 for l in &libinfo.links {
                     relink.push(FileInfo::from_str(&format!("{name}/{}/{}.lib", libinfo.libdir, l)));
-                    links.push(format!("{}.lib", l));
+                    links.push(format!("{l}.lib"));
                 }
             } else {
                 for l in &libinfo.links {
@@ -303,6 +258,7 @@ pub fn get_libraries(
     })
 }
 
+
 fn get_version(s: &str) -> (&str, Option<&str>) {
     for (i, c) in s.chars().rev().enumerate() {
         if c == '/' || c == '\\' {
@@ -314,6 +270,7 @@ fn get_version(s: &str) -> (&str, Option<&str>) {
     }
     (s, None)
 }
+
 
 #[cfg(test)]
 mod tests {

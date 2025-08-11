@@ -34,6 +34,10 @@ fn main() -> ExitCode {
     } else if let input::Action::Init{ library, is_c } = &cmd {
         action::init(*library, *is_c).unwrap_or_else(|e| exit_failure!("{}", e));
         0.into()
+    } else if let input::Action::Help{ action } = &cmd {
+        action::help(action.clone());
+        0.into()
+
     } else {
         let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {
             std::fs::read_to_string("win.build.json").unwrap()
@@ -69,10 +73,6 @@ fn main() -> ExitCode {
             }
             input::Action::Clean => {
                 action::clean(build).unwrap_or_else(|e| exit_failure!("{}", e));
-                0.into()
-            }
-            input::Action::Help{ action } => {
-                action::help(action);
                 0.into()
             }
             _ => 0.into()

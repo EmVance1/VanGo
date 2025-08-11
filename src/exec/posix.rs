@@ -5,30 +5,31 @@ use std::{io::Write, process::Command};
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
+    let args = info.toolchain.args();
+
     if info.lang.is_cpp() {
-        cmd.arg("-xc++");
+        cmd.arg(args.force_cpp());
+        cmd.args(args.eh_default_cpp());
     }
-    cmd.args([
-        format!("-std={}", info.lang.version_str(&info.toolchain)),
-        "-c".to_string(),
-        src.to_string(),
-        "-o".to_string(),
-        obj.to_string(),
-    ]);
-    cmd.args(info.incdirs.iter().map(|i| format!("-I{i}")));
-    cmd.args(info.defines.iter().map(|d| format!("-D{d}")));
+
+    cmd.arg(args.std(&info.lang));
+    cmd.arg(args.no_link());
+    cmd.arg(src);
+    cmd.arg(args.output(obj));
+
+    cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
+    cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
+
     if info.pch.is_some() {
         cmd.arg(format!("-Ibin/{}/pch/", info.config));
     }
+
     if info.config.is_release() {
-        cmd.arg("-O2");
-        // args.push("/MD".to_string());
+        cmd.args(args.opt_profile_high());
     } else {
-        cmd.args(["-O0", "-g"]);
-        // args.push("/MDd".to_string());
-        // args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
-        // args.push("/FS".to_string());
+        cmd.args(args.opt_profile_none());
     }
+
     cmd.args(info.comp_args);
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
@@ -36,7 +37,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     } else {
         cmd.stdout(std::process::Stdio::null());
     };
-    if verbose { print_command(info.toolchain.compiler(info.lang.is_cpp()), &cmd); }
+    if verbose { print_command(&cmd); }
     cmd
 }
 
@@ -46,7 +47,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.arg(&info.outfile.repr);
     cmd.args(objs.into_iter().map(|o| o.repr));
     cmd.args(info.link_args);
-    if verbose { print_command(info.toolchain.archiver(), &cmd); }
+    if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
@@ -66,7 +67,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.args(info.libdirs.iter().map(|l| format!("-L{l}")));
     cmd.args(info.links.iter().map(|l| format!("-l{l}")));
     cmd.args(info.link_args);
-    if verbose { print_command(info.toolchain.linker(info.lang.is_cpp()), &cmd); }
+    if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
@@ -86,30 +87,36 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
     if !std::fs::exists(&outfile).unwrap() ||
         (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outfile).unwrap().modified().unwrap())
     {
+        log_info!("compiling precompiled header: {}{}", info.srcdir, header);
+
         let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
+        let args = info.toolchain.args();
+
         if info.lang.is_cpp() {
-            cmd.arg("-xc++-header");
+            cmd.arg(args.force_cpp());
+            cmd.args(args.eh_default_cpp());
         }
-        cmd.args([
-            format!("-std={}", info.lang),
-            infile,
-            "-o".to_string(),
-            outfile
-        ]);
-        cmd.args(info.incdirs.iter().map(|i| format!("-I{i}")));
-        cmd.args(info.defines.iter().map(|d| format!("-D{d}")));
+
+        cmd.arg(args.std(&info.lang));
+        cmd.arg(args.no_link());
+        cmd.arg(&infile);
+        cmd.arg(args.output(&outfile));
+
+        cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
+        cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
+
         if info.config.is_release() {
-            cmd.arg("-O2");
+            cmd.args(args.opt_profile_high());
         } else {
-            cmd.arg("-O0");
-            cmd.arg("-g");
+            cmd.args(args.opt_profile_none());
         }
+
         if verbose {
             cmd.stdout(std::process::Stdio::piped());
         } else {
             cmd.stdout(std::process::Stdio::null());
         };
-        if verbose { print_command(info.toolchain.compiler(info.lang.is_cpp()), &cmd); }
+        if verbose { print_command(&cmd); }
         Some(cmd)
     } else {
         None
@@ -117,8 +124,8 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
 }
 
 
-fn print_command(exe: &str, cmd: &std::process::Command) {
-    print!("{exe} ");
+fn print_command(cmd: &std::process::Command) {
+    print!("{} ", cmd.get_program().to_string_lossy());
     for arg in cmd.get_args() {
         print!("{} ", arg.to_string_lossy());
     }
@@ -139,7 +146,6 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
-            outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
@@ -152,8 +158,7 @@ mod tests {
                 "-std=c++20",
                 "-c",
                 src,
-                "-o",
-                obj,
+                &format!("-o{obj}"),
                 "-Isrc/",
                 "-O0",
                 "-g",
@@ -170,7 +175,6 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Clang,
             lang: Lang::Cpp(123),
-            outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
@@ -183,8 +187,7 @@ mod tests {
                 "-std=c++23",
                 "-c",
                 src,
-                "-o",
-                obj,
+                &format!("-o{obj}"),
                 "-Isrc/",
                 "-O0",
                 "-g",

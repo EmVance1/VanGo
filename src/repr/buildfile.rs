@@ -6,7 +6,6 @@ use serde::Deserialize;
 #[serde(rename_all = "kebab-case")]
 pub struct BuildFile {
     pub project: String,
-    #[serde(alias = "cpp")]
     pub lang: String,
     pub dependencies: Vec<String>,
 
@@ -20,12 +19,16 @@ pub struct BuildFile {
     pub pch: Option<String>,
 
     #[serde(default)]
+    pub include_public: Option<String>,
+
+    #[serde(default)]
+    pub crt_static: bool,
+
+    #[serde(default)]
     pub compiler_options: Vec<String>,
     #[serde(default)]
     pub linker_options: Vec<String>,
 
-    #[serde(default)]
-    pub include_public: Option<String>,
 }
 
 impl BuildFile {

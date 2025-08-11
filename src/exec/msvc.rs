@@ -5,34 +5,33 @@ use std::{io::Write, process::Command};
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
-    cmd.args([
-        format!("/std:{}", info.lang.version_str(&info.toolchain)),
-        "/c".to_string(),
-        src.to_string(),
-        format!("/Fo:{obj}"),
-        "/EHsc".to_string(),
-        // "/Gy".to_string(),
-        // "/GL".to_string(),
-        // "/Oi".to_string(),
-    ]);
-    cmd.args(info.incdirs.iter().map(|i| format!("/I{i}")));
-    cmd.args(info.defines.iter().map(|d| format!("/D{d}")));
-    if info.config.is_release() {
-        cmd.args(["/MD", "/O2"]);
-    } else {
-        cmd.args([
-            "/MDd".to_string(),
-            "/Od".to_string(),
-            "/Zi".to_string(),
-            format!("/Fd:{}vc143.pdb", info.outdir),
-            "/FS".to_string(),
-        ]);
+    let args = info.toolchain.args();
+
+    if info.lang.is_cpp() {
+        cmd.arg(args.force_cpp());
+        cmd.args(args.eh_default_cpp());
     }
+
+    cmd.arg(args.std(&info.lang));
+    cmd.arg(args.no_link());
+    cmd.arg(src);
+    cmd.arg(args.output(obj));
+
+    cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
+    cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
+
+    if info.config.is_release() {
+        cmd.args(args.opt_profile_high());
+    } else {
+        cmd.args(args.opt_profile_none());
+    }
+
     if let Some(infile) = info.pch {
         let outfile = format!("bin/{}/pch/{}.pch", info.config, infile);
         cmd.arg(format!("/Yu{infile}"));
-        cmd.arg(format!("/Fp{outfile}"));
+        cmd.arg(format!("/Fp:{outfile}"));
     }
+
     cmd.args(info.comp_args);
     cmd.stdout(std::process::Stdio::piped());
     if verbose {
@@ -40,7 +39,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     } else {
         cmd.stderr(std::process::Stdio::null());
     };
-    if verbose { print_command("cl.exe", &cmd); }
+    if verbose { print_command(&cmd); }
     cmd
 }
 
@@ -50,7 +49,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.arg(format!("/OUT:{}", info.outfile.repr));
     cmd.arg("/MACHINE:X64");
     cmd.args(info.link_args);
-    if verbose { print_command("lib.exe", &cmd); }
+    if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
@@ -77,7 +76,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
         cmd.arg("/DEBUG");
     }
     cmd.args(info.link_args);
-    if verbose { print_command("link.exe", &cmd); }
+    if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
@@ -102,35 +101,33 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
     if !std::fs::exists(&outpch).unwrap() ||
         (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outpch).unwrap().modified().unwrap())
     {
-        let mut cmd = Command::new("cl");
-        if info.lang.is_latest() {
-            if info.lang.is_cpp() {
-                cmd.arg("/std:c++latest");
-            } else {
-                cmd.arg("/std:clatest");
-            }
-        } else {
-            cmd.arg(format!("/std:{}", info.lang));
+        log_info!("compiling precompiled header: {}{}", info.srcdir, header);
+
+        let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
+        let args = info.toolchain.args();
+
+        if info.lang.is_cpp() {
+            cmd.arg(args.force_cpp());
+            cmd.args(args.eh_default_cpp());
         }
-        cmd.args([
-            "/c".to_string(),
-            cppf,
-            format!("/Fo:{outobj}"),
-            "/EHsc".to_string(),
-            // "/Gy".to_string(),
-            // "/GL".to_string(),
-            // "/Oi".to_string(),
-        ]);
-        cmd.args(info.incdirs.iter().map(|i| format!("/I{i}")));
-        cmd.args(info.defines.iter().map(|d| format!("/D{d}")));
+
+        cmd.arg(args.std(&info.lang));
+        cmd.arg(args.no_link());
+        cmd.arg(&cppf);
+        cmd.arg(args.output(&outobj));
+
+        cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
+        cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
+
         if info.config.is_release() {
-            cmd.args(["/MD", "/O2"]);
+            cmd.args(args.opt_profile_high());
         } else {
-            cmd.args(["/MDd", "/Od", "/Zi", "/FS"]);
-            cmd.arg(format!("/Fd:{}vc143.pdb", info.outdir));
+            cmd.args(args.opt_profile_none());
         }
+
         cmd.arg(format!("/Yc{header}"));
         cmd.arg(format!("/Fp:{outpch}"));
+
         cmd.args(&info.comp_args);
         cmd.stdout(std::process::Stdio::piped());
         if verbose {
@@ -138,7 +135,7 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
         } else {
             cmd.stderr(std::process::Stdio::null());
         };
-        if verbose { print_command("cl.exe", &cmd); }
+        if verbose { print_command(&cmd); }
         Some(cmd)
     } else {
         None
@@ -161,8 +158,8 @@ const DEFAULT_LIBS: &[&str] = &[
 ];
 
 
-fn print_command(exe: &str, cmd: &std::process::Command) {
-    print!("{exe} ");
+fn print_command(cmd: &std::process::Command) {
+    print!("{} ", cmd.get_program().to_string_lossy());
     for arg in cmd.get_args() {
         print!("{} ", arg.to_string_lossy());
     }
@@ -183,7 +180,6 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(120),
-            outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
@@ -192,15 +188,16 @@ mod tests {
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
+                "/TP",
+                "/EHsc",
                 "/std:c++20",
                 "/c",
                 src,
                 &format!("/Fo:{obj}"),
-                "/EHsc",
                 "/Isrc/",
-                "/MDd",
                 "/Od",
                 "/Zi",
+                "/MDd",
                 "/Fd:bin/debug/obj/vc143.pdb",
                 "/FS",
             ]
@@ -216,7 +213,6 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(123),
-            outdir: "bin/debug/obj/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
@@ -225,15 +221,16 @@ mod tests {
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
+                "/TP",
+                "/EHsc",
                 "/std:c++latest",
                 "/c",
                 src,
                 &format!("/Fo:{obj}"),
-                "/EHsc",
                 "/Isrc/",
-                "/MDd",
                 "/Od",
                 "/Zi",
+                "/MDd",
                 "/Fd:bin/debug/obj/vc143.pdb",
                 "/FS",
             ]

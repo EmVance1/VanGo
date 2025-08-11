@@ -1,5 +1,6 @@
 mod buildfile;
 mod libfile;
+mod args;
 
 pub use buildfile::*;
 pub use libfile::*;
@@ -105,6 +106,10 @@ impl ToolChain {
             Self::Clang => "-t=clang",
         }
     }
+
+    pub fn args(&self) -> args::Args {
+        args::Args(*self)
+    }
 }
 
 impl Display for ToolChain {
@@ -136,6 +141,12 @@ impl Config {
         match self {
             Self::Debug   => "DEBUG",
             Self::Release => "RELEASE",
+        }
+    }
+    pub fn as_arg(&self) -> &'static str {
+        match self {
+            Self::Debug   => "--debug",
+            Self::Release => "--release",
         }
     }
 }
@@ -177,18 +188,6 @@ impl Lang {
     pub fn numeric(&self) -> u32 {
         match *self {
             Self::Cpp(n)|Self::C(n) => if n >= 100 { n - 100 } else { n },
-        }
-    }
-
-    pub fn version_str(&self, toolchain: &ToolChain) -> String {
-        if toolchain.is_msvc() && self.is_latest() {
-            if self.is_cpp() {
-                "c++latest".to_string()
-            } else {
-                "clatest".to_string()
-            }
-        } else {
-            self.to_string()
         }
     }
 }

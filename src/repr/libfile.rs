@@ -7,7 +7,6 @@ use super::{Lang, BuildFile};
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibFile {
     pub library: String,
-    #[serde(alias = "minstd")]
     pub lang: String,
     pub include: String,
     #[serde(default)]

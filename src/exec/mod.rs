@@ -42,7 +42,6 @@ impl BuildInfo {
             toolchain: self.toolchain,
             config: self.config,
             lang: self.lang,
-            outdir: &self.outdir,
             defines: &self.defines,
             incdirs: &self.incdirs,
             pch: &self.pch,
@@ -56,7 +55,6 @@ struct CompileInfo<'a> {
     toolchain: ToolChain,
     config: Config,
     lang: Lang,
-    outdir: &'a str,
     defines: &'a [String],
     incdirs: &'a [String],
     pch: &'a Option<String>,
@@ -74,7 +72,6 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
             posix::precompile_header(pch, &info, verbose)
         };
         if let Some(mut cmd) = cmd {
-            log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
             let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
             if !output.status.success() {
                 log_error!("failed to compile precompiled header");

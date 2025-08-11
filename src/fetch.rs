@@ -95,10 +95,7 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
             let stem = url.file_stem().unwrap().to_string_lossy();
             let dir = format!("{home}/.vango/packages/{stem}");
             if !std::fs::exists(&dir).unwrap() {
-                log_info!(
-                    "cloning project dependency to: {:-<52}",
-                    format!("$ENV/packages/{stem} ")
-                );
+                log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
                 std::process::Command::new("git")
                     .arg("clone")
                     .arg(format!("{}", url.to_string_lossy()))
@@ -116,13 +113,13 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
                 links.extend(libinfo.links);
                 defines.extend(libinfo.defines);
             } else if let Ok(build) = std::fs::read_to_string(format!("{dir}/build.json")) {
-                let build: BuildFile = serde_json::from_str(&build).unwrap();
+                let build: BuildFile = serde_json::from_str(&build)?;
                 log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
                 let save = std::env::current_dir().unwrap();
                 std::env::set_current_dir(&dir).unwrap();
                 let mut cmd = std::process::Command::new("vango");
                 cmd.arg("build")
-                    .arg(format!("--{config}"))
+                    .arg(config.as_arg())
                     .arg(toolchain.as_arg());
                 let output = cmd.status().unwrap();
                 if output.code() == Some(8) {
@@ -151,39 +148,11 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
             }
         }
 
-        if let Some(build) = if cfg!(target_os = "windows")
-            && std::fs::exists(format!("lib/{name}/win.lib.json")).unwrap()
-        {
-            std::fs::read_to_string(format!("lib/{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux")
-            && std::fs::exists(format!("lib/{name}/linux.lib.json")).unwrap()
-        {
-            std::fs::read_to_string(format!("lib/{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos")
-            && std::fs::exists(format!("lib/{name}/macos.lib.json")).unwrap()
-        {
-            std::fs::read_to_string(format!("lib/{name}/macos.lib.json")).ok()
-        } else {
-            std::fs::read_to_string(format!("lib/{name}/lib.json")).ok()
-        } {
-            let libinfo = LibFile::from_str(&build)?
-                .validate(maxcpp)?
-                .linearise(config, version)?;
-            incdirs.push(format!("lib/{name}/{}", libinfo.incdir));
-            libdirs.push(format!("lib/{name}/{}", libinfo.libdir));
-            links.extend(libinfo.links);
-            defines.extend(libinfo.defines);
-        } else if let Some(build) = if cfg!(target_os = "windows")
-            && std::fs::exists(format!("{name}/win.lib.json")).unwrap()
-        {
+        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux")
-            && std::fs::exists(format!("{name}/linux.lib.json")).unwrap()
-        {
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos")
-            && std::fs::exists(format!("{name}/macos.lib.json")).unwrap()
-        {
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/macos.lib.json")).ok()
         } else {
             std::fs::read_to_string(format!("{name}/lib.json")).ok()
@@ -195,31 +164,22 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
             libdirs.push(format!("{name}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Some(build) = if cfg!(target_os = "windows")
-            && std::fs::exists(format!("{name}/win.build.json")).unwrap()
-        {
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.build.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/win.build.json")).ok()
-        } else if cfg!(target_os = "linux")
-            && std::fs::exists(format!("{name}/linux.build.json")).unwrap()
-        {
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.build.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/linux.build.json")).ok()
-        } else if cfg!(target_os = "macos")
-            && std::fs::exists(format!("{name}/macos.build.json")).unwrap()
-        {
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.build.json")).unwrap() {
             std::fs::read_to_string(format!("{name}/macos.build.json")).ok()
         } else {
             std::fs::read_to_string(format!("{name}/build.json")).ok()
         } {
-            let build: BuildFile = serde_json::from_str(&build).unwrap();
-            log_info!(
-                "building project dependency: {:-<54}",
-                format!("{} ", build.project)
-            );
+            let build: BuildFile = serde_json::from_str(&build)?;
+            log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(name).unwrap();
             let mut cmd = std::process::Command::new("vango");
             cmd.arg("build")
-                .arg(format!("--{config}"))
+                .arg(config.as_arg())
                 .arg(toolchain.as_arg());
             let output = cmd.status().unwrap();
             if output.code() == Some(8) {

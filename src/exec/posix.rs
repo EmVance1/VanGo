@@ -9,7 +9,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.arg("-xc++");
     }
     cmd.args([
-        format!("-std={}", info.lang),
+        format!("-std={}", info.lang.version_str(&info.toolchain)),
         "-c".to_string(),
         src.to_string(),
         "-o".to_string(),

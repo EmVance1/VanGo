@@ -4,17 +4,9 @@ use std::{io::Write, process::Command};
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
-    let mut cmd = std::process::Command::new("cl");
-    if info.lang.is_latest() {
-        if info.lang.is_cpp() {
-            cmd.arg("/std:c++latest");
-        } else {
-            cmd.arg("/std:clatest");
-        }
-    } else {
-        cmd.arg(format!("/std:{}", info.lang));
-    }
+    let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     cmd.args([
+        format!("/std:{}", info.lang.version_str(&info.toolchain)),
         "/c".to_string(),
         src.to_string(),
         format!("/Fo:{obj}"),
@@ -111,17 +103,6 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
         (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outpch).unwrap().modified().unwrap())
     {
         let mut cmd = Command::new("cl");
-        cmd.args([
-            cppf,
-            "/c".to_string(),
-            "/EHsc".to_string(),
-            format!("/Yc{header}"),
-            format!("/Fp:{outpch}"),
-            format!("/Fo:{outobj}"),
-            // "/Gy".to_string(),
-            // "/GL".to_string(),
-            // "/Oi".to_string(),
-        ]);
         if info.lang.is_latest() {
             if info.lang.is_cpp() {
                 cmd.arg("/std:c++latest");
@@ -131,6 +112,15 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
         } else {
             cmd.arg(format!("/std:{}", info.lang));
         }
+        cmd.args([
+            "/c".to_string(),
+            cppf,
+            format!("/Fo:{outobj}"),
+            "/EHsc".to_string(),
+            // "/Gy".to_string(),
+            // "/GL".to_string(),
+            // "/Oi".to_string(),
+        ]);
         cmd.args(info.incdirs.iter().map(|i| format!("/I{i}")));
         cmd.args(info.defines.iter().map(|d| format!("/D{d}")));
         if info.config.is_release() {
@@ -139,6 +129,9 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
             cmd.args(["/MDd", "/Od", "/Zi", "/FS"]);
             cmd.arg(format!("/Fd:{}vc143.pdb", info.outdir));
         }
+        cmd.arg(format!("/Yc{header}"));
+        cmd.arg(format!("/Fp:{outpch}"));
+        cmd.args(&info.comp_args);
         cmd.stdout(std::process::Stdio::piped());
         if verbose {
             cmd.stderr(std::process::Stdio::piped());

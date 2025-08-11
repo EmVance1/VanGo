@@ -18,7 +18,7 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
     log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext =    if is_c { "c" } else { "cpp" };
-    let cstd =   if is_c { "c11" } else { "c++17" };
+    let lang =   if is_c { "c11" } else { "c++17" };
     let header = if is_c { "stdio.h" } else { "cstdio" };
     std::fs::create_dir("src")?;
     if library {
@@ -28,17 +28,17 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
         } else {
             "#pragma once\n\nint func(int a, int b);\n"
         })?;
-        let json = format!("{{\n    \"project\": \"{name}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{name}\" ],\n    \"include-public\": \"include/\"\n}}");
+        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{name}\" ],\n    \"include-public\": \"include/\"\n}}");
         let flags = format!(
-            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc\n-Iinclude/{name}",
+            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc\n-Iinclude/{name}",
             if !is_c { "-xc++\n" } else { "" });
         std::fs::write(format!("src/lib.{ext}"), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n")?;
         std::fs::write("build.json", json)?;
         std::fs::write("compile_flags.txt", flags)?;
     } else {
-        let json = format!("{{\n    \"project\": \"{name}\",\n    \"cpp\": \"{cstd}\",\n    \"dependencies\": []\n}}");
+        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"dependencies\": []\n}}");
         let flags = format!(
-            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={cstd}\n{}-DDEBUG\n-Isrc",
+            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc",
             if !is_c { "-xc++\n" } else { "" });
         std::fs::write(format!("src/main.{ext}"), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"))?;
         std::fs::write("build.json", json)?;

@@ -173,13 +173,31 @@ impl Lang {
             Self::C(..)   => ".c",
         }
     }
+
+    pub fn numeric(&self) -> u32 {
+        match *self {
+            Self::Cpp(n)|Self::C(n) => if n >= 100 { n - 100 } else { n },
+        }
+    }
+
+    pub fn version_str(&self, toolchain: &ToolChain) -> String {
+        if toolchain.is_msvc() && self.is_latest() {
+            if self.is_cpp() {
+                "c++latest".to_string()
+            } else {
+                "clatest".to_string()
+            }
+        } else {
+            self.to_string()
+        }
+    }
 }
 
 impl Display for Lang {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            Self::Cpp(n) => write!(f, "c++{}", if n >= 100 { n - 100 } else { n }),
-            Self::C(n)   => write!(f, "c{}",   if n >= 100 { n - 100 } else { n }),
+            Self::Cpp(_) => write!(f, "c++{}", self.numeric()),
+            Self::C(_)   => write!(f, "c{}",   self.numeric()),
         }
     }
 }

@@ -2,8 +2,10 @@ use std::path::{Path, PathBuf};
 
 
 pub fn ensure_out_dirs(sdir: &str, odir: &str) {
-    let _ = std::fs::create_dir_all("bin/debug/pch");
-    let _ = std::fs::create_dir_all("bin/release/pch");
+    let _ = std::fs::create_dir_all("bin/debug/obj");
+    let _ = std::fs::create_dir("bin/debug/pch");
+    let _ = std::fs::create_dir_all("bin/release/obj");
+    let _ = std::fs::create_dir("bin/release/pch");
     ensure_out_dirs_rec(&PathBuf::from(sdir), sdir, odir);
 }
 

@@ -17,6 +17,9 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     ]);
     cmd.args(info.incdirs.iter().map(|i| format!("-I{i}")));
     cmd.args(info.defines.iter().map(|d| format!("-D{d}")));
+    if info.pch.is_some() {
+        cmd.arg(format!("-Ibin/{}/pch/", info.config));
+    }
     if info.config.is_release() {
         cmd.arg("-O2");
         // args.push("/MD".to_string());
@@ -77,10 +80,10 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 }
 
 pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let head_with_dir = format!("{}{}", info.srcdir, header);
-    let cmpd = format!("{head_with_dir}.gch");
-    let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
-    let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
+    let _infile = format!("{}{}", info.srcdir, header);
+    let _outfile = format!("bin/{}/pch/{}.gch", info.config, header);
+    let infile = FileInfo::from_path(&PathBuf::from(&_infile));
+    let outfile = FileInfo::from_path(&PathBuf::from(&_outfile));
 
     if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
         let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
@@ -89,9 +92,9 @@ pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -
         }
         cmd.args([
             format!("-std={}", info.lang),
-            head_with_dir,
-            // "-o".to_string(),
-            // obj.to_string(),
+            _infile,
+            "-o".to_string(),
+            _outfile
         ]);
         cmd.args(info.incdirs.iter().map(|i| format!("-I{i}")));
         cmd.args(info.defines.iter().map(|d| format!("-D{d}")));

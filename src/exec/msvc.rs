@@ -36,10 +36,10 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
             "/FS".to_string(),
         ]);
     }
-    if let Some(outfile) = info.pch {
-        let cmpd = format!("{}/{}.pch", info.outdir, outfile);
-        cmd.arg(format!("/Yu{outfile}"));
-        cmd.arg(format!("/Fp{cmpd}"));
+    if let Some(infile) = info.pch {
+        let outfile = format!("bin/{}/pch/{}.pch", info.config, infile);
+        cmd.arg(format!("/Yu{infile}"));
+        cmd.arg(format!("/Fp{outfile}"));
     }
     cmd.args(info.comp_args);
     cmd.stdout(std::process::Stdio::piped());
@@ -74,7 +74,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     let mut cmd = Command::new("link");
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(&info.links);
-    cmd.args(DEFAULT_LIBS);
+    cmd.args(DEFAULT_LIBS.iter().map(|l| format!("/DEFAULTLIB:{l}")));
     cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{l}")));
     cmd.arg(format!("/OUT:{}", info.outfile.repr));
     cmd.arg("/MACHINE:X64");
@@ -98,22 +98,22 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 }
 
 pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let head_with_dir = format!("{}{}", info.srcdir, header);
     let cppf = format!("{}{}", info.srcdir, header.replace(".h", ".cpp"));
-    let objt = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
-    let cmpd = format!("{}{}.pch", info.outdir, header.replace(&info.srcdir, &info.outdir));
-    let infile = FileInfo::from_path(&PathBuf::from(&head_with_dir));
-    let outfile = FileInfo::from_path(&PathBuf::from(&cmpd));
+    let _infile = format!("{}{}", info.srcdir, header);
+    let _outpch = format!("bin/{}/pch/{}.pch", info.config, header);
+    let outobj = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
+    let infile = FileInfo::from_path(&PathBuf::from(&_infile));
+    let outpch = FileInfo::from_path(&PathBuf::from(&_outpch));
 
-    if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
+    if !outpch.exists() || infile.modified().unwrap() > outpch.modified().unwrap() {
         let mut cmd = Command::new("cl");
         cmd.args([
-            cppf.clone(),
+            cppf,
             "/c".to_string(),
             "/EHsc".to_string(),
             format!("/Yc{header}"),
-            format!("/Fp:{cmpd}"),
-            format!("/Fo:{objt}"),
+            format!("/Fp:{_outpch}"),
+            format!("/Fo:{outobj}"),
             // "/Gy".to_string(),
             // "/GL".to_string(),
             // "/Oi".to_string(),

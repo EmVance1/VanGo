@@ -18,7 +18,7 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
     log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext =    if is_c { "c" } else { "cpp" };
-    let cstd =   if is_c { "C11" } else { "C++17" };
+    let cstd =   if is_c { "c11" } else { "c++17" };
     let header = if is_c { "stdio.h" } else { "cstdio" };
     std::fs::create_dir("src")?;
     if library {
@@ -45,17 +45,6 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
         std::fs::write("compile_flags.txt", flags)?;
     }
     log_info!("successfully created project '{name}'");
-    Ok(())
-}
-
-
-pub fn clean(build: BuildFile) -> Result<(), Error> {
-    log_info!("cleaning build files for \"{}\"", build.project);
-    let _ = std::fs::remove_dir_all("bin/debug/");
-    let _ = std::fs::remove_dir_all("bin/release/");
-    if let Some(pch) = build.pch {
-        let _ = std::fs::remove_file(format!("src/{pch}.gch"));
-    }
     Ok(())
 }
 
@@ -106,6 +95,17 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
         Err(e) => Err(e),
         Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outpath)),
     }
+}
+
+
+pub fn clean(build: BuildFile) -> Result<(), Error> {
+    log_info!("cleaning build files for \"{}\"", build.project);
+    let _ = std::fs::remove_dir_all("bin/debug/");
+    let _ = std::fs::remove_dir_all("bin/release/");
+    if let Some(pch) = build.pch {
+        let _ = std::fs::remove_file(format!("src/{pch}.gch"));
+    }
+    Ok(())
 }
 
 

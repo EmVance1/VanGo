@@ -41,7 +41,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.arg(format!("/Yu{outfile}"));
         cmd.arg(format!("/Fp{cmpd}"));
     }
-    cmd.args(info.comp_args.iter().map(|s| s.to_string()));
+    cmd.args(info.comp_args);
     cmd.stdout(std::process::Stdio::piped());
     if verbose {
         cmd.stderr(std::process::Stdio::piped());
@@ -81,10 +81,10 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
         // "/LTCG".to_string(),
         // format!("/{}", info.config.as_arg()),
         // "/OPT:REF".to_string(),
-    cmd.args(info.link_args);
     if info.config.is_debug() {
         cmd.arg("/DEBUG");
     }
+    cmd.args(info.link_args);
     if verbose { print_command("link.exe", &cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {

@@ -36,11 +36,10 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 "defines": [ "MACRO" ],
 "defines": [ "VALUE=10" ],
 ```
-- Precompiled headers were never easier
+- Precompiling a header was never easier
 ```json
 "pch": "pch.h",
 ```
-- Executable/Library output deduction using main.cpp/lib.h entry points
 - Debug and Release configurations (work in progress)
 ```json
 "SETTING.debug": { ... },
@@ -48,23 +47,23 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 ```
 
 ### It just works
-Slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard C++ standards commitee?
+Even without boilerplate generation, slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard C++ standards commitee?
 
 ## How-to:
-The build system is invoked as follows:
+Some examples of invocations are as follows, but for a more complete list see the help action.
 
-- `vango n[ew]   [-lib] [-c] name`
-- `vango init    [-lib] [-c]`
-- `vango b[uild] [-r|--release] [-t=(msvc|gnu|clang)]`
-- `vango r[un]   [-r|--release] [-t=(msvc|gnu|clang)] [-- args*]`
-- `vango t[est]  [-r|--release] [-t=(msvc|gnu|clang)] [tests*]`
+- `vango new     [-lib] [-c] <name>`
+- `vango b[uild] [-r|--release] [-t=<msvc|gnu|clang>]`
+- `vango r[un]   [-r|--release] [-t=<msvc|gnu|clang>] [-- args*]`
 - `vango c[lean]`
 - `vango help    [action]`
 
-For more, see the help action.
-VanGo is opinionated for simplicity and makes some base assumptions: you have a valid build script in the project root (`build.json`), all of your source files are in the `src` directory, and it will place all output files in `bin/{config}/`. Your output executable is named the same as your project. In the `run` action, all arguments passed after the `--` separator are forwared to the invoked executable.
-
-All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. Here, MSVC is provided for completeness as obviously it is unavailable on non-windows platforms.
+VanGo is opinionated for simplicity and makes some base assumptions and decisions:
+- You have a valid build script in the project root (`build.json`)
+- All of your source files are in the `src` directory, and all output files are generated in in `bin/{config}/`.
+- Your output binary is named the same as your project.
+- To build as a library, you have a `lib.h` somewhere in your project.
+- All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms.
 
 ### How-to: build.json
 All `build.json` files are expected to have 3 base declarations at the root:
@@ -146,7 +145,7 @@ test(basic_math) {
 ```
 In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
-To forward declare a test, use the macro `decl_test(test_name)`.
+To forward declare a test, use the `decl_test(test_name)` macro.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp
@@ -162,5 +161,5 @@ test_main(
     test_register(basic_math);
 )
 ```
-Given these prerequisites, tests can be run on a case by case basis or all at once by not specifying specific tests.
+Given these prerequisites, tests can be run on a case by case basis by specifying their names on the command line,by specifying their names on the command line, or all at once by not specifying anything.
 

@@ -26,6 +26,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         // args.push(format!("/Fd:{}/vc143.pdb", info.outdir));
         // args.push("/FS".to_string());
     }
+    cmd.args(info.comp_args);
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
         cmd.stdout(std::process::Stdio::piped());
@@ -41,6 +42,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.arg("rcs");
     cmd.arg(&info.outfile.repr);
     cmd.args(objs.into_iter().map(|o| o.repr));
+    cmd.args(info.link_args);
     if verbose { print_command(info.toolchain.archiver(), &cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
@@ -60,6 +62,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.args(["-o", &info.outfile.repr]);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{l}")));
     cmd.args(info.links.iter().map(|l| format!("-l{l}")));
+    cmd.args(info.link_args);
     if verbose { print_command(info.toolchain.linker(info.lang.is_cpp()), &cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {

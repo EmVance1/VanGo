@@ -37,13 +37,6 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
                 Err(Error::ExtraArgs("init".to_string(), args))
             }
         }
-        "clean" | "c" => {
-            if args.is_empty() {
-                Ok(Action::Clean)
-            } else {
-                Err(Error::ExtraArgs("clean".to_string(), args))
-            }
-        }
         "build" | "b" => {
             let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
@@ -81,6 +74,13 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             Ok(Action::Test{ config, toolchain, verbose, args })
+        }
+        "clean" | "c" => {
+            if args.is_empty() {
+                Ok(Action::Clean)
+            } else {
+                Err(Error::ExtraArgs("clean".to_string(), args))
+            }
         }
         "help" => {
             if args.is_empty() {

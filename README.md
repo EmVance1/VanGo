@@ -109,7 +109,7 @@ A `lib.json` file specifies for prebuilt libraries how they should be correctly 
 ```
 `lang` in this case declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. that header files use 'clean' C).
 
-In addition, all libraries must have one of the following (but not both):
+In addition, all libraries may have one of the following (neither in the case of header only libraries, never both):
 ```json
     "all": { ... },
     "configs": { "name": { ... }, ... },

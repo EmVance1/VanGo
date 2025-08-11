@@ -122,7 +122,9 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
                 .validate(maxcpp)?
                 .linearise(config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
-            libdirs.push(format!("{path}/{}", libinfo.libdir));
+            if let Some(libdir) = libinfo.libdir {
+                libdirs.push(format!("{path}/{libdir}"));
+            }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
         } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.build.json")).unwrap() {
@@ -155,15 +157,17 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
                 .validate(maxcpp)?
                 .linearise(config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
-            libdirs.push(format!("{path}/{}", libinfo.libdir));
+            if let Some(libdir) = &libinfo.libdir {
+                libdirs.push(format!("{path}/{libdir}"));
+            }
             if toolchain.is_msvc() {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{path}/{}/{}.lib", libinfo.libdir, l)));
+                    relink.push(FileInfo::from_str(&format!("{path}/{}/{}.lib", libinfo.libdir.as_ref().unwrap(), l)));
                     links.push(format!("{l}.lib"));
                 }
             } else {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{path}/{}/lib{}.a", libinfo.libdir, l)));
+                    relink.push(FileInfo::from_str(&format!("{path}/{}/lib{}.a", libinfo.libdir.as_ref().unwrap(), l)));
                     links.push(l.to_string());
                 }
             }

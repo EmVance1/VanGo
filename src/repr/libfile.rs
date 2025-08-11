@@ -35,7 +35,7 @@ pub struct LibConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibData {
     pub incdir: String,
-    pub libdir: String,
+    pub libdir: Option<String>,
     pub links: Vec<String>,
     pub defines: Vec<String>,
 }
@@ -52,13 +52,15 @@ impl LibFile {
     pub fn linearise(mut self, config: Config, version: Option<&str>) -> Result<LibData, Error> {
         let cfg = if let Some(ver) = version {
             self.configs.remove(ver).ok_or(Error::ConfigUnavailable(self.library, ver.to_string()))?
+        } else if let Some(all) = self.all {
+            all
         } else {
-            self.all.ok_or(Error::ConfigUnavailable(self.library, "default".to_string()))?
+            return Ok(LibData{ incdir: self.include, libdir: None, links: vec![], defines: vec![] })
         };
 
         Ok(LibData {
             incdir: self.include,
-            libdir: if config.is_release() { cfg.binary_release } else { cfg.binary_debug },
+            libdir: Some(if config.is_release() { cfg.binary_release } else { cfg.binary_debug }),
             links: cfg.links,
             defines: cfg.defines,
         })

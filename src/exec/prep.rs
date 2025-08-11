@@ -6,7 +6,8 @@ pub fn ensure_out_dirs(sdir: &str, odir: &str) {
     let _ = std::fs::create_dir("bin/debug/pch");
     let _ = std::fs::create_dir_all("bin/release/obj");
     let _ = std::fs::create_dir("bin/release/pch");
-    ensure_out_dirs_rec(&PathBuf::from(sdir), sdir, odir);
+    let objdir = format!("{odir}obj/");
+    ensure_out_dirs_rec(&PathBuf::from(sdir), sdir, &objdir);
 }
 
 fn ensure_out_dirs_rec(root: &Path, sdir: &str, odir: &str) {

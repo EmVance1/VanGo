@@ -57,7 +57,7 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang = Lang::try_from(&build.lang)?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, &build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, &build.lang)?;
     deps.defines.extend(build.defines);
     if test { deps.defines.push("TEST".to_string()); }
     deps.incdirs.extend(build.incdirs);
@@ -80,8 +80,8 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
-        outdir: format!("bin/{config}/obj/"),
-        outfile: outfile.clone(),
+        outdir: format!("bin/{config}/"),
+        outfile,
         defines: deps.defines,
         incdirs: deps.incdirs,
         libdirs: deps.libdirs,
@@ -186,7 +186,7 @@ pub fn help(action: Option<String>) {
 
 
 #[allow(unused)]
-fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, test: bool) -> Result<bool, Error> {
+fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bool, test: bool) -> Result<bool, Error> {
     let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
     for incdir in build.incdirs.iter().chain(&build.include_public) {
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
@@ -194,7 +194,7 @@ fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, test: 
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang = Lang::try_from(&build.lang)?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, &build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, &build.lang)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());

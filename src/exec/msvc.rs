@@ -1,9 +1,9 @@
-use super::{BuildInfo, CompileInfo};
+use super::{BuildInfo, CompileInfo, PreCompHead};
 use crate::{Error, fetch::FileInfo, log_info};
 use std::{io::Write, process::Command};
 
 
-pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
+pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompHead, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     let args = info.toolchain.args();
 
@@ -26,10 +26,16 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.args(args.opt_profile_none());
     }
 
-    if let Some(infile) = info.pch {
-        let outfile = format!("bin/{}/pch/{}.pch", info.config, infile);
-        cmd.arg(format!("/Yu{infile}"));
-        cmd.arg(format!("/Fp:{outfile}"));
+    match pch {
+        PreCompHead::Create(h) => {
+            cmd.arg(format!("/Yc{h}"));
+            cmd.arg(format!("/Fp:{}pch/{}.pch", info.outdir, h));
+        }
+        PreCompHead::Use(h) => {
+            cmd.arg(format!("/Yu{h}"));
+            cmd.arg(format!("/Fp:{}pch/{}.pch", info.outdir, h));
+        }
+        _ => ()
     }
 
     cmd.args(info.comp_args);
@@ -88,59 +94,6 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     }
 }
 
-pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let cppf = format!("bin/{}/pch/{}", info.config, header.replace(".h", ".cpp"));
-    if !std::fs::exists(&cppf).unwrap() {
-        std::fs::write(&cppf, format!("#include \"{}\"", header)).unwrap();
-    }
-
-    let infile = format!("{}{}", info.srcdir, header);
-    let outpch = format!("bin/{}/pch/{}.pch", info.config, header);
-    let outobj = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
-
-    if !std::fs::exists(&outpch).unwrap() ||
-        (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outpch).unwrap().modified().unwrap())
-    {
-        log_info!("compiling precompiled header: {}{}", info.srcdir, header);
-
-        let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
-        let args = info.toolchain.args();
-
-        if info.lang.is_cpp() {
-            cmd.arg(args.force_cpp());
-            cmd.args(args.eh_default_cpp());
-        }
-
-        cmd.arg(args.std(&info.lang));
-        cmd.arg(args.no_link());
-        cmd.arg(&cppf);
-        cmd.arg(args.output(&outobj));
-
-        cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
-        cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
-
-        if info.config.is_release() {
-            cmd.args(args.opt_profile_high());
-        } else {
-            cmd.args(args.opt_profile_none());
-        }
-
-        cmd.arg(format!("/Yc{header}"));
-        cmd.arg(format!("/Fp:{outpch}"));
-
-        cmd.args(&info.comp_args);
-        cmd.stdout(std::process::Stdio::piped());
-        if verbose {
-            cmd.stderr(std::process::Stdio::piped());
-        } else {
-            cmd.stderr(std::process::Stdio::null());
-        };
-        if verbose { print_command(&cmd); }
-        Some(cmd)
-    } else {
-        None
-    }
-}
 
 const DEFAULT_LIBS: &[&str] = &[
     "kernel32.lib",
@@ -180,11 +133,12 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(120),
+            outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
             comp_args: &vec![],
-        }, false);
+        }, crate::exec::PreCompHead::None, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
@@ -213,11 +167,12 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(123),
+            outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
             comp_args: &vec![],
-        }, false);
+        }, crate::exec::PreCompHead::None, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [

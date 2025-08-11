@@ -64,7 +64,7 @@ fn main() -> ExitCode {
             input::Action::Test{ config, toolchain, verbose, args } => {
                 let build = build.finalise(config);
                 action::build(build.clone(), config, toolchain, verbose, true).unwrap_or_else(|e| exit_failure!("{}", e));
-                testfw::test_lib(build, config, toolchain, args).unwrap_or_else(|e| exit_failure!("{}", e));
+                testfw::test_lib(build, config, toolchain, verbose, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 0.into()
             }
             input::Action::Clean => {

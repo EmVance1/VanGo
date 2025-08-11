@@ -29,19 +29,15 @@ impl Args {
                 } else {
                     format!("/std:c++{}", lang.numeric())
                 }
+            } else if lang.is_latest() {
+                "/std:clatest".to_string()
             } else {
-                if lang.is_latest() {
-                    "/std:clatest".to_string()
-                } else {
-                    format!("/std:c{}", lang.numeric())
-                }
+                format!("/std:c{}", lang.numeric())
             }
+        } else if lang.is_cpp() {
+            format!("-std=c++{}", lang.numeric())
         } else {
-            if lang.is_cpp() {
-                format!("-std=c++{}", lang.numeric())
-            } else {
-                format!("-std=c{}", lang.numeric())
-            }
+            format!("-std=c{}", lang.numeric())
         }
     }
 

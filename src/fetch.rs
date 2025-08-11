@@ -78,7 +78,9 @@ pub struct Dependencies {
     pub rebuilt: bool,
 }
 
-pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, maxcpp: &str) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, verbose: bool, maxcpp: &str) -> Result<Dependencies, Error> {
+    let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
+
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
     let mut links = Vec::new();
@@ -87,11 +89,10 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
     let mut rebuilt = false;
 
     for lib in libraries {
-        let (name, version) = get_version(&lib);
+        let (root, version) = split_version(&lib);
 
-        if name.ends_with(".git") {
-            let url = std::path::Path::new(name);
-            let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
+        let path = if root.ends_with(".git") {
+            let url = std::path::Path::new(root);
             let stem = url.file_stem().unwrap().to_string_lossy();
             let dir = format!("{home}/.vango/packages/{stem}");
             if !std::fs::exists(&dir).unwrap() {
@@ -103,85 +104,47 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
                     .output()
                     .unwrap();
             }
-
-            if let Ok(build) = std::fs::read_to_string(format!("{dir}/lib.json")) {
-                let libinfo = LibFile::from_str(&build)?
-                    .validate(maxcpp)?
-                    .linearise(config, version)?;
-                incdirs.push(format!("{dir}/{}", libinfo.incdir));
-                libdirs.push(format!("{dir}/{}", libinfo.libdir));
-                links.extend(libinfo.links);
-                defines.extend(libinfo.defines);
-            } else if let Ok(build) = std::fs::read_to_string(format!("{dir}/build.json")) {
-                let build: BuildFile = serde_json::from_str(&build)?;
-                log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
-                let save = std::env::current_dir().unwrap();
-                std::env::set_current_dir(&dir).unwrap();
-                let mut cmd = std::process::Command::new("vango");
-                cmd.arg("build")
-                    .arg(config.as_arg())
-                    .arg(toolchain.as_arg());
-                let output = cmd.status().unwrap();
-                if output.code() == Some(8) {
-                    rebuilt = true;
-                } else {
-                    println!();
-                }
-                std::env::set_current_dir(&save).unwrap();
-                let libinfo = LibFile::from(build)
-                    .validate(maxcpp)?
-                    .linearise(config, version)?;
-                incdirs.push(format!("{dir}/{}", libinfo.incdir));
-                libdirs.push(format!("{dir}/{}", libinfo.libdir));
-                if toolchain.is_msvc() {
-                    for l in &libinfo.links {
-                        relink.push(FileInfo::from_str(&format!("{dir}/{}/{}", libinfo.libdir, l)));
-                        links.push(format!("{l}.lib"));
-                    }
-                } else {
-                    for l in &libinfo.links {
-                        relink.push(FileInfo::from_str(&format!("{name}/{}/lib{}.a", libinfo.libdir, l)));
-                        links.push(l.to_string());
-                    }
-                }
-                defines.extend(libinfo.defines);
-            }
-        }
-
-        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/macos.lib.json")).ok()
+            dir
         } else {
-            std::fs::read_to_string(format!("{name}/lib.json")).ok()
+            root.to_string()
+        };
+
+        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/win.lib.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{path}/linux.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/linux.lib.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{path}/macos.lib.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/macos.lib.json")).ok()
+        } else {
+            std::fs::read_to_string(format!("{path}/lib.json")).ok()
         } {
             let libinfo = LibFile::from_str(&build)?
                 .validate(maxcpp)?
                 .linearise(config, version)?;
-            incdirs.push(format!("{name}/{}", libinfo.incdir));
-            libdirs.push(format!("{name}/{}", libinfo.libdir));
+            incdirs.push(format!("{path}/{}", libinfo.incdir));
+            libdirs.push(format!("{path}/{}", libinfo.libdir));
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{name}/win.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/win.build.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{name}/linux.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/linux.build.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{name}/macos.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{name}/macos.build.json")).ok()
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/win.build.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{path}/linux.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/linux.build.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{path}/macos.build.json")).unwrap() {
+            std::fs::read_to_string(format!("{path}/macos.build.json")).ok()
         } else {
-            std::fs::read_to_string(format!("{name}/build.json")).ok()
+            std::fs::read_to_string(format!("{path}/build.json")).ok()
         } {
             let build: BuildFile = serde_json::from_str(&build)?;
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
-            std::env::set_current_dir(name).unwrap();
-            let mut cmd = std::process::Command::new("vango");
-            cmd.arg("build")
+            std::env::set_current_dir(&path).unwrap();
+            let output = std::process::Command::new("vango")
+                .arg("build")
                 .arg(config.as_arg())
-                .arg(toolchain.as_arg());
-            let output = cmd.status().unwrap();
+                .arg(toolchain.as_arg())
+                .args(if verbose { Some("-v") } else { None })
+                .status()
+                .unwrap();
             if output.code() == Some(8) {
                 rebuilt = true;
             } else {
@@ -191,16 +154,16 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
             let libinfo = LibFile::from(build)
                 .validate(maxcpp)?
                 .linearise(config, version)?;
-            incdirs.push(format!("{name}/{}", libinfo.incdir));
-            libdirs.push(format!("{name}/{}", libinfo.libdir));
+            incdirs.push(format!("{path}/{}", libinfo.incdir));
+            libdirs.push(format!("{path}/{}", libinfo.libdir));
             if toolchain.is_msvc() {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{name}/{}/{}.lib", libinfo.libdir, l)));
+                    relink.push(FileInfo::from_str(&format!("{path}/{}/{}.lib", libinfo.libdir, l)));
                     links.push(format!("{l}.lib"));
                 }
             } else {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{name}/{}/lib{}.a", libinfo.libdir, l)));
+                    relink.push(FileInfo::from_str(&format!("{path}/{}/lib{}.a", libinfo.libdir, l)));
                     links.push(l.to_string());
                 }
             }
@@ -219,7 +182,7 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, m
 }
 
 
-fn get_version(s: &str) -> (&str, Option<&str>) {
+fn split_version(s: &str) -> (&str, Option<&str>) {
     for (i, c) in s.chars().rev().enumerate() {
         if c == '/' || c == '\\' {
             return (s, None);
@@ -238,15 +201,12 @@ mod tests {
 
     #[test]
     pub fn test_get_version() {
-        assert_eq!(get_version("SFML"), ("SFML", None));
-        assert_eq!(get_version("SFML:static"), ("SFML", Some("static")));
-        assert_eq!(get_version("SF.ML:static"), ("SF.ML", Some("static")));
-        assert_eq!(get_version("SFML-2.6.1"), ("SFML-2.6.1", None));
-        assert_eq!(get_version("../Rusty"), ("../Rusty", None));
-        assert_eq!(get_version("../Rusty:static"), ("../Rusty", Some("static")));
-        assert_eq!(
-            get_version("../Ru.sty:static"),
-            ("../Ru.sty", Some("static"))
-        );
+        assert_eq!(split_version("SFML"),             ("SFML",       None));
+        assert_eq!(split_version("SFML:static"),      ("SFML",       Some("static")));
+        assert_eq!(split_version("SF.ML:static"),     ("SF.ML",      Some("static")));
+        assert_eq!(split_version("SFML-2.6.1"),       ("SFML-2.6.1", None));
+        assert_eq!(split_version("../Rusty"),         ("../Rusty",   None));
+        assert_eq!(split_version("../Rusty:static"),  ("../Rusty",   Some("static")));
+        assert_eq!(split_version("../Ru.sty:static"), ("../Ru.sty",  Some("static")));
     }
 }

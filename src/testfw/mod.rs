@@ -8,8 +8,8 @@ struct TestInfo {
 }
 
 
-fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain) -> TestInfo {
-    let mut deps = crate::fetch::libraries(build.dependencies.clone(), config, toolchain, &build.lang).unwrap();
+fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain, verbose: bool) -> TestInfo {
+    let mut deps = crate::fetch::libraries(build.dependencies.clone(), config, toolchain, verbose, &build.lang).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -19,7 +19,7 @@ fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain) -> TestInf
     }
 }
 
-pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, args: Vec<String>) -> Result<(), Error> {
+pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bool, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test/").unwrap() { return Err(Error::MissingTests); }
 
     let inc = std::env::current_exe()
@@ -33,7 +33,7 @@ pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, args: Ve
         .to_string_lossy()
         .to_string();
 
-    let mut partial = inherited(&build, config, toolchain);
+    let mut partial = inherited(&build, config, toolchain, verbose);
     partial.defines.extend([ config.as_define().to_string(), "TEST".to_string() ]);
     partial.incdirs.extend([ "test/".to_string(), format!("{inc}/testframework/") ]);
     let mut headers = if let Some(inc) = build.include_public {

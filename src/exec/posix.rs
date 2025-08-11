@@ -21,7 +21,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
 
     if info.pch.is_some() {
-        cmd.arg(format!("-Ibin/{}/pch/", info.config));
+        cmd.arg(format!("-I{}pch/", info.outdir));
     }
 
     if info.config.is_release() {
@@ -40,6 +40,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     if verbose { print_command(&cmd); }
     cmd
 }
+
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.archiver());
@@ -80,49 +81,6 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     }
 }
 
-pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let infile = format!("{}{}", info.srcdir, header);
-    let outfile = format!("bin/{}/pch/{}.gch", info.config, header);
-
-    if !std::fs::exists(&outfile).unwrap() ||
-        (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outfile).unwrap().modified().unwrap())
-    {
-        log_info!("compiling precompiled header: {}{}", info.srcdir, header);
-
-        let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
-        let args = info.toolchain.args();
-
-        if info.lang.is_cpp() {
-            cmd.arg(args.force_cpp());
-            cmd.args(args.eh_default_cpp());
-        }
-
-        cmd.arg(args.std(&info.lang));
-        cmd.arg(args.no_link());
-        cmd.arg(&infile);
-        cmd.arg(args.output(&outfile));
-
-        cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
-        cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
-
-        if info.config.is_release() {
-            cmd.args(args.opt_profile_high());
-        } else {
-            cmd.args(args.opt_profile_none());
-        }
-
-        if verbose {
-            cmd.stdout(std::process::Stdio::piped());
-        } else {
-            cmd.stdout(std::process::Stdio::null());
-        };
-        if verbose { print_command(&cmd); }
-        Some(cmd)
-    } else {
-        None
-    }
-}
-
 
 fn print_command(cmd: &std::process::Command) {
     print!("{} ", cmd.get_program().to_string_lossy());
@@ -146,6 +104,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
+            outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,
@@ -175,6 +134,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Clang,
             lang: Lang::Cpp(123),
+            outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
             pch: &None,

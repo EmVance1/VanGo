@@ -58,7 +58,7 @@ pub fn source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
             res.extend(source_files(&e.path(), ext)?);
         } else {
             let filename = e.path().file_name()?.to_str()?.to_string();
-            if filename.ends_with(ext) && filename != "pch.cpp" {
+            if filename.ends_with(ext) {
                 res.push(FileInfo::from_path(&e.path()));
             }
         }

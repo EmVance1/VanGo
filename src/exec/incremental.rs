@@ -15,28 +15,26 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     let pairs: Vec<_> = info
         .sources
         .iter()
-        .map(|c| (c,
-            FileInfo::from_str(&transform_file(
-                &c.repr,
-                &info.srcdir,
-                &objdir,
-                info.toolchain.is_msvc())
-        )))
+        .map(|c| (c, FileInfo::from_str(&transform_file( &c.repr, &info.srcdir, &objdir, info.toolchain.is_msvc()))))
         .collect();
 
+    // IF BINARY EXISTS
     if info.outfile.exists() {
+        // IF ANY HEADER IS NEWER THAN THE BINARY
         if !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
             BuildLevel::CompileAndLink(pairs
                 .into_iter()
                 .map(|(src, obj)| (src.repr.as_str(), obj.repr))
                 .collect())
+
+        // NO HEADER IS NEWER THAN THE BINARY
         } else {
-            let mut build = Vec::new();
-            for (src, obj) in pairs {
-                if !obj.exists() || src.modified().unwrap() > obj.modified().unwrap() || src.modified().unwrap() > info.outfile.modified().unwrap() {
-                    build.push((src.repr.as_str(), obj.repr))
-                }
-            }
+            // IF ANY SOURCE IS NEWER THAN ITS OBJ | (AND THE BINARY BY TRANSITIVITY)
+            let build: Vec<_> = pairs.into_iter()
+                .filter(|(src, obj)| !obj.exists() || (src.modified().unwrap() > obj.modified().unwrap()))
+                .map(   |(src, obj)| (src.repr.as_str(), obj.repr))
+                .collect();
+
             if build.is_empty() {
                 if !get_recent_changes(&info.relink, info.outfile.modified().unwrap()).is_empty() {
                     BuildLevel::LinkOnly
@@ -48,12 +46,12 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
             }
         }
     } else {
-        let mut build = Vec::new();
-        for (src, obj) in pairs {
-            if !obj.exists() || src.modified().unwrap() > obj.modified().unwrap() {
-                build.push((src.repr.as_str(), obj.repr))
-            }
-        }
+        // IF ANY SOURCE IS NEWER THAN ITS OBJ
+        let build: Vec<_> = pairs.into_iter()
+            .filter(|(src, obj)| !obj.exists() || (src.modified().unwrap() > obj.modified().unwrap()))
+            .map(   |(src, obj)| (src.repr.as_str(), obj.repr))
+            .collect();
+
         if build.is_empty() {
             BuildLevel::LinkOnly
         } else {

@@ -1,6 +1,6 @@
 use super::{BuildInfo, CompileInfo};
 use crate::{Error, fetch::FileInfo, log_info};
-use std::{io::Write, path::PathBuf, process::Command};
+use std::{io::Write, process::Command};
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
@@ -98,21 +98,25 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 }
 
 pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let cppf = format!("{}{}", info.srcdir, header.replace(".h", ".cpp"));
-    let _infile = format!("{}{}", info.srcdir, header);
-    let _outpch = format!("bin/{}/pch/{}.pch", info.config, header);
-    let outobj = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
-    let infile = FileInfo::from_path(&PathBuf::from(&_infile));
-    let outpch = FileInfo::from_path(&PathBuf::from(&_outpch));
+    let cppf = format!("bin/{}/pch/{}", info.config, header.replace(".h", ".cpp"));
+    if !std::fs::exists(&cppf).unwrap() {
+        std::fs::write(&cppf, format!("#include \"{}\"", header)).unwrap();
+    }
 
-    if !outpch.exists() || infile.modified().unwrap() > outpch.modified().unwrap() {
+    let infile = format!("{}{}", info.srcdir, header);
+    let outpch = format!("bin/{}/pch/{}.pch", info.config, header);
+    let outobj = format!("{}{}", info.outdir, header.replace(".h", ".obj"));
+
+    if !std::fs::exists(&outpch).unwrap() ||
+        (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outpch).unwrap().modified().unwrap())
+    {
         let mut cmd = Command::new("cl");
         cmd.args([
             cppf,
             "/c".to_string(),
             "/EHsc".to_string(),
             format!("/Yc{header}"),
-            format!("/Fp:{_outpch}"),
+            format!("/Fp:{outpch}"),
             format!("/Fo:{outobj}"),
             // "/Gy".to_string(),
             // "/GL".to_string(),

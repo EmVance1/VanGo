@@ -1,6 +1,6 @@
 use super::{BuildInfo, CompileInfo};
 use crate::{Error, fetch::FileInfo, log_info};
-use std::{io::Write, path::PathBuf, process::Command};
+use std::{io::Write, process::Command};
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
@@ -80,21 +80,21 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 }
 
 pub(super) fn precompile_header(header: &str, info: &BuildInfo, verbose: bool) -> Option<std::process::Command> {
-    let _infile = format!("{}{}", info.srcdir, header);
-    let _outfile = format!("bin/{}/pch/{}.gch", info.config, header);
-    let infile = FileInfo::from_path(&PathBuf::from(&_infile));
-    let outfile = FileInfo::from_path(&PathBuf::from(&_outfile));
+    let infile = format!("{}{}", info.srcdir, header);
+    let outfile = format!("bin/{}/pch/{}.gch", info.config, header);
 
-    if !outfile.exists() || infile.modified().unwrap() > outfile.modified().unwrap() {
+    if !std::fs::exists(&outfile).unwrap() ||
+        (std::fs::metadata(&infile).unwrap().modified().unwrap() > std::fs::metadata(&outfile).unwrap().modified().unwrap())
+    {
         let mut cmd = Command::new(info.toolchain.compiler(info.lang.is_cpp()));
         if info.lang.is_cpp() {
             cmd.arg("-xc++-header");
         }
         cmd.args([
             format!("-std={}", info.lang),
-            _infile,
+            infile,
             "-o".to_string(),
-            _outfile
+            outfile
         ]);
         cmd.args(info.incdirs.iter().map(|i| format!("-I{i}")));
         cmd.args(info.defines.iter().map(|d| format!("-D{d}")));

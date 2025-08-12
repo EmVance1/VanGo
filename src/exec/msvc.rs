@@ -40,7 +40,6 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
         _ => ()
     }
 
-    // cmd.args(info.comp_args);
     cmd.stdout(std::process::Stdio::piped());
     if verbose {
         cmd.stderr(std::process::Stdio::piped());
@@ -52,13 +51,15 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
 }
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = Command::new("lib");
+    let mut cmd = Command::new(info.toolchain.archiver());
+    cmd.args(info.toolchain.archiver_as_arg());
+    cmd.args(info.link_args);
+
     cmd.args(objs.into_iter().map(|o| o.repr));
     cmd.arg(format!("/OUT:{}", info.outfile.repr));
     cmd.arg("/MACHINE:X64");
-    cmd.args(info.link_args);
     if verbose { print_command(&cmd); }
-    let output = cmd.output().unwrap();
+    let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
         eprintln!();
@@ -70,7 +71,10 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 }
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = Command::new("link");
+    let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
+    cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
+    cmd.args(info.link_args);
+
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(&info.links);
     cmd.args(DEFAULT_LIBS.iter().map(|l| format!("/DEFAULTLIB:{l}")));
@@ -83,9 +87,8 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     if info.config.is_debug() {
         cmd.arg("/DEBUG");
     }
-    cmd.args(info.link_args);
     if verbose { print_command(&cmd); }
-    let output = cmd.output().unwrap();
+    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
     if !output.status.success() {
         std::io::stderr().write_all(&output.stdout).unwrap();
         eprintln!();

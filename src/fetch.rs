@@ -109,6 +109,10 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
             root.to_string()
         };
 
+        if !std::fs::exists(&path).unwrap() {
+            return Err(Error::DirectoryNotFound(path))
+        }
+
         if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.lib.json")).unwrap() {
             std::fs::read_to_string(format!("{path}/win.lib.json")).ok()
         } else if cfg!(target_os = "linux") && std::fs::exists(format!("{path}/linux.lib.json")).unwrap() {
@@ -172,6 +176,8 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
                 }
             }
             defines.extend(libinfo.defines);
+        } else {
+            return Err(Error::MissingBuildScript(path))
         }
     }
 

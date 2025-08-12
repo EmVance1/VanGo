@@ -53,7 +53,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.arg(&info.outfile.repr);
     cmd.args(objs.into_iter().map(|o| o.repr));
     if verbose { print_command(&cmd); }
-    let output = cmd.output().unwrap();
+    let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
         if verbose { std::io::stderr().write_all(&output.stdout).unwrap(); }
@@ -75,7 +75,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.args(info.libdirs.iter().map(|l| format!("-L{l}")));
     cmd.args(info.links.iter().map(|l| format!("-l{l}")));
     if verbose { print_command(&cmd); }
-    let output = cmd.output().unwrap();
+    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
     if !output.status.success() {
         std::io::stderr().write_all(&output.stderr).unwrap();
         if verbose { std::io::stderr().write_all(&output.stdout).unwrap(); }

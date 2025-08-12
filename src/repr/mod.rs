@@ -5,6 +5,7 @@ mod args;
 pub use buildfile::*;
 pub use libfile::*;
 use std::{
+    str::FromStr,
     fmt::Display,
     io::Write,
 };
@@ -260,10 +261,10 @@ impl PartialOrd for Lang {
     }
 }
 
-impl TryFrom<&str> for Lang {
-    type Error = Error;
+impl FromStr for Lang {
+    type Err = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let cpp = value.to_ascii_lowercase();
         if cpp.starts_with("c++") {
             let num: u32 = cpp.strip_prefix("c++")
@@ -293,14 +294,6 @@ impl TryFrom<&str> for Lang {
     }
 }
 
-impl TryFrom<&String> for Lang {
-    type Error = Error;
-
-    fn try_from(value: &String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -308,32 +301,46 @@ mod tests {
 
     #[test]
     pub fn parse_lang_cpp() {
-        assert_eq!(Lang::try_from("c++98").unwrap(), Lang::Cpp(98));
-        assert_eq!(Lang::try_from("c++03").unwrap(), Lang::Cpp(103));
-        assert_eq!(Lang::try_from("c++11").unwrap(), Lang::Cpp(111));
-        assert_eq!(Lang::try_from("c++14").unwrap(), Lang::Cpp(114));
-        assert_eq!(Lang::try_from("C++17").unwrap(), Lang::Cpp(117));
-        assert_eq!(Lang::try_from("C++20").unwrap(), Lang::Cpp(120));
-        assert_eq!(Lang::try_from("C++23").unwrap(), Lang::Cpp(123));
+        assert_eq!(Lang::from_str("c++98").unwrap(), Lang::Cpp(98));
+        assert_eq!(Lang::from_str("c++03").unwrap(), Lang::Cpp(103));
+        assert_eq!(Lang::from_str("c++11").unwrap(), Lang::Cpp(111));
+        assert_eq!(Lang::from_str("c++14").unwrap(), Lang::Cpp(114));
+        assert_eq!(Lang::from_str("C++17").unwrap(), Lang::Cpp(117));
+        assert_eq!(Lang::from_str("C++20").unwrap(), Lang::Cpp(120));
+        assert_eq!(Lang::from_str("C++23").unwrap(), Lang::Cpp(123));
     }
 
     #[test]
     pub fn parse_lang_c() {
-        assert_eq!(Lang::try_from("c89").unwrap(), Lang::C(89));
-        assert_eq!(Lang::try_from("c99").unwrap(), Lang::C(99));
-        assert_eq!(Lang::try_from("C11").unwrap(), Lang::C(111));
-        assert_eq!(Lang::try_from("C17").unwrap(), Lang::C(117));
-        assert_eq!(Lang::try_from("C20").unwrap(), Lang::C(120));
-        assert_eq!(Lang::try_from("C23").unwrap(), Lang::C(123));
+        assert_eq!(Lang::from_str("c89").unwrap(), Lang::C(89));
+        assert_eq!(Lang::from_str("c99").unwrap(), Lang::C(99));
+        assert_eq!(Lang::from_str("C11").unwrap(), Lang::C(111));
+        assert_eq!(Lang::from_str("C17").unwrap(), Lang::C(117));
+        assert_eq!(Lang::from_str("C20").unwrap(), Lang::C(120));
+        assert_eq!(Lang::from_str("C23").unwrap(), Lang::C(123));
     }
 
     #[test]
     pub fn parse_lang_err() {
-        assert!(Lang::try_from("c++24").is_err());
-        assert!(Lang::try_from("c++").is_err());
-        assert!(Lang::try_from("c14").is_err());
-        assert!(Lang::try_from("c4").is_err());
-        assert!(Lang::try_from("c").is_err());
-        assert!(Lang::try_from("3").is_err());
+        assert!(Lang::from_str("3").is_err());
+        assert!(Lang::from_str("c").is_err());
+        assert!(Lang::from_str("c4").is_err());
+        assert!(Lang::from_str("c14").is_err());
+        assert!(Lang::from_str("c++").is_err());
+        assert!(Lang::from_str("c++24").is_err());
+    }
+
+    #[test]
+    pub fn lang_cmp() {
+        assert!(Lang::from_str("C99").unwrap() >  Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C11").unwrap() >  Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C89").unwrap() >= Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C99").unwrap() >= Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C11").unwrap() >= Lang::from_str("C99").unwrap());
+        assert!(Lang::from_str("C++03").unwrap() >  Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++11").unwrap() >  Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++98").unwrap() >= Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++03").unwrap() >= Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++11").unwrap() >= Lang::from_str("C++98").unwrap());
     }
 }

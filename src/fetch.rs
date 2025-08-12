@@ -1,4 +1,4 @@
-use crate::{error::Error, log_info, repr::ToolChain, BuildFile, Config, LibFile};
+use crate::{error::Error, log_info, repr::{Lang, ToolChain}, BuildFile, Config, LibFile};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -78,7 +78,7 @@ pub struct Dependencies {
     pub rebuilt: bool,
 }
 
-pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, verbose: bool, maxcpp: &str) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, verbose: bool, lang: Lang) -> Result<Dependencies, Error> {
     let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
 
     let mut incdirs = Vec::new();
@@ -119,7 +119,7 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
             std::fs::read_to_string(format!("{path}/lib.json")).ok()
         } {
             let libinfo = LibFile::from_str(&build)?
-                .validate(maxcpp)?
+                .validate(lang)?
                 .linearise(config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
             if let Some(libdir) = libinfo.libdir {
@@ -154,7 +154,7 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
             }
             std::env::set_current_dir(&save).unwrap();
             let libinfo = LibFile::from(build)
-                .validate(maxcpp)?
+                .validate(lang)?
                 .linearise(config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
             if let Some(libdir) = &libinfo.libdir {

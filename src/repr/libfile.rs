@@ -41,8 +41,8 @@ pub struct LibData {
 }
 
 impl LibFile {
-    pub fn validate(self, maxcpp: &str) -> Result<Self, Error> {
-        if Lang::try_from(&self.lang)? > Lang::try_from(maxcpp)? {
+    pub fn validate(self, max_lang: Lang) -> Result<Self, Error> {
+        if self.lang.parse::<Lang>()? > max_lang {
             Err(Error::IncompatibleCppStd(self.library))
         } else {
             Ok(self)

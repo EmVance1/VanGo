@@ -8,8 +8,8 @@ struct TestInfo {
 }
 
 
-fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain, verbose: bool) -> TestInfo {
-    let mut deps = crate::fetch::libraries(build.dependencies.clone(), config, toolchain, verbose, &build.lang).unwrap();
+fn inherited(build: &BuildFile, config: Config, toolchain: ToolChain, lang: Lang, verbose: bool) -> TestInfo {
+    let mut deps = crate::fetch::libraries(build.dependencies.clone(), config, toolchain, verbose, lang).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -33,7 +33,8 @@ pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, verbose:
         .to_string_lossy()
         .to_string();
 
-    let mut partial = inherited(&build, config, toolchain, verbose);
+    let lang: Lang = build.lang.parse()?;
+    let mut partial = inherited(&build, config, toolchain, lang, verbose);
     partial.defines.extend([ config.as_define().to_string(), "TEST".to_string() ]);
     partial.incdirs.extend([ "test/".to_string(), format!("{inc}/testframework/") ]);
     let mut headers = if let Some(inc) = build.include_public {
@@ -44,8 +45,6 @@ pub fn test_lib(build: BuildFile, config: Config, toolchain: ToolChain, verbose:
     headers.push(FileInfo::from_str(&format!("{inc}/testframework/vangotest/asserts.h")));
     headers.push(FileInfo::from_str(&format!("{inc}/testframework/vangotest/casserts.h")));
     let relink = vec![ FileInfo::from_str(&format!( "bin/{}/{}{}{}", config, toolchain.lib_prefix(), build.project, toolchain.lib_ext())) ];
-
-    let lang = Lang::try_from(&build.lang)?;
 
     let sources = crate::fetch::source_files(&PathBuf::from("test/"), lang.src_ext()).unwrap();
     let outpath = format!("bin/{}/test_{}.exe", config, build.project);

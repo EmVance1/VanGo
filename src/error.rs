@@ -18,9 +18,9 @@ pub enum Error {
     DirNotFound(String),
     #[error("parse json error: {0}")]
     JsonParse(#[from] serde_json::Error),
-    #[error("'{0}' is not a valid C++ standard")]
+    #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
-    #[error("library '{0}' C++ standard incompatible with current project")]
+    #[error("library '{0}' C/C++ standard incompatible with current project")]
     IncompatibleCppStd(String),
     #[error("library '{0}' does not have config '{1}'")]
     ConfigUnavailable(String, String),

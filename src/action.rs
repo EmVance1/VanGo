@@ -55,9 +55,9 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
-    let lang = Lang::try_from(&build.lang)?;
+    let lang: Lang = build.lang.parse()?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, &build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, lang)?;
     deps.defines.extend(build.defines);
     if test { deps.defines.push("TEST".to_string()); }
     deps.incdirs.extend(build.incdirs);
@@ -192,9 +192,9 @@ fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, verbos
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
-    let lang = Lang::try_from(&build.lang)?;
+    let lang: Lang = build.lang.parse()?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, &build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, lang)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());

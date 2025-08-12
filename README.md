@@ -82,9 +82,9 @@ All `build.json` files are expected to have 3 base declarations at the root:
 
 - `dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
 
-There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
+    There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
 
-As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
+    As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
 
 - Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `DEBUG` or `RELEASE` definitions, aswell as `TEST` for test builds.
 

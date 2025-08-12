@@ -42,7 +42,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("build".to_string(), vec![ "--release".to_string() ])) }
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             if args.is_empty() {
                 Ok(Action::Build{ config, toolchain, verbose })
@@ -62,7 +62,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("run".to_string(), vec![ "--release".to_string() ])) }
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             Ok(Action::Run{ config, toolchain, verbose, args: user_args })
         }
@@ -71,7 +71,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "--release".to_string() ])) }
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=")))?;
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             Ok(Action::Test{ config, toolchain, verbose, args })
         }
@@ -127,6 +127,8 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
             Ok(ToolChain::Gnu)
         } else if tc == "clang" {
             Ok(ToolChain::Clang)
+        } else if tc == "zig" {
+            Ok(ToolChain::Zig)
         } else {
             Err(Error::UnknownToolChain(tc.to_string()))
         }

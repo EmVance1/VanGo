@@ -6,6 +6,8 @@ use std::{io::Write, process::Command};
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompHead, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     let args = info.toolchain.args();
+    cmd.args(info.toolchain.compiler_as_arg(info.lang.is_cpp()));
+    cmd.args(info.comp_args);
 
     if info.lang.is_cpp() {
         cmd.arg(args.force_cpp());
@@ -38,7 +40,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
         _ => ()
     }
 
-    cmd.args(info.comp_args);
+    // cmd.args(info.comp_args);
     cmd.stdout(std::process::Stdio::piped());
     if verbose {
         cmd.stderr(std::process::Stdio::piped());

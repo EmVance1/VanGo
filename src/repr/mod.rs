@@ -20,6 +20,7 @@ pub enum ToolChain {
     Msvc,
     Gnu,
     Clang,
+    Zig,
 }
 
 impl Default for ToolChain {
@@ -43,14 +44,14 @@ impl ToolChain {
         matches!(self, Self::Gnu)
     }
     pub fn is_clang(&self) -> bool {
-        matches!(self, Self::Clang)
+        matches!(self, Self::Clang|Self::Zig)
     }
 
     pub fn is_posix(&self) -> bool {
-        matches!(self, Self::Gnu|Self::Clang)
+        matches!(self, Self::Gnu|Self::Clang|Self::Zig)
     }
     pub fn is_llvm(&self) -> bool {
-        matches!(self, Self::Clang)
+        matches!(self, Self::Clang|Self::Zig)
     }
 
     pub fn lib_prefix(&self) -> &'static str {
@@ -81,14 +82,27 @@ impl ToolChain {
     pub fn compiler(&self, cpp: bool) -> &'static str {
         match self {
             Self::Msvc  => "cl",
-            Self::Gnu   => if cpp { "g++" } else { "gcc" }
+            Self::Gnu   => if cpp { "g++" }     else { "gcc" }
             Self::Clang => if cpp { "clang++" } else { "clang" }
+            Self::Zig   => "zig"
+        }
+    }
+    pub fn compiler_as_arg(&self, cpp: bool) -> Option<&'static str> {
+        match self {
+            Self::Msvc|Self::Gnu|Self::Clang => None,
+            Self::Zig   => Some(if cpp { "c++" } else { "cc" })
         }
     }
     pub fn linker(&self, cpp: bool) -> &'static str {
         match self {
             Self::Msvc => "LINK",
-            Self::Gnu|Self::Clang => self.compiler(cpp),
+            Self::Gnu|Self::Clang|Self::Zig => self.compiler(cpp),
+        }
+    }
+    pub fn linker_as_arg(&self, cpp: bool) -> Option<&'static str> {
+        match self {
+            Self::Msvc|Self::Gnu|Self::Clang => None,
+            Self::Zig => self.compiler_as_arg(cpp),
         }
     }
     pub fn archiver(&self) -> &'static str {
@@ -96,6 +110,13 @@ impl ToolChain {
             Self::Msvc  => "LIB",
             Self::Gnu   => "ar",
             Self::Clang => "llvm-ar",
+            Self::Zig   => "zig",
+        }
+    }
+    pub fn archiver_as_arg(&self) -> Option<&'static str> {
+        match self {
+            Self::Msvc|Self::Gnu|Self::Clang => None,
+            Self::Zig => Some("ar"),
         }
     }
 
@@ -104,6 +125,7 @@ impl ToolChain {
             Self::Msvc  => "-t=msvc",
             Self::Gnu   => "-t=gnu",
             Self::Clang => "-t=clang",
+            Self::Zig   => "-t=zig",
         }
     }
 
@@ -117,7 +139,8 @@ impl Display for ToolChain {
         match self {
             Self::Msvc  => write!(f, "MSVC"),
             Self::Gnu   => write!(f, "GCC"),
-            Self::Clang => write!(f, "Clang/LLVM"),
+            Self::Clang => write!(f, "Clang"),
+            Self::Zig   => write!(f, "Zig/Clang"),
         }
     }
 }

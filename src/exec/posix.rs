@@ -6,6 +6,8 @@ use std::{io::Write, process::Command};
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     let args = info.toolchain.args();
+    cmd.args(info.toolchain.compiler_as_arg(info.lang.is_cpp()));
+    cmd.args(info.comp_args);
 
     if info.lang.is_cpp() {
         cmd.arg(args.force_cpp());
@@ -30,7 +32,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.args(args.opt_profile_none());
     }
 
-    cmd.args(info.comp_args);
+    // cmd.args(info.comp_args);
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
         cmd.stdout(std::process::Stdio::piped());
@@ -44,10 +46,12 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.archiver());
+    cmd.args(info.toolchain.archiver_as_arg());
+    cmd.args(info.link_args);
+
     cmd.arg("rcs");
     cmd.arg(&info.outfile.repr);
     cmd.args(objs.into_iter().map(|o| o.repr));
-    cmd.args(info.link_args);
     if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {
@@ -63,11 +67,13 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
+    cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
+    cmd.args(info.link_args);
+
     cmd.args(objs.into_iter().map(|fi| fi.repr));
     cmd.args(["-o", &info.outfile.repr]);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{l}")));
     cmd.args(info.links.iter().map(|l| format!("-l{l}")));
-    cmd.args(info.link_args);
     if verbose { print_command(&cmd); }
     let output = cmd.output().unwrap();
     if !output.status.success() {

@@ -17,7 +17,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
     cmd.arg(args.std(&info.lang));
     cmd.arg(args.no_link());
     cmd.arg(src);
-    cmd.arg(args.output(obj));
+    cmd.arg(args.comp_output(obj));
 
     cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
     cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
@@ -46,10 +46,11 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
 
 pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.archiver());
+    // let args = info.toolchain.args();
     cmd.args(info.toolchain.archiver_as_arg());
+    cmd.arg("rcs");
     cmd.args(info.link_args);
 
-    cmd.arg("rcs");
     cmd.arg(&info.outfile.repr);
     cmd.args(objs.into_iter().map(|o| o.repr));
     if verbose { print_command(&cmd); }
@@ -67,13 +68,15 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
 
 pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
+    let args = info.toolchain.args();
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
     cmd.args(info.link_args);
 
-    cmd.args(objs.into_iter().map(|fi| fi.repr));
-    cmd.args(["-o", &info.outfile.repr]);
-    cmd.args(info.libdirs.iter().map(|l| format!("-L{l}")));
-    cmd.args(info.links.iter().map(|l| format!("-l{l}")));
+    cmd.args(objs.into_iter().map(|o| o.repr));
+    cmd.arg(args.link_output(&info.outfile.repr));
+    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l)));
+    cmd.args(info.links.iter().map(|l| format!("{}{}", args.l(), l)));
+
     if verbose { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
     if !output.status.success() {

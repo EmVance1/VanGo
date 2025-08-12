@@ -8,8 +8,11 @@ impl Args {
     pub fn no_link(&self) -> &'static str {
         if self.0.is_msvc() { "/c" } else { "-c" }
     }
-    pub fn output(&self, file: &str) -> String {
+    pub fn comp_output(&self, file: &str) -> String {
         if self.0.is_msvc() { format!("/Fo:{file}") } else { format!("-o{file}") }
+    }
+    pub fn link_output(&self, file: &str) -> String {
+        if self.0.is_msvc() { format!("/OUT:{file}") } else { format!("-o{file}") }
     }
     pub fn force_cpp(&self) -> &'static str {
         if self.0.is_msvc() { "/TP" } else { "-xc++" }
@@ -67,7 +70,7 @@ impl Args {
         if self.0.is_msvc() { "/D" } else { "-D" }
     }
     pub fn L(&self) -> &'static str {
-        if self.0.is_msvc() { "/L" } else { "-L" }
+        if self.0.is_msvc() { "/LIBPATH:" } else { "-L" }
     }
     pub fn l(&self) -> &'static str {
         if self.0.is_msvc() { "" } else { "-l" }

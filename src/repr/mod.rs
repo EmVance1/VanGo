@@ -4,8 +4,11 @@ mod args;
 
 pub use buildfile::*;
 pub use libfile::*;
-use std::fmt::Display;
-use crate::Error;
+use std::{
+    fmt::Display,
+    io::Write,
+};
+use crate::{log_warn, Error};
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,6 +28,25 @@ pub enum ToolChain {
 
 impl Default for ToolChain {
     fn default() -> Self {
+        let sysdef = Self::system_default();
+        match std::env::var("VANGO_DEFAULT_TOOLCHAIN") {
+            Ok(var) => match var.as_str() {
+                "msvc"  => return ToolChain::Msvc,
+                "gnu"   => return ToolChain::Gnu,
+                "clang" => return ToolChain::Clang,
+                "zig"   => return ToolChain::Zig,
+                _ => log_warn!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
+            }
+            Err(std::env::VarError::NotUnicode(..)) => log_warn!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
+            _ => ()
+        }
+        return sysdef;
+    }
+}
+
+#[allow(unused)]
+impl ToolChain {
+    pub fn system_default() -> Self {
         if cfg!(target_os = "windows") {
             ToolChain::Msvc
         } else if cfg!(target_os = "linux") {
@@ -33,10 +55,7 @@ impl Default for ToolChain {
             ToolChain::Clang
         }
     }
-}
 
-#[allow(unused)]
-impl ToolChain {
     pub fn is_msvc(&self) -> bool {
         matches!(self, Self::Msvc)
     }

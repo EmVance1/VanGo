@@ -139,10 +139,10 @@ pub fn help(action: Option<String>) {
                 println!("Usage: vango build [OPTIONS]");
                 println!();
                 println!("Options:");
-                println!("  -d, --debug    Generate library boilerplate instead of application");
-                println!("  -r, --release  Generate library boilerplate instead of application");
-                println!("  -v, --verbose  Echo build command and entire compiler output");
-                println!("  -t=<TOOL>      Specify a toolchain for compilation");
+                println!("  -d, --debug             Generate library boilerplate instead of application");
+                println!("  -r, --release           Generate library boilerplate instead of application");
+                println!("  -v, --verbose           Echo build command and complete compiler output");
+                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
             }
             "run" => {
                 println!("Build and run the current project, with the working directory as the project root, and forwarding commandline arguments");
@@ -150,10 +150,10 @@ pub fn help(action: Option<String>) {
                 println!("Usage: vango run [OPTIONS] [-- ARGS]");
                 println!();
                 println!("Options:");
-                println!("  -d, --debug    Generate library boilerplate instead of application");
-                println!("  -r, --release  Generate library boilerplate instead of application");
-                println!("  -v, --verbose  Echo build command and entire compiler output");
-                println!("  -t=<TOOL>      Specify a toolchain for compilation");
+                println!("  -d, --debug             Generate library boilerplate instead of application");
+                println!("  -r, --release           Generate library boilerplate instead of application");
+                println!("  -v, --verbose           Echo build command and complete compiler output");
+                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
             }
             "test" => {
                 println!("Build the current project in test configuration, link it to your test app and run it");
@@ -161,10 +161,10 @@ pub fn help(action: Option<String>) {
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();
                 println!("Options:");
-                println!("  -d, --debug    Generate library boilerplate instead of application");
-                println!("  -r, --release  Generate library boilerplate instead of application");
-                println!("  -v, --verbose  Echo build command and entire compiler output");
-                println!("  -t=<TOOL>      Specify a toolchain for compilation");
+                println!("  -d, --debug             Generate library boilerplate instead of application");
+                println!("  -r, --release           Generate library boilerplate instead of application");
+                println!("  -v, --verbose           Echo build command and complete compiler output");
+                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
             }
             _ => (),
         }

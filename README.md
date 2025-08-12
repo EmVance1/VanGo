@@ -10,7 +10,7 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
 ```
 The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 
-The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed. It is not in itself a compiler. For easier cross compilation, vango also supports the zig target, which utilises zig as a wrapper of clang. To read why this is useful, see chapter on [#Cross-Compilation].
+The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see chapter on [cross-compilation](#Cross-Compilation).
 
 ### Features supported so far
 - New, Build, Run, Test, and Clean actions
@@ -54,8 +54,8 @@ Even without boilerplate generation, slap a `build.json` next to a `src` directo
 Some examples of invocations are as follows, but for a more complete list see the help action.
 
 - `vango new     [-lib] [-c] <name>`
-- `vango b[uild] [-r|--release] [-t=<msvc|gnu|clang|zig>]`
-- `vango r[un]   [-r|--release] [-t=<msvc|gnu|clang|zig>] [-- args*]`
+- `vango b[uild] [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>]`
+- `vango r[un]   [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>] [-- args*]`
 - `vango c[lean]`
 - `vango help    [action]`
 
@@ -64,9 +64,9 @@ VanGo is opinionated for simplicity and makes some base assumptions and decision
 - All of your source files are in the `src` directory, and all output files are generated in in `bin/{config}/`.
 - Your output binary is named the same as your project.
 - To build as a library, you have a `lib.h` somewhere in your project.
-- All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms.
+- All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
 
-### How-to: build.json
+### build.json
 All `build.json` files are expected to have 3 base declarations at the root:
 ```json
 {
@@ -98,7 +98,7 @@ For finer control, the option is provided to pass compiler and linker flags dire
 
 For a given project, you can make a platform specific build definition by naming the file "win.build.json", "linux.build.json", or "macos.build.json". The same applies to the lib definitions in the following chapter.
 
-### How-to: lib.json
+### lib.json
 A `lib.json` file specifies for prebuilt libraries how they should be correctly linked. It must contain:
 ```json
 {
@@ -130,7 +130,7 @@ as well as an optional field for version specific preprocessor flags
 ```
 The `all` field represents a standard configuration if versions are not necessary for a project.
 
-### How-to: automated testing
+### Automated Testing
 Testing is made easy by assuming all tests are in a `test/` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
 ```cpp
 #define TEST_ROOT
@@ -165,10 +165,10 @@ test_main(
 Given these prerequisites, tests can be run on a case by case basis by specifying their names on the command line,by specifying their names on the command line, or all at once by not specifying anything.
 
 
-### How-to: Cross-Compilation
+### Cross-Compilation
 If you're familiar with the Clang/LLVM toolchain, you already know that these tools support cross-compilation out of the box. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
 
-As referenced earlier, vango supports the usage of zig as a compilation toolchain (not for the zig language itself unfortunately). This works because zig ships with Clang by default, however, the main benefit of using zigs wrappers vs clang, is that zig *does* ship with system libraries for many many platforms. This means that if you have zig on your system, no messing around with `sysroot`s is necessary. In fact, you do not need to so much as touch the target platform until you ship. All that's required is to specify the target triple like so:
+As referenced earlier, vango supports the usage of zig as a compilation toolchain (not for the zig language itself unfortunately). This works because zig includes clang as part of its ecosystem, however, the main benefit of using zigs wrappers vs clang, is that zig *does* ship with system libraries for many many platforms. This means that if you have zig on your system, no messing around with `sysroot`s is necessary. In fact, you do not need to so much as touch the target platform until you ship. All that's required is to specify the target triple like so:
 ```json
     "compiler-options": [ "-target", "<machine>-<os>-<abi>" ],
     "linker-options": [ "-target", "<machine>-<os>-<abi>" ],

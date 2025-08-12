@@ -22,9 +22,6 @@ pub struct BuildFile {
     pub include_public: Option<String>,
 
     #[serde(default)]
-    pub crt_static: bool,
-
-    #[serde(default)]
     pub compiler_options: Vec<String>,
     #[serde(default)]
     pub linker_options: Vec<String>,

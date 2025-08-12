@@ -4,7 +4,7 @@ spec.md
 todo.md
 build.bat
 
-sysroot-x86_64-linux-gnu/
 vango-1.0.0-win-x86_64/
+vango-release/
 *.zip
 

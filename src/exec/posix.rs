@@ -1,6 +1,6 @@
+use std::{io::Write, process::Command};
 use super::{BuildInfo, CompileInfo};
 use crate::{Error, fetch::FileInfo, log_info};
-use std::{io::Write, process::Command};
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool) -> std::process::Command {
@@ -14,7 +14,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.args(args.eh_default_cpp());
     }
 
-    cmd.arg(args.std(&info.lang));
+    cmd.arg(args.std(info.lang));
     cmd.arg(args.no_link());
     cmd.arg(src);
     cmd.arg(args.comp_output(obj));
@@ -26,13 +26,18 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, verbose: bool
         cmd.arg(format!("-I{}pch/", info.outdir));
     }
 
+    if info.crtstatic {
+        cmd.arg(args.crt_static(info.config));
+    } else {
+        cmd.args(args.crt_dynamic(info.config));
+    }
+
     if info.config.is_release() {
         cmd.args(args.opt_profile_high());
     } else {
         cmd.args(args.opt_profile_none());
     }
 
-    // cmd.args(info.comp_args);
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
         cmd.stdout(std::process::Stdio::piped());
@@ -105,7 +110,7 @@ mod tests {
     use crate::repr::{ToolChain, Config, Lang};
 
     #[test]
-    pub fn compile_cmd_gcc_1() {
+    pub fn compile_cmd_gcc_dbg1() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.o";
 
@@ -113,6 +118,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
+            crtstatic: false,
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
@@ -135,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    pub fn compile_cmd_clang_1() {
+    pub fn compile_cmd_clang_dbg1() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.o";
 
@@ -143,6 +149,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Clang,
             lang: Lang::Cpp(123),
+            crtstatic: false,
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
@@ -160,6 +167,67 @@ mod tests {
                 "-Isrc/",
                 "-O0",
                 "-g",
+            ]
+        );
+    }
+
+    #[test]
+    pub fn compile_cmd_gcc_rel1() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.o";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            config: Config::Release,
+            toolchain: ToolChain::Gnu,
+            lang: Lang::Cpp(120),
+            crtstatic: false,
+            outdir: "bin/debug/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        }, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "-xc++",
+                "-std=c++20",
+                "-c",
+                src,
+                &format!("-o{obj}"),
+                "-Isrc/",
+                "-O2",
+            ]
+        );
+    }
+
+    #[test]
+    pub fn compile_cmd_gcc_rel2() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.o";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            config: Config::Release,
+            toolchain: ToolChain::Gnu,
+            lang: Lang::Cpp(120),
+            crtstatic: true,
+            outdir: "bin/debug/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        }, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "-xc++",
+                "-std=c++20",
+                "-c",
+                src,
+                &format!("-o{obj}"),
+                "-Isrc/",
+                "-static",
+                "-O2",
             ]
         );
     }

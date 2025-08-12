@@ -24,7 +24,7 @@ impl Args {
         if self.0.is_msvc() { "/Zi" } else { "-g" }
     }
 
-    pub fn std(&self, lang: &Lang) -> String {
+    pub fn std(&self, lang: Lang) -> String {
         if self.0.is_msvc() {
             if lang.is_cpp() {
                 if lang.is_latest() {
@@ -76,23 +76,23 @@ impl Args {
         if self.0.is_msvc() { "" } else { "-l" }
     }
 
-    pub fn crt_static(&self, config: &Config) -> &'static str {
+    pub fn crt_static(&self, config: Config) -> &'static str {
         if self.0.is_msvc() { if config.is_release() { "/MT" } else { "/MTd" } } else { "-static" }
     }
-    pub fn crt_dynamic(&self, config: &Config) -> Option<&'static str> {
-        if self.0.is_msvc() { if config.is_release() { Some("/MD") } else { Some("/MDd") } } else { Some("-static") }
+    pub fn crt_dynamic(&self, config: Config) -> Option<&'static str> {
+        if self.0.is_msvc() { if config.is_release() { Some("/MD") } else { Some("/MDd") } } else { None }
     }
 
     pub fn opt_profile_none(&self) -> Vec<String> {
         if self.0.is_msvc() {
-            vec![ self.O0().to_string(), self.dbg_symbols().to_string(), "/MDd".to_string(), "/Fd:bin/debug/obj/vc143.pdb".to_string(), "/FS".to_string() ]
+            vec![ self.O0().to_string(), self.dbg_symbols().to_string(), "/Fd:bin/debug/obj/vc143.pdb".to_string(), "/FS".to_string() ]
         } else {
             vec![ self.O0().to_string(), self.dbg_symbols().to_string() ]
         }
     }
     pub fn opt_profile_high(&self) -> Vec<String> {
         if self.0.is_msvc() {
-            vec![ self.O2().to_string(), "/MD".to_string(), "/Oi".to_string(), "/GL".to_string() ]
+            vec![ self.O2().to_string(), "/Oi".to_string(), "/GL".to_string() ]
         } else {
             vec![ self.O2().to_string() ]
         }

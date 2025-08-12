@@ -1,10 +1,10 @@
+use std::{io::Write, path::PathBuf};
 use crate::{
+    error::Error,
     exec::{self, BuildInfo},
     fetch::{self, FileInfo},
-    repr::*,
-    error::Error,
+    input::BuildSwitches, repr::*,
 };
-use std::{io::Write, path::PathBuf};
 
 
 pub fn new(library: bool, is_c: bool, name: &str) -> Result<(), Error> {
@@ -49,7 +49,7 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
 }
 
 
-pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bool, test: bool) -> Result<(bool, String), Error> {
+pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, String), Error> {
     let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
     for incdir in build.incdirs.iter().chain(&build.include_public) {
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
@@ -57,30 +57,31 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang: Lang = build.lang.parse()?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, lang)?;
+    let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
     deps.defines.extend(build.defines);
     if test { deps.defines.push("TEST".to_string()); }
     deps.incdirs.extend(build.incdirs);
 
     let rebuilt_dep = deps.rebuilt;
     let outpath = if projkind == ProjKind::App {
-        format!("bin/{}/{}{}", config, build.project, toolchain.app_ext())
+        format!("bin/{}/{}{}", switches.config, build.project, switches.toolchain.app_ext())
     } else {
-        format!("bin/{}/{}{}{}", config, toolchain.lib_prefix(), build.project, toolchain.lib_ext())
+        format!("bin/{}/{}{}{}", switches.config, switches.toolchain.lib_prefix(), build.project, switches.toolchain.lib_ext())
     };
     let outfile = FileInfo::from_str(&outpath);
 
     let info = BuildInfo {
         projkind,
-        toolchain,
-        config,
+        toolchain: switches.toolchain,
+        config: switches.config,
         lang,
+        crtstatic: switches.crtstatic,
 
         sources: fetch::source_files(&PathBuf::from(&build.srcdir), lang.src_ext()).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
-        outdir: format!("bin/{config}/"),
+        outdir: format!("bin/{}/", switches.config),
         outfile,
         defines: deps.defines,
         incdirs: deps.incdirs,
@@ -91,7 +92,7 @@ pub fn build(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bo
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
-    match exec::run_build(info, verbose) {
+    match exec::run_build(info, switches.verbose) {
         Err(e) => Err(e),
         Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outpath)),
     }
@@ -110,10 +111,23 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
 
 
 pub fn help(action: Option<String>) {
+    let print_build_details = || {
+        println!("Options:");
+        println!("  -d, --debug             Build project in debug profile (default)");
+        println!("  -r, --release           Build project in release profile");
+        println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})", ToolChain::default());
+        println!("      --crtstatic         Link statically with the C runtime library");
+        println!("  -v, --verbose           Echo build command and complete compiler output");
+        println!();
+        println!("Profiles:");
+        println!("    debug    Build with no optimization; Generate debug symbols; 'DEBUG' macro defined; Generally faster compile times;");
+        println!("    release  Build with high optimization; 'RELEASE' macro defined; Generally slower compile times;");
+    };
+
     if let Some(action) = action {
         match action.as_str() {
             "new" => {
-                println!("Create a new folder with a boilerplate C++ application");
+                println!("Create a new folder with a boilerplate C++ project");
                 println!();
                 println!("Usage: vango new <NAME> [OPTIONS]");
                 println!();
@@ -122,7 +136,7 @@ pub fn help(action: Option<String>) {
                 println!("    --c    Generate C boilerplate instead of C++");
             }
             "init" => {
-                println!("Create a boilerplate C++ application inside an existing folder");
+                println!("Create a boilerplate C++ project inside an existing folder");
                 println!();
                 println!("Usage: vango init [OPTIONS]");
                 println!();
@@ -132,50 +146,41 @@ pub fn help(action: Option<String>) {
             }
             "clean" => {
                 println!("Remove all generated build files from the current project");
+                println!();
+                println!("Usage: vango clean");
             }
             "build" => {
                 println!("Build the current project");
                 println!();
                 println!("Usage: vango build [OPTIONS]");
                 println!();
-                println!("Options:");
-                println!("  -d, --debug             Generate library boilerplate instead of application");
-                println!("  -r, --release           Generate library boilerplate instead of application");
-                println!("  -v, --verbose           Echo build command and complete compiler output");
-                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
+                print_build_details();
             }
             "run" => {
                 println!("Build and run the current project, with the working directory as the project root, and forwarding commandline arguments");
                 println!();
                 println!("Usage: vango run [OPTIONS] [-- ARGS]");
                 println!();
-                println!("Options:");
-                println!("  -d, --debug             Generate library boilerplate instead of application");
-                println!("  -r, --release           Generate library boilerplate instead of application");
-                println!("  -v, --verbose           Echo build command and complete compiler output");
-                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
+                print_build_details();
             }
             "test" => {
                 println!("Build the current project in test configuration, link it to your test app and run it");
                 println!();
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();
-                println!("Options:");
-                println!("  -d, --debug             Generate library boilerplate instead of application");
-                println!("  -r, --release           Generate library boilerplate instead of application");
-                println!("  -v, --verbose           Echo build command and complete compiler output");
-                println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation");
+                print_build_details();
             }
             _ => (),
         }
     } else {
-        println!("C/C++ build automation tool");
+        println!("VanGo {} - C/C++ build automation tool", env!("CARGO_PKG_VERSION"));
         println!();
         println!("Usage: vango [ACTION] [OPTIONS]");
         println!();
         println!("Commands:");
         println!("    new         Create a new empty project");
         println!("    init        Create a new empty project in an existing location");
+        println!("    help        Display detailed information about a command");
         println!("    clean, c    Remove all build files of the current project");
         println!("    build, b    Build the current project");
         println!("    run,   r    Build the current project and run it");
@@ -186,7 +191,7 @@ pub fn help(action: Option<String>) {
 
 
 #[allow(unused)]
-fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, verbose: bool, test: bool) -> Result<bool, Error> {
+fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
     let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
     for incdir in build.incdirs.iter().chain(&build.include_public) {
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
@@ -194,7 +199,7 @@ fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, verbos
     let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang: Lang = build.lang.parse()?;
 
-    let mut deps = fetch::libraries(build.dependencies, config, toolchain, verbose, lang)?;
+    let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
     deps.defines.extend(build.defines);
     if test {
         deps.defines.push("TEST".to_string());
@@ -203,23 +208,24 @@ fn check_outdated(build: BuildFile, config: Config, toolchain: ToolChain, verbos
 
     let rebuilt_dep = deps.rebuilt;
     let outpath = if projkind == ProjKind::App {
-        format!("bin/{}/{}{}", config, build.project, toolchain.app_ext())
+        format!("bin/{}/{}{}", switches.config, build.project, switches.toolchain.app_ext())
     } else {
-        format!("bin/{}/{}{}{}", config, toolchain.lib_prefix(), build.project, toolchain.lib_ext())
+        format!("bin/{}/{}{}{}", switches.config, switches.toolchain.lib_prefix(), build.project, switches.toolchain.lib_ext())
     };
     let outfile = FileInfo::from_str(&outpath);
 
     let info = BuildInfo{
         projkind,
-        toolchain,
-        config,
+        toolchain: switches.toolchain,
+        config: switches.config,
         lang,
+        crtstatic: switches.crtstatic,
 
         sources: fetch::source_files(&PathBuf::from(&build.srcdir), lang.src_ext()).unwrap(),
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
-        outdir: format!("bin/{config}/obj/"),
+        outdir: format!("bin/{}/obj/", switches.config),
         outfile: outfile.clone(),
         defines: deps.defines,
         incdirs: deps.incdirs,

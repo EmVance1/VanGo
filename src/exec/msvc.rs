@@ -1,6 +1,6 @@
+use std::{io::Write, process::Command};
 use super::{BuildInfo, CompileInfo, PreCompHead};
 use crate::{Error, fetch::FileInfo, log_info};
-use std::{io::Write, process::Command};
 
 
 pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompHead, verbose: bool) -> std::process::Command {
@@ -14,13 +14,19 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
         cmd.args(args.eh_default_cpp());
     }
 
-    cmd.arg(args.std(&info.lang));
+    cmd.arg(args.std(info.lang));
     cmd.arg(args.no_link());
     cmd.arg(src);
     cmd.arg(args.comp_output(obj));
 
     cmd.args(info.incdirs.iter().map(|i| format!("{}{i}", args.I())));
     cmd.args(info.defines.iter().map(|d| format!("{}{d}", args.D())));
+
+    if info.crtstatic {
+        cmd.arg(args.crt_static(info.config));
+    } else {
+        cmd.args(args.crt_dynamic(info.config));
+    }
 
     if info.config.is_release() {
         cmd.args(args.opt_profile_high());
@@ -135,7 +141,7 @@ mod tests {
     use crate::repr::{ToolChain, Config, Lang};
 
     #[test]
-    pub fn compile_cmd_msvc_1() {
+    pub fn compile_cmd_msvc_dbg() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.obj";
 
@@ -143,6 +149,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(120),
+            crtstatic: false,
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
@@ -159,9 +166,9 @@ mod tests {
                 src,
                 &format!("/Fo:{obj}"),
                 "/Isrc/",
+                "/MDd",
                 "/Od",
                 "/Zi",
-                "/MDd",
                 "/Fd:bin/debug/obj/vc143.pdb",
                 "/FS",
             ]
@@ -169,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    pub fn compile_cmd_msvc_2() {
+    pub fn compile_cmd_msvc_dbg2() {
         let src = "src/main.cpp";
         let obj = "bin/debug/obj/main.obj";
 
@@ -177,6 +184,7 @@ mod tests {
             config: Config::Debug,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(123),
+            crtstatic: false,
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
@@ -193,11 +201,79 @@ mod tests {
                 src,
                 &format!("/Fo:{obj}"),
                 "/Isrc/",
+                "/MDd",
                 "/Od",
                 "/Zi",
-                "/MDd",
                 "/Fd:bin/debug/obj/vc143.pdb",
                 "/FS",
+            ]
+        );
+    }
+
+    #[test]
+    pub fn compile_cmd_msvc_rel1() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.obj";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            config: Config::Release,
+            toolchain: ToolChain::Msvc,
+            lang: Lang::Cpp(123),
+            crtstatic: false,
+            outdir: "bin/debug/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        }, crate::exec::PreCompHead::None, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "/TP",
+                "/EHsc",
+                "/std:c++latest",
+                "/c",
+                src,
+                &format!("/Fo:{obj}"),
+                "/Isrc/",
+                "/MD",
+                "/O2",
+                "/Oi",
+                "/GL",
+            ]
+        );
+    }
+
+    #[test]
+    pub fn compile_cmd_msvc_rel2() {
+        let src = "src/main.cpp";
+        let obj = "bin/debug/obj/main.obj";
+
+        let cmd = super::compile_cmd(src, obj, super::CompileInfo {
+            config: Config::Release,
+            toolchain: ToolChain::Msvc,
+            lang: Lang::Cpp(123),
+            crtstatic: true,
+            outdir: "bin/debug/",
+            defines: &vec![],
+            incdirs: &vec![ "src/".to_string() ],
+            pch: &None,
+            comp_args: &vec![],
+        }, crate::exec::PreCompHead::None, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "/TP",
+                "/EHsc",
+                "/std:c++latest",
+                "/c",
+                src,
+                &format!("/Fo:{obj}"),
+                "/Isrc/",
+                "/MT",
+                "/O2",
+                "/Oi",
+                "/GL",
             ]
         );
     }

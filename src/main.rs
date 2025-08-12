@@ -55,20 +55,20 @@ fn main() -> ExitCode {
             .unwrap_or_else(|e| exit_failure!("{}", e));
 
         match cmd {
-            input::Action::Build{ config, toolchain, verbose } => {
-                let build = build.finalise(config);
-                let (rebuilt, _) = action::build(build, config, toolchain, verbose, false).unwrap_or_else(|e| exit_failure!("{}", e));
+            input::Action::Build{ switches } => {
+                let build = build.finalise(switches.config);
+                let (rebuilt, _) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 if rebuilt { 8.into() } else { 0.into() }
             }
-            input::Action::Run{ config, toolchain, verbose, args } => {
-                let build = build.finalise(config);
-                let (_, outfile) = action::build(build, config, toolchain, verbose, false).unwrap_or_else(|e| exit_failure!("{}", e));
+            input::Action::Run{ switches, args } => {
+                let build = build.finalise(switches.config);
+                let (_, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 exec::run_app(&outfile, args).into()
             }
-            input::Action::Test{ config, toolchain, verbose, args } => {
-                let build = build.finalise(config);
-                action::build(build.clone(), config, toolchain, verbose, true).unwrap_or_else(|e| exit_failure!("{}", e));
-                testfw::test_lib(build, config, toolchain, verbose, args).unwrap_or_else(|e| exit_failure!("{}", e));
+            input::Action::Test{ switches, args } => {
+                let build = build.finalise(switches.config);
+                action::build(build.clone(), switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
+                testfw::test_lib(build, switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 0.into()
             }
             input::Action::Clean => {

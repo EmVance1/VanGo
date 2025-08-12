@@ -41,7 +41,7 @@ impl Default for ToolChain {
             Err(std::env::VarError::NotUnicode(..)) => log_warn!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             _ => ()
         }
-        return sysdef;
+        sysdef
     }
 }
 
@@ -166,8 +166,9 @@ impl Display for ToolChain {
 }
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Config {
+    #[default]
     Debug,
     Release,
 }

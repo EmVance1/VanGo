@@ -1,4 +1,4 @@
-use crate::{error::Error, log_info, repr::{Lang, ToolChain}, BuildFile, Config, LibFile};
+use crate::{error::Error, input::BuildSwitches, repr::Lang, BuildFile, LibFile, log_info};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -78,7 +78,7 @@ pub struct Dependencies {
     pub rebuilt: bool,
 }
 
-pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, verbose: bool, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
 
     let mut incdirs = Vec::new();
@@ -124,7 +124,7 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
         } {
             let libinfo = LibFile::from_str(&build)?
                 .validate(lang)?
-                .linearise(config, version)?;
+                .linearise(switches.config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
             if let Some(libdir) = libinfo.libdir {
                 libdirs.push(format!("{path}/{libdir}"));
@@ -146,9 +146,10 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
             std::env::set_current_dir(&path).unwrap();
             let output = std::process::Command::new("vango")
                 .arg("build")
-                .arg(config.as_arg())
-                .arg(toolchain.as_arg())
-                .args(if verbose { Some("-v") } else { None })
+                .arg(switches.config.as_arg())
+                .arg(switches.toolchain.as_arg())
+                .args(if switches.crtstatic { Some("--crtstatic") } else { None })
+                .args(if switches.verbose { Some("-v") } else { None })
                 .status()
                 .unwrap();
             if output.code() == Some(8) {
@@ -159,12 +160,12 @@ pub fn libraries(libraries: Vec<String>, config: Config, toolchain: ToolChain, v
             std::env::set_current_dir(&save).unwrap();
             let libinfo = LibFile::from(build)
                 .validate(lang)?
-                .linearise(config, version)?;
+                .linearise(switches.config, version)?;
             incdirs.push(format!("{path}/{}", libinfo.incdir));
             if let Some(libdir) = &libinfo.libdir {
                 libdirs.push(format!("{path}/{libdir}"));
             }
-            if toolchain.is_msvc() {
+            if switches.toolchain.is_msvc() {
                 for l in &libinfo.links {
                     relink.push(FileInfo::from_str(&format!("{path}/{}/{}.lib", libinfo.libdir.as_ref().unwrap(), l)));
                     links.push(format!("{l}.lib"));
@@ -220,3 +221,4 @@ mod tests {
         assert_eq!(split_version("../Ru.sty:static"), ("../Ru.sty",  Some("static")));
     }
 }
+

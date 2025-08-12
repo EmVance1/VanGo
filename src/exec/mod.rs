@@ -3,14 +3,14 @@ mod msvc;
 mod posix;
 mod prep;
 
+use std::{io::Write, path::PathBuf, process::Command};
+use incremental::BuildLevel;
 use crate::{
     error::Error,
     fetch::FileInfo,
+    repr::{ProjKind, ToolChain, Config, Lang},
     log_error, log_info,
-    repr::{Config, ProjKind, ToolChain, Lang},
 };
-use incremental::BuildLevel;
-use std::{io::Write, path::PathBuf, process::Command};
 
 
 #[derive(Debug)]
@@ -19,6 +19,7 @@ pub struct BuildInfo {
     pub toolchain: ToolChain,
     pub config: Config,
     pub lang: Lang,
+    pub crtstatic: bool,
 
     pub sources: Vec<FileInfo>,
     pub headers: Vec<FileInfo>,
@@ -42,6 +43,7 @@ impl BuildInfo {
             toolchain: self.toolchain,
             config: self.config,
             lang: self.lang,
+            crtstatic: self.crtstatic,
             outdir: &self.outdir,
             defines: &self.defines,
             incdirs: &self.incdirs,
@@ -56,6 +58,7 @@ struct CompileInfo<'a> {
     toolchain: ToolChain,
     config: Config,
     lang: Lang,
+    crtstatic: bool,
     outdir: &'a str,
     defines: &'a [String],
     incdirs: &'a [String],

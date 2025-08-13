@@ -3,7 +3,9 @@ mod msvc;
 mod posix;
 mod prep;
 
-use std::{io::Write, path::PathBuf, process::Command};
+use std::{
+    io::Write, path::PathBuf, process::Command
+};
 use incremental::BuildLevel;
 use crate::{
     error::Error,
@@ -76,6 +78,19 @@ enum PreCompHead<'a> {
 }
 
 
+fn on_compile_finish(src: &str, proc: std::process::Child) -> bool {
+    let output = proc.wait_with_output().unwrap();
+    if !output.status.success() {
+        log_error!("failed to compile '{src}'");
+        std::io::stderr().write_all(&output.stderr).unwrap();
+        std::io::stderr().write_all(&output.stdout).unwrap();
+        eprintln!();
+        true
+    } else {
+        false
+    }
+}
+
 pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
     let mut built_pch = false;
@@ -95,18 +110,13 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
         {
             built_pch = true;
             log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
-            log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
+            log_info!("precompiling header: '{inpch}'");
             let mut cmd = if info.toolchain.is_msvc() {
                 msvc::compile_cmd(&incpp, &outfile, info.compile_info(), PreCompHead::Create(pch), verbose)
             } else {
                 posix::compile_cmd(&inpch, &outfile, info.compile_info(), verbose)
             };
-            let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-            if !output.status.success() {
-                log_error!("failed to compile precompiled header");
-                std::io::stderr().write_all(&output.stdout).unwrap();
-                std::io::stderr().write_all(&output.stderr).unwrap();
-                eprintln!();
+            if on_compile_finish(&inpch, cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
                 return Err(Error::CompilerFail(info.outfile.repr));
             }
         }
@@ -128,54 +138,55 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
                 log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
             }
             let _ = std::fs::remove_file(&info.outfile.repr);
-            let mut handles = Vec::new();
+            let mut handles: Vec<Option<(&str, std::process::Child)>> = Vec::new();
+            handles.resize_with(std::thread::available_parallelism().unwrap().get(), || None);
             let mut failure = false;
-            const LIMIT: u32 = 12;
-            let mut batch = 0;
+            let mut count = 0;
+
             for (src, obj) in elems {
-                log_info!("compiling: {}", src);
-                if info.toolchain.is_msvc() {
-                    handles.push((src, msvc::compile_cmd(src, &obj, info.compile_info(), pch_use, verbose)
-                        .spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
-                    ));
-                } else {
-                    handles.push((src, posix::compile_cmd(src, &obj, info.compile_info(), verbose)
-                        .spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
-                    ));
-                };
-                batch += 1;
-                if batch == LIMIT {
-                    for (src, proc) in handles {
-                        let output = proc.wait_with_output().unwrap();
-                        if !output.status.success() {
-                            log_error!("failed to compile file '{src}'");
-                            std::io::stderr().write_all(&output.stderr).unwrap();
-                            std::io::stderr().write_all(&output.stdout).unwrap();
-                            eprintln!();
-                            failure = true;
+                log_info!("compiling: {src}");
+                let mut slot = None;
+                for (i, handle) in handles.iter_mut().enumerate() {
+                    // IF SLOT IS FULL :: AND ::  SLOT IS FINISHED :: THEN :: FLUSH SLOT
+                    if let Some((_, proc)) = handle.as_mut() {
+                        if proc.try_wait().unwrap().is_some() {
+                            let (src, proc) = std::mem::take(handle).unwrap();
+                            failure = failure || on_compile_finish(src, proc);
+                            count -= 1;
+                            *handle = None;
+                            slot = Some(i);
                         }
+                    // ELSE SLOT IS FREE
+                    } else {
+                        slot = Some(i);
                     }
-                    batch = 0;
-                    handles = Vec::new();
+                }
+
+                let slot = slot.unwrap_or_else(|| {
+                    // ALL SLOTS FULL - BLOCK ON FIRST ONE
+                    let (src, proc) = std::mem::take(&mut handles[0]).unwrap();
+                    failure = failure || on_compile_finish(src, proc);
+                    count -= 1;
+                    0
+                });
+
+                if info.toolchain.is_msvc() {
+                    handles[slot] = Some((src, msvc::compile_cmd(src, &obj, info.compile_info(), pch_use, verbose).spawn()
+                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
+                } else {
+                    handles[slot] = Some((src, posix::compile_cmd(src, &obj, info.compile_info(), verbose).spawn()
+                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
+                };
+                count += 1;
+            }
+
+            for h in handles {
+                if let Some((src, proc)) = h {
+                    failure = failure || on_compile_finish(src, proc);
                 }
             }
 
-            for (src, proc) in handles {
-                let output = proc.wait_with_output().unwrap();
-                if !output.status.success() {
-                    log_error!("failed to compile file '{src}'");
-                    std::io::stderr().write_all(&output.stderr).unwrap();
-                    std::io::stderr().write_all(&output.stdout).unwrap();
-                    eprintln!();
-                    failure = true;
-                }
-            }
-
-            if failure {
-                return Err(Error::CompilerFail(info.outfile.repr));
-            }
+            if failure { return Err(Error::CompilerFail(info.outfile.repr)); }
         }
     }
 
@@ -220,19 +231,27 @@ pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
 
     if let Some(pch) = &info.pch {
-        let cmd = if info.toolchain.is_msvc() {
-            msvc::precompile_header(pch, &info, false)
+        let inpch = format!("{}{}", info.srcdir, pch);
+        let incpp = format!("{}pch/pch_impl.cpp", info.outdir);
+        let outfile = if info.toolchain.is_msvc() {
+            std::fs::write(&incpp, format!("#include \"{pch}\"")).unwrap();
+            format!("{}obj/{}.obj", info.outdir, pch)
         } else {
-            posix::precompile_header(pch, &info, false)
+            format!("{}pch/{}.gch", info.outdir, pch)
         };
-        if let Some(mut cmd) = cmd {
-            log_info!("compiling precompiled header: {}{}", info.srcdir, pch);
-            let output = cmd.output().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-            if !output.status.success() {
-                log_error!("failed to compile precompiled header");
-                std::io::stderr().write_all(&output.stdout).unwrap();
-                std::io::stderr().write_all(&output.stderr).unwrap();
-                eprintln!();
+
+        if !std::fs::exists(&outfile).unwrap() ||
+            (std::fs::metadata(&inpch).unwrap().modified().unwrap() > std::fs::metadata(&outfile).unwrap().modified().unwrap())
+        {
+            built_pch = true;
+            log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
+            log_info!("precompiling header: '{inpch}'");
+            let mut cmd = if info.toolchain.is_msvc() {
+                msvc::compile_cmd(&incpp, &outfile, info.compile_info(), PreCompHead::Create(pch), verbose)
+            } else {
+                posix::compile_cmd(&inpch, &outfile, info.compile_info(), verbose)
+            };
+            if on_compile_finish(&inpch, cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
                 return Err(Error::CompilerFail(info.outfile.repr));
             }
         }

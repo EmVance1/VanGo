@@ -6,6 +6,9 @@ on:
       - 'v*.*.*' # triggers on version tags
 
 jobs:
+  permissions:
+    contents: write
+
   build:
     runs-on: ubuntu-latest
     strategy:

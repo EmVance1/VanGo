@@ -3,14 +3,13 @@ use super::{BuildInfo, CompileInfo, PreCompHead};
 use crate::{Error, fetch::FileInfo, log_info};
 
 
-pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompHead, verbose: bool) -> std::process::Command {
+pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, echo: bool, verbose: bool) -> std::process::Command {
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     let args = info.toolchain.args();
     cmd.args(info.toolchain.compiler_as_arg(info.lang.is_cpp()));
     cmd.args(info.comp_args);
 
     if info.lang.is_cpp() {
-        cmd.arg(args.force_cpp());
         cmd.args(args.eh_default_cpp());
     }
 
@@ -34,7 +33,7 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
         cmd.args(args.opt_profile_none());
     }
 
-    match pch {
+    match info.pch {
         PreCompHead::Create(h) => {
             cmd.arg(format!("/Yc{h}"));
             cmd.arg(format!("/Fp:{}pch/{}.pch", info.outdir, h));
@@ -52,11 +51,11 @@ pub(super) fn compile_cmd(src: &str, obj: &str, info: CompileInfo, pch: PreCompH
     } else {
         cmd.stderr(std::process::Stdio::null());
     };
-    if verbose { print_command(&cmd); }
+    if echo { print_command(&cmd); }
     cmd
 }
 
-pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
+pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.archiver());
     let args = info.toolchain.args();
     cmd.args(info.toolchain.archiver_as_arg());
@@ -65,7 +64,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     cmd.args(objs.into_iter().map(|o| format!("{}{}", args.l(), o.repr)));
     cmd.arg(args.link_output(&info.outfile.repr));
     cmd.arg("/MACHINE:X64");
-    if verbose { print_command(&cmd); }
+    if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
     if !output.status.success() {
         if verbose { std::io::stderr().write_all(&output.stderr).unwrap(); }
@@ -78,7 +77,7 @@ pub(super) fn link_lib(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     }
 }
 
-pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> Result<bool, Error> {
+pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
     let args = info.toolchain.args();
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
@@ -97,7 +96,7 @@ pub(super) fn link_exe(objs: Vec<FileInfo>, info: BuildInfo, verbose: bool) -> R
     if info.config.is_debug() {
         cmd.arg("/DEBUG");
     }
-    if verbose { print_command(&cmd); }
+    if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
     if !output.status.success() {
         if verbose { std::io::stderr().write_all(&output.stderr).unwrap(); }
@@ -139,6 +138,7 @@ fn print_command(cmd: &std::process::Command) {
 #[cfg(test)]
 mod tests {
     use crate::repr::{ToolChain, Config, Lang};
+    use super::*;
 
     #[test]
     pub fn compile_cmd_msvc_dbg() {
@@ -153,9 +153,9 @@ mod tests {
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
-            pch: &None,
+            pch: &PreCompHead::None,
             comp_args: &vec![],
-        }, crate::exec::PreCompHead::None, false);
+        }, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
@@ -188,9 +188,9 @@ mod tests {
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
-            pch: &None,
+            pch: &PreCompHead::None,
             comp_args: &vec![],
-        }, crate::exec::PreCompHead::None, false);
+        }, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
@@ -223,9 +223,9 @@ mod tests {
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
-            pch: &None,
+            pch: &PreCompHead::None,
             comp_args: &vec![],
-        }, crate::exec::PreCompHead::None, false);
+        }, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
@@ -257,9 +257,9 @@ mod tests {
             outdir: "bin/debug/",
             defines: &vec![],
             incdirs: &vec![ "src/".to_string() ],
-            pch: &None,
+            pch: &PreCompHead::None,
             comp_args: &vec![],
-        }, crate::exec::PreCompHead::None, false);
+        }, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [

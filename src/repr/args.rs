@@ -14,9 +14,6 @@ impl Args {
     pub fn link_output(&self, file: &str) -> String {
         if self.0.is_msvc() { format!("/OUT:{file}") } else { format!("-o{file}") }
     }
-    pub fn force_cpp(&self) -> &'static str {
-        if self.0.is_msvc() { "/TP" } else { "-xc++" }
-    }
     pub fn eh_default_cpp(&self) -> Option<&'static str> {
         if self.0.is_msvc() { Some("/EHsc") } else { None }
     }

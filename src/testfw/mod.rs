@@ -72,7 +72,7 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
         comp_args: vec![],
         link_args: vec![],
     };
-    crate::exec::run_build(info, false)?;
+    crate::exec::run_build(info, switches.echo, false)?;
     log_info!(
         "running tests for project {:=<57}",
         format!("\"{}\" ", build.project)

@@ -17,7 +17,8 @@ pub struct BuildSwitches {
     pub config: Config,
     pub toolchain: ToolChain,
     pub crtstatic: bool,
-    pub verbose: bool
+    pub echo: bool,
+    pub verbose: bool,
 }
 
 
@@ -50,12 +51,13 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
+            let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("build".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             if args.is_empty() {
-                Ok(Action::Build{ switches: BuildSwitches{ config, toolchain, crtstatic, verbose } })
+                Ok(Action::Build{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose } })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -71,12 +73,13 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
+            let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("run".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
             if args.is_empty() {
-                Ok(Action::Run{ switches: BuildSwitches{ config, toolchain, crtstatic, verbose }, args: user_args })
+                Ok(Action::Run{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose }, args: user_args })
             } else {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
@@ -85,11 +88,12 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
             let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
+            let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let config = if release { Config::Release } else { Config::Debug };
-            Ok(Action::Test{ switches: BuildSwitches{ config, toolchain, crtstatic, verbose }, args })
+            Ok(Action::Test{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose }, args })
         }
         "clean" | "c" => {
             if args.is_empty() {

@@ -92,7 +92,7 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
         comp_args: build.compiler_options,
         link_args: build.linker_options,
     };
-    match exec::run_build(info, switches.verbose) {
+    match exec::run_build(info, switches.echo, switches.verbose) {
         Err(e) => Err(e),
         Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outpath)),
     }
@@ -117,7 +117,8 @@ pub fn help(action: Option<String>) {
         println!("  -r, --release           Build project in release profile");
         println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})", ToolChain::default());
         println!("      --crtstatic         Link statically with the C runtime library");
-        println!("  -v, --verbose           Echo build command and complete compiler output");
+        println!("      --echo              Echo the entire build command composed by vango");
+        println!("  -v, --verbose           Forward '--verbose' to invoked tool, if available");
         println!();
         println!("Profiles:");
         println!("    debug    Build with no optimization; Generate debug symbols; 'DEBUG' macro defined; Generally faster compile times;");

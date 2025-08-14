@@ -38,7 +38,7 @@ pub struct BuildInfo {
 }
 
 impl BuildInfo {
-    fn compile_info(&self) -> CompileInfo<'_> {
+    fn compile_info<'a, 'b>(&'a self, pch: &'b PreCompHead) -> CompileInfo<'a, 'b> {
         CompileInfo {
             toolchain: self.toolchain,
             config: self.config,
@@ -47,14 +47,14 @@ impl BuildInfo {
             outdir: &self.outdir,
             defines: &self.defines,
             incdirs: &self.incdirs,
-            pch: &self.pch,
+            pch,
             comp_args: &self.comp_args,
         }
     }
 }
 
 #[derive(Debug)]
-struct CompileInfo<'a> {
+struct CompileInfo<'a, 'b> {
     toolchain: ToolChain,
     config: Config,
     lang: Lang,
@@ -62,7 +62,7 @@ struct CompileInfo<'a> {
     outdir: &'a str,
     defines: &'a [String],
     incdirs: &'a [String],
-    pch: &'a Option<String>,
+    pch: &'b PreCompHead<'b>,
     comp_args: &'a [String],
 }
 
@@ -89,7 +89,7 @@ fn on_compile_finish(src: &str, proc: std::process::Child) -> bool {
     }
 }
 
-pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
+pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
     let mut built_pch = false;
 
@@ -109,10 +109,11 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
             built_pch = true;
             log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.repr));
             log_info!("precompiling header: '{inpch}'");
+            let var = PreCompHead::Create(pch);
             let mut cmd = if info.toolchain.is_msvc() {
-                msvc::compile_cmd(&incpp, &outfile, info.compile_info(), PreCompHead::Create(pch), verbose)
+                msvc::compile_cmd(&incpp, &outfile, info.compile_info(&var), echo, verbose)
             } else {
-                posix::compile_cmd(&inpch, &outfile, info.compile_info(), verbose)
+                posix::compile_cmd(&inpch, &outfile, info.compile_info(&var), echo, verbose)
             };
             if on_compile_finish(&inpch, cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
                 return Err(Error::CompilerFail(info.outfile.repr));
@@ -169,10 +170,10 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
                 });
 
                 if info.toolchain.is_msvc() {
-                    handles[slot] = Some((src, msvc::compile_cmd(src, &obj, info.compile_info(), pch_use, verbose).spawn()
+                    handles[slot] = Some((src, msvc::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
                         .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
                 } else {
-                    handles[slot] = Some((src, posix::compile_cmd(src, &obj, info.compile_info(), verbose).spawn()
+                    handles[slot] = Some((src, posix::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
                         .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
                 };
                 count += 1;
@@ -192,16 +193,16 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".obj").unwrap();
         if info.projkind == ProjKind::App {
-            msvc::link_exe(all_objs, info, verbose)
+            msvc::link_exe(all_objs, info, echo, verbose)
         } else {
-            msvc::link_lib(all_objs, info, verbose)
+            msvc::link_lib(all_objs, info, echo, verbose)
         }
     } else {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".o").unwrap();
         if info.projkind == ProjKind::App {
-            posix::link_exe(all_objs, info, verbose)
+            posix::link_exe(all_objs, info, echo, verbose)
         } else {
-            posix::link_lib(all_objs, info, verbose)
+            posix::link_lib(all_objs, info, echo, verbose)
         }
     }
 }

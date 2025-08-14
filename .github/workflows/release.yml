@@ -25,9 +25,9 @@ jobs:
         run: |
           mkdir dist
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            cp target/release/*.exe dist/
+            cp target/release/*.exe dist/ -r
           else
-            cp target/release/* dist/
+            cp target/release/* dist/ -r
           fi
 
       - name: Upload binaries to release

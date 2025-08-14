@@ -3,9 +3,7 @@ mod msvc;
 mod posix;
 mod prep;
 
-use std::{
-    io::Write, path::PathBuf, process::Command
-};
+use std::{ io::Write, path::PathBuf, process::Command };
 use incremental::BuildLevel;
 use crate::{
     error::Error,

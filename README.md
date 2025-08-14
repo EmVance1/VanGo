@@ -53,7 +53,7 @@ Even without boilerplate generation, slap a `build.json` next to a `src` directo
 ## How-to:
 Some examples of invocations are as follows, but for a more complete list see the help action.
 
-- `vango new     [-lib] [-c] <name>`
+- `vango new     [--lib] [--c] <name>`
 - `vango b[uild] [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>]`
 - `vango r[un]   [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>] [-- args*]`
 - `vango c[lean]`

@@ -63,7 +63,7 @@ fn main() -> ExitCode {
             input::Action::Run{ switches, args } => {
                 let build = build.finalise(switches.config);
                 let (_, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                exec::run_app(&outfile, args).into()
+                exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
                 let build = build.finalise(switches.config);

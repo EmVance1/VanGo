@@ -206,15 +206,19 @@ pub fn run_build(info: BuildInfo, verbose: bool) -> Result<bool, Error> {
     }
 }
 
-pub fn run_app(outfile: &str, runargs: Vec<String>) -> u8 {
+pub fn run_app(outfile: &str, runargs: Vec<String>) -> Result<u8, Error> {
     log_info!("running application {:=<63}", format!("\"{outfile}\" "));
-    Command::new(format!("./{outfile}"))
-        .args(runargs)
-        .current_dir(std::env::current_dir().unwrap())
-        .status()
-        .unwrap()
-        .code()
-        .unwrap() as u8
+    if outfile.ends_with(".a") || outfile.ends_with(".lib") {
+        Err(Error::LibNotExe(outfile.to_string()))
+    } else {
+        Ok(Command::new(format!("./{outfile}"))
+            .args(runargs)
+            .current_dir(std::env::current_dir().unwrap())
+            .status()
+            .map_err(|_| Error::InvalidExe(outfile.to_string()))?
+            .code()
+            .unwrap() as u8)
+    }
 }
 
 

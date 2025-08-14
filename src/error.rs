@@ -37,6 +37,10 @@ pub enum Error {
     LinkerFail(String),
     #[error("project does not contain 'test' directory")]
     MissingTests,
+    #[error("binary '{0}' is not runnable on current platform")]
+    InvalidExe(String),
+    #[error("static library '{0}' is not executable")]
+    LibNotExe(String),
     #[error("filesystem error: {0}")]
     FileSystem(#[from] std::io::Error),
     #[error("build failed")]

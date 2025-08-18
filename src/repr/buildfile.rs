@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use super::Config;
 use serde::Deserialize;
 
@@ -10,16 +11,16 @@ pub struct BuildFile {
     pub dependencies: Vec<String>,
 
     #[serde(default = "src_default")]
-    pub srcdir: String,
+    pub srcdir: PathBuf,
     #[serde(default)]
-    pub incdirs: Vec<String>,
+    pub incdirs: Vec<PathBuf>,
     #[serde(default)]
     pub defines: Vec<String>,
     #[serde(default)]
-    pub pch: Option<String>,
+    pub pch: Option<PathBuf>,
 
     #[serde(default)]
-    pub include_public: Option<String>,
+    pub include_public: Option<PathBuf>,
 
     #[serde(default)]
     pub compiler_options: Vec<String>,
@@ -36,6 +37,7 @@ impl BuildFile {
     }
 }
 
-fn src_default() -> String {
-    "src/".to_string()
+fn src_default() -> PathBuf {
+    "src".into()
 }
+

@@ -1,6 +1,9 @@
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+};
 use crate::{Config, error::Error};
 use serde::Deserialize;
-use std::collections::HashMap;
 use super::{Lang, BuildFile};
 
 
@@ -8,7 +11,7 @@ use super::{Lang, BuildFile};
 pub struct LibFile {
     pub library: String,
     pub lang: String,
-    pub include: String,
+    pub include: PathBuf,
     #[serde(default)]
     pub all: Option<LibConfig>,
     #[serde(default)]
@@ -24,9 +27,9 @@ impl LibFile {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibConfig {
     #[serde(rename = "binary.debug")]
-    pub binary_debug: String,
+    pub binary_debug: PathBuf,
     #[serde(rename = "binary.release")]
-    pub binary_release: String,
+    pub binary_release: PathBuf,
     pub links: Vec<String>,
     #[serde(default)]
     pub defines: Vec<String>,
@@ -34,8 +37,8 @@ pub struct LibConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibData {
-    pub incdir: String,
-    pub libdir: Option<String>,
+    pub incdir: PathBuf,
+    pub libdir: Option<PathBuf>,
     pub links: Vec<String>,
     pub defines: Vec<String>,
 }
@@ -76,8 +79,8 @@ impl From<BuildFile> for LibFile {
             lang: value.lang,
             include,
             all: Some(LibConfig {
-                binary_debug: "bin/debug/".to_string(),
-                binary_release: "bin/release/".to_string(),
+                binary_debug: "bin/debug".into(),
+                binary_release: "bin/release/".into(),
                 links: vec![value.project],
                 defines: value.defines,
             }),

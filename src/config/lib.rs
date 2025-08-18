@@ -17,16 +17,17 @@ pub struct Library {
     pub package: String,
     pub version: String,
     pub lang: String,
-    pub include: PathBuf,
+    #[serde(rename="include-pub")]
+    pub include_pub: PathBuf,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
 pub struct Profile {
-    pub include: Option<Vec<PathBuf>>,
-    pub libdirs: Option<Vec<PathBuf>>,
-    pub binaries: Option<Vec<String>>,
-    pub macros: Option<Vec<String>>,
+    pub include:  Option<Vec<PathBuf>>,
+    pub libdirs:  Option<Vec<PathBuf>>,
+    pub binaries: Option<Vec<PathBuf>>,
+    pub macros:   Option<Vec<String>>,
 }
 
 
@@ -72,7 +73,7 @@ binaries = [ "sfml-network", "sfml-audio", "sfml-graphics", "sfml-window", "sfml
                 package: "SFML".to_string(),
                 version: "3.0.1".to_string(),
                 lang: "C++17".to_string(),
-                include: "include".into(),
+                include_pub: "include".into(),
                 ..Default::default()
             },
             profile,

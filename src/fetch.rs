@@ -1,10 +1,10 @@
 use crate::{error::Error, input::BuildSwitches, repr::Lang, BuildFile, LibFile, log_info};
 use std::{
-    io::Write,
-    path::{Path, PathBuf},
+    io::Write, path::{Path, PathBuf}
 };
 
 
+/*
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileInfo {
     pub path: PathBuf,
@@ -18,7 +18,7 @@ impl FileInfo {
     pub fn from_path(path: &Path) -> Self {
         let exists = path.exists();
         let modified = if exists {
-            Some(std::fs::metadata(path).unwrap().modified().unwrap())
+            Some(path.metadata().unwrap().modified().unwrap())
         } else {
             None
         };
@@ -37,8 +37,8 @@ impl FileInfo {
         Self::from_path(&PathBuf::from(path))
     }
 
-    pub fn file_name(&self) -> String {
-        self.path.file_name().unwrap().to_string_lossy().to_string()
+    pub fn file_name(&self) -> &OsStr {
+        self.path.file_name().unwrap()
     }
     pub fn exists(&self) -> bool {
         self.exists
@@ -47,44 +47,45 @@ impl FileInfo {
         self.modified
     }
 }
+*/
 
 
-pub fn source_files(sdir: &Path, ext: &str) -> Option<Vec<FileInfo>> {
+pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
     let mut res = Vec::new();
 
-    for e in std::fs::read_dir(sdir).ok()? {
-        let e = e.ok()?;
+    for e in std::fs::read_dir(sdir)? {
+        let e = e?;
         if e.path().is_dir() {
             res.extend(source_files(&e.path(), ext)?);
-        } else {
-            let filename = e.path().file_name()?.to_str()?.to_string();
+        } else if e.path().is_file() {
+            let filename = e.path().file_name().unwrap().to_string_lossy().to_string();
             if filename.ends_with(ext) {
-                res.push(FileInfo::from_path(&e.path()));
+                res.push(e.path());
             }
         }
     }
 
-    Some(res)
+    Ok(res)
 }
 
 
 #[derive(Debug, Clone)]
 pub struct Dependencies {
-    pub incdirs: Vec<String>,
-    pub libdirs: Vec<String>,
+    pub incdirs: Vec<PathBuf>,
+    pub libdirs: Vec<PathBuf>,
     pub links: Vec<String>,
-    pub relink: Vec<FileInfo>,
+    pub relink: Vec<PathBuf>,
     pub defines: Vec<String>,
     pub rebuilt: bool,
 }
 
 pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
-    let home = std::env::home_dir().unwrap().to_string_lossy().to_string();
+    let home = std::env::home_dir().unwrap();
 
     let mut incdirs = Vec::new();
     let mut libdirs = Vec::new();
-    let mut links = Vec::new();
-    let mut relink = Vec::new();
+    let mut links   = Vec::new();
+    let mut relink  = Vec::new();
     let mut defines = Vec::new();
     let mut rebuilt = false;
 
@@ -94,7 +95,7 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
         let path = if root.ends_with(".git") {
             let url = std::path::Path::new(root);
             let stem = url.file_stem().unwrap().to_string_lossy();
-            let dir = format!("{home}/.vango/packages/{stem}");
+            let dir = home.join(format!(".vango/packages/{stem}"));
             if !std::fs::exists(&dir).unwrap() {
                 log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
                 std::process::Command::new("git")
@@ -106,39 +107,39 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
             }
             dir
         } else {
-            root.to_string()
+            PathBuf::from(root)
         };
 
         if !std::fs::exists(&path).unwrap() {
             return Err(Error::DirectoryNotFound(path))
         }
 
-        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{path}/linux.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{path}/macos.lib.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/macos.lib.json")).ok()
+        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.lib.json"))? {
+            std::fs::read_to_string(path.join("win.lib.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("linux.lib.json"))? {
+            std::fs::read_to_string(path.join("linux.lib.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("macos.lib.json"))? {
+            std::fs::read_to_string(path.join("macos.lib.json")).ok()
         } else {
-            std::fs::read_to_string(format!("{path}/lib.json")).ok()
+            std::fs::read_to_string(path.join("lib.json")).ok()
         } {
             let libinfo = LibFile::from_str(&build)?
                 .validate(lang)?
                 .linearise(switches.config, version)?;
-            incdirs.push(format!("{path}/{}", libinfo.incdir));
+            incdirs.push(path.join(libinfo.incdir));
             if let Some(libdir) = libinfo.libdir {
-                libdirs.push(format!("{path}/{libdir}"));
+                libdirs.push(path.join(libdir));
             }
             links.extend(libinfo.links);
             defines.extend(libinfo.defines);
-        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(format!("{path}/win.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/win.build.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(format!("{path}/linux.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/linux.build.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(format!("{path}/macos.build.json")).unwrap() {
-            std::fs::read_to_string(format!("{path}/macos.build.json")).ok()
+        } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.build.json"))? {
+            std::fs::read_to_string(path.join("win.build.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("linux.build.json"))? {
+            std::fs::read_to_string(path.join("linux.build.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("macos.build.json"))? {
+            std::fs::read_to_string(path.join("macos.build.json")).ok()
         } else {
-            std::fs::read_to_string(format!("{path}/build.json")).ok()
+            std::fs::read_to_string(path.join("build.json")).ok()
         } {
             let build: BuildFile = serde_json::from_str(&build)?;
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
@@ -161,18 +162,18 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
             let libinfo = LibFile::from(build)
                 .validate(lang)?
                 .linearise(switches.config, version)?;
-            incdirs.push(format!("{path}/{}", libinfo.incdir));
+            incdirs.push(path.join(libinfo.incdir));
             if let Some(libdir) = &libinfo.libdir {
-                libdirs.push(format!("{path}/{libdir}"));
+                libdirs.push(path.join(libdir));
             }
             if switches.toolchain.is_msvc() {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{path}/{}/{}.lib", libinfo.libdir.as_ref().unwrap(), l)));
+                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(l).with_extension("lib"));
                     links.push(format!("{l}.lib"));
                 }
             } else {
                 for l in &libinfo.links {
-                    relink.push(FileInfo::from_str(&format!("{path}/{}/lib{}.a", libinfo.libdir.as_ref().unwrap(), l)));
+                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(format!("lib{}", l)).with_extension("a"));
                     links.push(l.to_string());
                 }
             }

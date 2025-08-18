@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::path::PathBuf;
 
 
 #[derive(Debug, Error)]
@@ -12,9 +13,9 @@ pub enum Error {
     #[error("toolchain '{0}' is unavailable")]
     UnknownToolChain(String),
     #[error("directory '{0}' was not found")]
-    DirectoryNotFound(String),
+    DirectoryNotFound(PathBuf),
     #[error("directory '{0}' does not contain a build script")]
-    MissingBuildScript(String),
+    MissingBuildScript(PathBuf),
     #[error("json error: {0}")]
     JsonParse(#[from] serde_json::Error),
     #[error("'{0}' is not a valid C/C++ standard")]
@@ -30,18 +31,18 @@ pub enum Error {
     #[error("toolchain '{0}' linker is unavailable")]
     MissingLinker(String),
     #[error("failed to compile project '{0}'")]
-    CompilerFail(String),
+    CompilerFail(PathBuf),
     #[error("failed to link library '{0}'")]
-    ArchiverFail(String),
+    ArchiverFail(PathBuf),
     #[error("failed to link application '{0}'")]
-    LinkerFail(String),
+    LinkerFail(PathBuf),
     #[error("project does not contain 'test' directory")]
     MissingTests,
     #[error("binary '{0}' is not runnable on current platform")]
-    InvalidExe(String),
+    InvalidExe(PathBuf),
     #[error("static library '{0}' is not executable")]
-    LibNotExe(String),
-    #[error("filesystem error: {0}")]
+    LibNotExe(PathBuf),
+    #[error("OS or IO error: {0}")]
     FileSystem(#[from] std::io::Error),
     #[error("build failed")]
     #[allow(unused)]

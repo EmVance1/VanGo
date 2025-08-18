@@ -1,42 +1,40 @@
+use std::path::{Path, PathBuf};
 use super::BuildInfo;
-use crate::fetch::FileInfo;
 
 
 pub enum BuildLevel<'a> {
     UpToDate,
     LinkOnly,
-    CompileAndLink(Vec<(&'a str, String)>),
+    CompileAndLink(Vec<(&'a Path, PathBuf)>),
 }
 
 
 pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
-    let objdir = format!("{}obj/", info.outdir);
+    let objdir = info.outdir.join("obj");
 
     let pairs: Vec<_> = info
         .sources
         .iter()
-        .map(|c| (c, FileInfo::from_str(&transform_file( &c.repr, &info.srcdir, &objdir, info.toolchain.is_msvc()))))
+        .map(|src| (src.as_path(), transform_file(&src, &info.srcdir, &objdir, info.toolchain.is_msvc())))
         .collect();
 
     // IF BINARY EXISTS
     if info.outfile.exists() {
         // IF ANY HEADER IS NEWER THAN THE BINARY
-        if !get_recent_changes(&info.headers, info.outfile.modified().unwrap()).is_empty() {
+        if !any_changed(&info.headers, info.outfile.metadata().unwrap().modified().unwrap()) {
             BuildLevel::CompileAndLink(pairs
                 .into_iter()
-                .map(|(src, obj)| (src.repr.as_str(), obj.repr))
                 .collect())
 
         // NO HEADER IS NEWER THAN THE BINARY
         } else {
             // IF ANY SOURCE IS NEWER THAN ITS OBJ | (AND THE BINARY BY TRANSITIVITY)
             let build: Vec<_> = pairs.into_iter()
-                .filter(|(src, obj)| !obj.exists() || (src.modified().unwrap() > obj.modified().unwrap()))
-                .map(   |(src, obj)| (src.repr.as_str(), obj.repr))
+                .filter(|(src, obj)| !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()))
                 .collect();
 
             if build.is_empty() {
-                if !get_recent_changes(&info.relink, info.outfile.modified().unwrap()).is_empty() {
+                if !any_changed(&info.relink, info.outfile.metadata().unwrap().modified().unwrap()) {
                     BuildLevel::LinkOnly
                 } else {
                     BuildLevel::UpToDate
@@ -48,8 +46,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     } else {
         // IF ANY SOURCE IS NEWER THAN ITS OBJ
         let build: Vec<_> = pairs.into_iter()
-            .filter(|(src, obj)| !obj.exists() || (src.modified().unwrap() > obj.modified().unwrap()))
-            .map(   |(src, obj)| (src.repr.as_str(), obj.repr))
+            .filter(|(src, obj)| !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()))
             .collect();
 
         if build.is_empty() {
@@ -61,19 +58,11 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
 }
 
 
-fn get_recent_changes(sources: &[FileInfo], pivot: std::time::SystemTime) -> Vec<&FileInfo> {
-    sources.iter().filter(|src| src.modified().unwrap() > pivot).collect()
+fn any_changed(sources: &[PathBuf], pivot: std::time::SystemTime) -> bool {
+    sources.iter().any(|src| src.metadata().unwrap().modified().unwrap() > pivot)
 }
 
-fn transform_file(path: &str, src_dir: &str, obj_dir: &str, msvc: bool) -> String {
-    if msvc {
-        path.replace(src_dir, obj_dir)
-            .replace(".cpp", ".obj")
-            .replace(".c", ".obj")
-    } else {
-        path.replace(src_dir, obj_dir)
-            .replace(".cpp", ".o")
-            .replace(".c", ".o")
-    }
+fn transform_file(path: &Path, src_dir: &Path, obj_dir: &Path, msvc: bool) -> PathBuf {
+    obj_dir.join(path.strip_prefix(src_dir).unwrap()).with_extension(if msvc { ".obj" } else { ".o" })
 }
 

@@ -2,8 +2,8 @@ use std::{io::Write, path::PathBuf};
 use crate::{
     error::Error,
     exec::{self, BuildInfo},
-    fetch::{self, FileInfo},
     input::BuildSwitches, repr::*,
+    fetch,
 };
 
 
@@ -49,12 +49,12 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
 }
 
 
-pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, String), Error> {
+pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
     let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
     for incdir in build.incdirs.iter().chain(&build.include_public) {
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
     }
-    let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
+    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang: Lang = build.lang.parse()?;
 
     let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
@@ -63,12 +63,12 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
     deps.incdirs.extend(build.incdirs);
 
     let rebuilt_dep = deps.rebuilt;
-    let outpath = if projkind == ProjKind::App {
-        format!("bin/{}/{}{}", switches.config, build.project, switches.toolchain.app_ext())
+    let outdir = PathBuf::from("bin").join(switches.config.to_string());
+    let outfile = if projkind == ProjKind::App {
+        outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
-        format!("bin/{}/{}{}{}", switches.config, switches.toolchain.lib_prefix(), build.project, switches.toolchain.lib_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.app_ext())
     };
-    let outfile = FileInfo::from_str(&outpath);
 
     let info = BuildInfo {
         projkind,
@@ -81,8 +81,8 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
-        outdir: format!("bin/{}/", switches.config),
-        outfile,
+        outdir,
+        outfile: outfile.clone(),
         defines: deps.defines,
         incdirs: deps.incdirs,
         libdirs: deps.libdirs,
@@ -94,7 +94,7 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
     };
     match exec::run_build(info, switches.echo, switches.verbose) {
         Err(e) => Err(e),
-        Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outpath)),
+        Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outfile)),
     }
 }
 
@@ -104,7 +104,7 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
     if let Some(pch) = build.pch {
-        let _ = std::fs::remove_file(format!("src/{pch}.gch"));
+        let _ = std::fs::remove_file(PathBuf::from("src").join(pch).with_extension("gch"));
     }
     Ok(())
 }
@@ -197,7 +197,7 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
     for incdir in build.incdirs.iter().chain(&build.include_public) {
         headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
     }
-    let projkind = if headers.iter().any(|f| f.file_name() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
+    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang: Lang = build.lang.parse()?;
 
     let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
@@ -208,12 +208,12 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
     deps.incdirs.extend(build.incdirs);
 
     let rebuilt_dep = deps.rebuilt;
-    let outpath = if projkind == ProjKind::App {
-        format!("bin/{}/{}{}", switches.config, build.project, switches.toolchain.app_ext())
+    let outdir = PathBuf::from("bin").join(switches.config.to_string());
+    let outfile = if projkind == ProjKind::App {
+        outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
-        format!("bin/{}/{}{}{}", switches.config, switches.toolchain.lib_prefix(), build.project, switches.toolchain.lib_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.app_ext())
     };
-    let outfile = FileInfo::from_str(&outpath);
 
     let info = BuildInfo{
         projkind,
@@ -226,7 +226,7 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
         headers,
         relink: deps.relink,
         srcdir: build.srcdir,
-        outdir: format!("bin/{}/obj/", switches.config),
+        outdir,
         outfile: outfile.clone(),
         defines: deps.defines,
         incdirs: deps.incdirs,

@@ -1,10 +1,11 @@
-/packages/
 /target/
 spec.md
 todo.md
-build.bat
 
-vango-1.0.0-win-x86_64/
-vango-release/
+build.bat
+Vango.toml
+vango-linux/
+vango-win/
+recipes/
 *.zip
 

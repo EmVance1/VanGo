@@ -48,7 +48,7 @@ fn main() -> ExitCode {
             std::fs::read_to_string("macos.build.json").unwrap()
         } else {
             std::fs::read_to_string("build.json")
-                .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string()))
+                .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().into()))
                 .unwrap_or_else(|e| exit_failure!("{}", e))
         };
         let build: BuildFile = serde_json::from_str(&bfile)

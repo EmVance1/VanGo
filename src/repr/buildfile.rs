@@ -29,10 +29,6 @@ pub struct BuildFile {
 }
 
 impl BuildFile {
-    pub fn from_str(s: &str) -> serde_json::Result<Self> {
-        serde_json::from_str(s)
-    }
-
     pub fn finalise(mut self, config: Config) -> Self {
         self.defines.push(config.as_define().to_string());
         self.incdirs.push(self.srcdir.clone());

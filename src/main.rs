@@ -3,6 +3,7 @@ mod exec;
 mod fetch;
 mod input;
 mod repr;
+mod config;
 mod testfw;
 #[macro_use]
 mod log;
@@ -50,7 +51,7 @@ fn main() -> ExitCode {
                 .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string()))
                 .unwrap_or_else(|e| exit_failure!("{}", e))
         };
-        let build = BuildFile::from_str(&bfile)
+        let build: BuildFile = serde_json::from_str(&bfile)
             .map_err(Error::JsonParse)
             .unwrap_or_else(|e| exit_failure!("{}", e));
 

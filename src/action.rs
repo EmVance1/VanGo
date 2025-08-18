@@ -67,7 +67,7 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
     let outfile = if projkind == ProjKind::App {
         outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.app_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     };
 
     let info = BuildInfo {
@@ -212,7 +212,7 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
     let outfile = if projkind == ProjKind::App {
         outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.app_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     };
 
     let info = BuildInfo{

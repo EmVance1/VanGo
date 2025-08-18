@@ -20,7 +20,7 @@ fn inherited(build: &BuildFile, switches: BuildSwitches, lang: Lang) -> TestInfo
 }
 
 pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) -> Result<(), Error> {
-    if !std::fs::exists("test/").unwrap_or_default() { return Err(Error::MissingTests); }
+    if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
     let inc = std::env::current_exe()?
         .parent()
@@ -40,7 +40,7 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
     headers.push(inc.join("testframework/vangotest/casserts.h"));
     let outdir = PathBuf::from("bin").join(switches.config.to_string());
     let relink = vec![
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.app_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     ];
 
     let sources = crate::fetch::source_files(&PathBuf::from("test/"), lang.src_ext()).unwrap();

@@ -88,14 +88,14 @@ impl ToolChain {
     }
     pub fn app_ext(&self) -> &'static str {
         match self {
-            Self::Msvc => ".exe",
+            Self::Msvc => "exe",
             _ => "",
         }
     }
     pub fn lib_ext(&self) -> &'static str {
         match self {
-            Self::Msvc => ".lib",
-            _ => ".a",
+            Self::Msvc => "lib",
+            _ => "a",
         }
     }
 

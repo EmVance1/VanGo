@@ -21,7 +21,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     // IF BINARY EXISTS
     if info.outfile.exists() {
         // IF ANY HEADER IS NEWER THAN THE BINARY
-        if !any_changed(&info.headers, info.outfile.metadata().unwrap().modified().unwrap()) {
+        if any_changed(&info.headers, info.outfile.metadata().unwrap().modified().unwrap()) {
             BuildLevel::CompileAndLink(pairs
                 .into_iter()
                 .collect())
@@ -34,7 +34,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
                 .collect();
 
             if build.is_empty() {
-                if !any_changed(&info.relink, info.outfile.metadata().unwrap().modified().unwrap()) {
+                if any_changed(&info.relink, info.outfile.metadata().unwrap().modified().unwrap()) {
                     BuildLevel::LinkOnly
                 } else {
                     BuildLevel::UpToDate
@@ -63,6 +63,6 @@ fn any_changed(sources: &[PathBuf], pivot: std::time::SystemTime) -> bool {
 }
 
 fn transform_file(path: &Path, src_dir: &Path, obj_dir: &Path, msvc: bool) -> PathBuf {
-    obj_dir.join(path.strip_prefix(src_dir).unwrap()).with_extension(if msvc { ".obj" } else { ".o" })
+    obj_dir.join(path.strip_prefix(src_dir).unwrap()).with_extension(if msvc { "obj" } else { "o" })
 }
 

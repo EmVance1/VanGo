@@ -1,53 +1,5 @@
+use std::{ io::Write, path::{Path, PathBuf} };
 use crate::{error::Error, input::BuildSwitches, repr::Lang, BuildFile, LibFile, log_info};
-use std::{
-    io::Write, path::{Path, PathBuf}
-};
-
-
-/*
-#[derive(Debug, Clone, PartialEq)]
-pub struct FileInfo {
-    pub path: PathBuf,
-    pub repr: String,
-    pub exists: bool,
-    pub modified: Option<std::time::SystemTime>,
-}
-
-#[allow(dead_code)]
-impl FileInfo {
-    pub fn from_path(path: &Path) -> Self {
-        let exists = path.exists();
-        let modified = if exists {
-            Some(path.metadata().unwrap().modified().unwrap())
-        } else {
-            None
-        };
-        let path = path.to_owned();
-        let repr = path.to_string_lossy().to_string();
-
-        Self {
-            path,
-            repr,
-            exists,
-            modified,
-        }
-    }
-
-    pub fn from_str(path: &str) -> Self {
-        Self::from_path(&PathBuf::from(path))
-    }
-
-    pub fn file_name(&self) -> &OsStr {
-        self.path.file_name().unwrap()
-    }
-    pub fn exists(&self) -> bool {
-        self.exists
-    }
-    pub fn modified(&self) -> Option<std::time::SystemTime> {
-        self.modified
-    }
-}
-*/
 
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -151,6 +103,7 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
                 .arg(switches.toolchain.as_arg())
                 .args(if switches.crtstatic { Some("--crtstatic") } else { None })
                 .args(if switches.verbose { Some("-v") } else { None })
+                .args(if switches.echo { Some("--echo") } else { None })
                 .status()
                 .unwrap();
             if output.code() == Some(8) {

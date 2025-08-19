@@ -10,6 +10,8 @@ pub struct LibFile {
     pub library: Library,
     #[serde(default)]
     pub profile: HashMap<String, Profile>,
+    #[serde(default)]
+    pub features: HashMap<String, Feature>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
@@ -24,10 +26,18 @@ pub struct Library {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
 pub struct Profile {
-    pub include:  Option<Vec<PathBuf>>,
-    pub libdirs:  Option<Vec<PathBuf>>,
+    pub include:     Option<Vec<PathBuf>>,
+    pub bin_debug:   Option<Vec<PathBuf>>,
+    pub bin_release: Option<Vec<PathBuf>>,
+    pub binaries:    Option<Vec<PathBuf>>,
+    pub macros:      Option<Vec<String>>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct Feature {
+    pub requires: Vec<String>,
     pub binaries: Option<Vec<PathBuf>>,
-    pub macros:   Option<Vec<String>>,
 }
 
 
@@ -44,25 +54,31 @@ package = "SFML"
 version = "3.0.1"
 lang = "C++17"
 include-pub = "include"
+macros = [ "SFML_STATIC" ]
 
 [profile.debug]
-libdirs = [ "lib" ]
-binaries = [ "sfml-network-d", "sfml-audio-d", "sfml-graphics-d", "sfml-window-d", "sfml-system-d" ]
+libdirs = [ "bin/debug" ]
+binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s", "sfml-system-s",
+    "freetype", "FLAC", "vorbisenc", "vorbisfile", "vorbis", "ogg.lib",
+    "opengl32", "gdi32", "ws2_32", "winmm" ],
 
 [profile.release]
-libdirs = [ "lib" ]
-binaries = [ "sfml-network", "sfml-audio", "sfml-graphics", "sfml-window", "sfml-system" ]
+libdirs = [ "bin/release" ]
+binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s", "sfml-system-s",
+    "freetype", "FLAC", "vorbisenc", "vorbisfile", "vorbis", "ogg.lib",
+    "opengl32", "gdi32", "ws2_32", "winmm" ],
 "#;
 
+        /*
         let mut profile: HashMap<String, Profile> = HashMap::new();
-        profile.insert("debug".into(),
-            Profile{ libdirs: Some(vec![ "lib".into() ]),
+        profile.insert("static".into(),
+            Profile{ bin_debug: Some(vec![ "bin/debug".into() ]), bin_release: Some(vec![ "bin/release".into() ]),
                 binaries: Some(vec![ "sfml-network-d".into(), "sfml-audio-d".into(), "sfml-graphics-d".into(), "sfml-window-d".into(), "sfml-system-d".into() ]),
                 ..Default::default()
             }
         );
-        profile.insert("release".into(),
-            Profile{ libdirs: Some(vec![ "lib".into() ]),
+        profile.insert("dynamic".into(),
+            Profile{ bin_debug: Some(vec![ "bin/debug".into() ]), bin_release: Some(vec![ "bin/release".into() ]),
                 binaries: Some(vec![ "sfml-network".into(), "sfml-audio".into(), "sfml-graphics".into(), "sfml-window".into(), "sfml-system".into() ]),
                 ..Default::default()
             }
@@ -77,6 +93,8 @@ binaries = [ "sfml-network", "sfml-audio", "sfml-graphics", "sfml-window", "sfml
                 ..Default::default()
             },
             profile,
+            features: HashMap::new(),
         });
+        */
     }
 }

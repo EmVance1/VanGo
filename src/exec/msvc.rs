@@ -35,19 +35,19 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
 
     match info.pch {
         PreCompHead::Create(h) => {
-            let mut ycarg = OsString::from("/Yc:");
-            ycarg.push(info.outdir.join("pch").join(h).with_extension("pch"));
+            let mut ycarg = OsString::from("/Yc");
+            ycarg.push(h);
             let mut fparg = OsString::from("/Fp:");
-            fparg.push(info.outdir.join("pch").join(h).with_extension("pch"));
+            fparg.push(info.outdir.join("pch").join(h).with_extension("h.pch"));
             cmd.arg(ycarg);
             cmd.arg(fparg);
         }
         PreCompHead::Use(h) => {
-            let mut yuarg = OsString::from("/Yu:");
-            yuarg.push(info.outdir.join("pch").join(h).with_extension("pch"));
+            let mut yuarg = OsString::from("/Yu");
+            yuarg.push(h);
             cmd.arg(yuarg);
             let mut fparg = OsString::from("/Fp:");
-            fparg.push(info.outdir.join("pch").join(h).with_extension("pch"));
+            fparg.push(info.outdir.join("pch").join(h).with_extension("h.pch"));
             cmd.arg(fparg);
         }
         _ => ()
@@ -94,7 +94,7 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(objs);
     cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
     cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.links.iter().map(|l| format!("{}{}", args.l(), l)));
+    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
 
     cmd.args(DEFAULT_LIBS.iter().map(|l| format!("/DEFAULTLIB:{l}")));
     cmd.arg("/MACHINE:X64");

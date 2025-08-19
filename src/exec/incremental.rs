@@ -15,7 +15,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     let pairs: Vec<_> = info
         .sources
         .iter()
-        .map(|src| (src.as_path(), transform_file(&src, &info.srcdir, &objdir, info.toolchain.is_msvc())))
+        .map(|src| (src.as_path(), transform_file(src, &info.srcdir, &objdir, info.toolchain.is_msvc())))
         .collect();
 
     // IF BINARY EXISTS

@@ -1,5 +1,5 @@
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{exec::BuildInfo, input::BuildSwitches, BuildFile, Error, Lang, log_info};
+use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, BuildFile, Error, Lang, log_info};
 
 
 struct TestInfo {
@@ -9,7 +9,7 @@ struct TestInfo {
 
 
 fn inherited(build: &BuildFile, switches: BuildSwitches, lang: Lang) -> TestInfo {
-    let mut deps = crate::fetch::libraries(build.dependencies.clone(), switches, lang).unwrap();
+    let mut deps = fetch::libraries(build.dependencies.clone(), switches, lang).unwrap();
     let mut defines = build.defines.clone();
     defines.extend(deps.defines);
     deps.incdirs.extend(build.incdirs.clone());
@@ -29,12 +29,12 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
 
     let lang: Lang = build.lang.parse()?;
     let mut partial = inherited(&build, switches, lang);
-    partial.defines.extend([ switches.config.as_define().to_string(), "TEST".to_string() ]);
-    partial.incdirs.extend([ "test/".into(), inc.join("testframework") ]);
+    partial.defines.extend([ switches.config.as_define().to_string(), "VANGO_TEST".to_string() ]);
+    partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
     let mut headers = if let Some(inc) = build.include_public {
-        crate::fetch::source_files(&PathBuf::from(&inc), ".h")?
+        fetch::source_files(&PathBuf::from(&inc), ".h")?
     } else {
-        crate::fetch::source_files(&PathBuf::from(&build.srcdir), ".h")?
+        fetch::source_files(&PathBuf::from(&build.srcdir), ".h")?
     };
     headers.push(inc.join("testframework/vangotest/asserts.h"));
     headers.push(inc.join("testframework/vangotest/casserts.h"));
@@ -43,7 +43,7 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
         outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     ];
 
-    let sources = crate::fetch::source_files(&PathBuf::from("test/"), lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&PathBuf::from("test"), lang.src_ext()).unwrap();
     let outfile = outdir.join(format!("test_{}.exe", build.project));
     let info = BuildInfo {
         projkind: crate::repr::ProjKind::App,
@@ -52,22 +52,24 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
         lang,
         crtstatic: switches.crtstatic,
 
+        defines: partial.defines,
+
+        srcdir: "test".into(),
+        incdirs: partial.incdirs,
+        libdirs:  vec![ PathBuf::from("bin").join(switches.config.to_string()) ],
+        outdir,
+
+        pch: None,
         sources,
         headers,
+        archives: vec![ PathBuf::from(&build.project).with_extension("lib") ],
         relink,
-        srcdir: "test/".into(),
-        outdir,
         outfile: outfile.clone(),
-        defines: partial.defines,
-        incdirs: partial.incdirs,
-        libdirs: vec![ PathBuf::from("bin").join(switches.config.to_string()) ],
-        links: vec![ format!("{}.lib", build.project) ],
-        pch: None,
 
         comp_args: vec![],
         link_args: vec![],
     };
-    crate::exec::run_build(info, switches.echo, false)?;
+    exec::run_build(info, switches.echo, false)?;
     log_info!(
         "running tests for project {:=<57}",
         format!("\"{}\" ", build.project)

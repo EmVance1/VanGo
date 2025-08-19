@@ -10,7 +10,7 @@ use super::{Lang, BuildFile};
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibFile {
     pub library: String,
-    pub lang: String,
+    pub lang:    String,
     pub include: PathBuf,
     #[serde(default)]
     pub all: Option<LibConfig>,
@@ -30,17 +30,19 @@ pub struct LibConfig {
     pub binary_debug: PathBuf,
     #[serde(rename = "binary.release")]
     pub binary_release: PathBuf,
-    pub links: Vec<String>,
+    #[serde(alias = "libs")]
+    #[serde(alias = "links")]
+    pub archives: Vec<PathBuf>,
     #[serde(default)]
     pub defines: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct LibData {
-    pub incdir: PathBuf,
-    pub libdir: Option<PathBuf>,
-    pub links: Vec<String>,
-    pub defines: Vec<String>,
+    pub incdir:   PathBuf,
+    pub libdir:   Option<PathBuf>,
+    pub archives: Vec<PathBuf>,
+    pub defines:  Vec<String>,
 }
 
 impl LibFile {
@@ -58,14 +60,14 @@ impl LibFile {
         } else if let Some(all) = self.all {
             all
         } else {
-            return Ok(LibData{ incdir: self.include, libdir: None, links: vec![], defines: vec![] })
+            return Ok(LibData{ incdir: self.include, libdir: None, archives: vec![], defines: vec![] })
         };
 
-        Ok(LibData {
-            incdir: self.include,
-            libdir: Some(if config.is_release() { cfg.binary_release } else { cfg.binary_debug }),
-            links: cfg.links,
-            defines: cfg.defines,
+        Ok(LibData{
+            incdir:   self.include,
+            libdir:   Some(if config.is_release() { cfg.binary_release } else { cfg.binary_debug }),
+            archives: cfg.archives,
+            defines:  cfg.defines,
         })
     }
 }
@@ -81,7 +83,7 @@ impl From<BuildFile> for LibFile {
             all: Some(LibConfig {
                 binary_debug: "bin/debug".into(),
                 binary_release: "bin/release/".into(),
-                links: vec![value.project],
+                archives: vec![ PathBuf::from(value.project) ],
                 defines: value.defines,
             }),
             configs: HashMap::default(),

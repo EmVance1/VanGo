@@ -42,10 +42,10 @@ fn main() -> ExitCode {
     } else {
         let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {
             std::fs::read_to_string("win.build.json").unwrap()
-        } else if cfg!(target_os = "linux") && std::fs::exists("linux.build.json").unwrap() {
-            std::fs::read_to_string("linux.build.json").unwrap()
-        } else if cfg!(target_os = "macos") && std::fs::exists("macos.build.json").unwrap() {
-            std::fs::read_to_string("macos.build.json").unwrap()
+        } else if cfg!(target_os = "linux") && std::fs::exists("lnx.build.json").unwrap() {
+            std::fs::read_to_string("lnx.build.json").unwrap()
+        } else if cfg!(target_os = "macos") && std::fs::exists("mac.build.json").unwrap() {
+            std::fs::read_to_string("mac.build.json").unwrap()
         } else {
             std::fs::read_to_string("build.json")
                 .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().into()))

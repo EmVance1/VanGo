@@ -50,12 +50,14 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
 
 
 pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
-    let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
-    for incdir in build.incdirs.iter().chain(&build.include_public) {
-        headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
-    }
-    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
     let lang: Lang = build.lang.parse()?;
+
+    let mut headers = fetch::source_files(&build.srcdir, ".h").unwrap();
+    for incdir in build.incdirs.iter().chain(&build.include_public) {
+        headers.extend(fetch::source_files(incdir, ".h").unwrap());
+    }
+    let sources = fetch::source_files(&build.srcdir, lang.src_ext()).unwrap();
+    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
     let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
     deps.defines.extend(build.defines);
@@ -70,24 +72,26 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
         outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     };
 
-    let info = BuildInfo {
+    let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
-        config: switches.config,
+        config:    switches.config,
         lang,
         crtstatic: switches.crtstatic,
 
-        sources: fetch::source_files(&PathBuf::from(&build.srcdir), lang.src_ext()).unwrap(),
-        headers,
-        relink: deps.relink,
-        srcdir: build.srcdir,
+        defines:  deps.defines,
+
+        srcdir:   build.srcdir,
+        incdirs:  deps.incdirs,
+        libdirs:  deps.libdirs,
         outdir,
-        outfile: outfile.clone(),
-        defines: deps.defines,
-        incdirs: deps.incdirs,
-        libdirs: deps.libdirs,
-        links: deps.links,
-        pch: build.pch,
+
+        pch:      build.pch,
+        sources,
+        headers,
+        archives: deps.archives,
+        relink:   deps.relink,
+        outfile:  outfile.clone(),
 
         comp_args: build.compiler_options,
         link_args: build.linker_options,
@@ -193,18 +197,18 @@ pub fn help(action: Option<String>) {
 
 #[allow(unused)]
 fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
-    let mut headers = fetch::source_files(&PathBuf::from(&build.srcdir), ".h").unwrap();
+    let lang: Lang = build.lang.parse()?;
+
+    let sources = fetch::source_files(&build.srcdir, lang.src_ext()).unwrap();
+    let mut headers = fetch::source_files(&build.srcdir, ".h").unwrap();
     for incdir in build.incdirs.iter().chain(&build.include_public) {
-        headers.extend(fetch::source_files(&PathBuf::from(incdir), ".h").unwrap());
+        headers.extend(fetch::source_files(incdir, ".h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
-    let lang: Lang = build.lang.parse()?;
 
     let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
     deps.defines.extend(build.defines);
-    if test {
-        deps.defines.push("TEST".to_string());
-    }
+    if test { deps.defines.push("VANGO_TEST".to_string()); }
     deps.incdirs.extend(build.incdirs);
 
     let rebuilt_dep = deps.rebuilt;
@@ -218,21 +222,23 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
     let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
-        config: switches.config,
+        config:    switches.config,
         lang,
         crtstatic: switches.crtstatic,
 
-        sources: fetch::source_files(&PathBuf::from(&build.srcdir), lang.src_ext()).unwrap(),
-        headers,
-        relink: deps.relink,
-        srcdir: build.srcdir,
+        defines:  deps.defines,
+
+        srcdir:   build.srcdir,
+        incdirs:  deps.incdirs,
+        libdirs:  deps.libdirs,
         outdir,
-        outfile: outfile.clone(),
-        defines: deps.defines,
-        incdirs: deps.incdirs,
-        libdirs: deps.libdirs,
-        links: deps.links,
-        pch: build.pch,
+
+        pch:      build.pch,
+        sources,
+        headers,
+        archives: deps.archives,
+        relink:   deps.relink,
+        outfile:  outfile.clone(),
 
         comp_args: build.compiler_options,
         link_args: build.linker_options,

@@ -20,20 +20,23 @@ pub struct BuildInfo {
     pub lang: Lang,
     pub crtstatic: bool,
 
-    pub sources: Vec<PathBuf>,
-    pub headers: Vec<PathBuf>,
-    pub relink:  Vec<PathBuf>,
-    pub srcdir:  PathBuf,
-    pub outdir:  PathBuf,
-    pub outfile: PathBuf,
-    pub defines: Vec<String>,
-    pub incdirs: Vec<PathBuf>,
-    pub libdirs: Vec<PathBuf>,
-    pub links: Vec<String>,
-    pub pch: Option<PathBuf>,
+    pub defines:  Vec<String>,
+
+    pub srcdir:   PathBuf,
+    pub incdirs:  Vec<PathBuf>,
+    pub libdirs:  Vec<PathBuf>,
+    pub outdir:   PathBuf,
+
+    pub pch:      Option<PathBuf>,
+    pub sources:  Vec<PathBuf>,
+    pub headers:  Vec<PathBuf>,
+    pub archives: Vec<PathBuf>,
+    pub relink:   Vec<PathBuf>,
+    pub outfile:  PathBuf,
 
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
+
 }
 
 impl BuildInfo {
@@ -176,10 +179,8 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 count += 1;
             }
 
-            for h in handles {
-                if let Some((src, proc)) = h {
-                    failure = failure || on_compile_finish(src, proc);
-                }
+            for (src, proc) in handles.into_iter().flatten() {
+                failure = failure || on_compile_finish(src, proc);
             }
 
             if failure { return Err(Error::CompilerFail(info.outfile)); }

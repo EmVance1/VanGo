@@ -32,19 +32,19 @@ public:
 #define FAIL_NON_NULL 5
 #define FAIL_THROWS 6
 
-#define assert(a)           if (!a)     { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
+#define assert(a)           if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
     VANGO_TEST_THROW(FAIL_TRUE); }
 
-#define assert_eq(a, b)     if (a != b) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+#define assert_eq(a, b)     if ((a) != (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
     VANGO_TEST_THROW(FAIL_EQ); }
 
-#define assert_ne(a, b)     if (a == b) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+#define assert_ne(a, b)     if ((a) == (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
     VANGO_TEST_THROW(FAIL_NE); }
 
-#define assert_null(a)      if (!a)     { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+#define assert_null(a)      if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
     VANGO_TEST_THROW(FAIL_NULL); }
 
-#define assert_non_null(a)  if (a)      { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+#define assert_non_null(a)  if (a)          { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
     VANGO_TEST_THROW(FAIL_NON_NULL); }
 
 #define assert_throws(a, e) { try { a; \
@@ -82,10 +82,10 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
 
 TestFuncArray init_testfuncarray(size_t size) {
     return TestFuncArray{
-        .names=(const char**)malloc(size * sizeof(char*)),
-        .funcs=(TestFunc*)malloc(size * sizeof(TestFunc*)),
-        .size=0,
-        .cap=size
+        (const char**)malloc(size * sizeof(char*)),
+        (TestFunc*)malloc(size * sizeof(TestFunc*)),
+        0,
+        size
     };
 }
 

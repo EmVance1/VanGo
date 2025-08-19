@@ -89,7 +89,7 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(objs);
     cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
     cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.links.iter().map(|l| format!("{}{}", args.l(), l)));
+    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
 
     if echo { print_command(&cmd); }
     if verbose { cmd.arg("--verbose"); }

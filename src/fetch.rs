@@ -23,23 +23,23 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
 
 #[derive(Debug, Clone)]
 pub struct Dependencies {
-    pub incdirs: Vec<PathBuf>,
-    pub libdirs: Vec<PathBuf>,
-    pub links: Vec<String>,
-    pub relink: Vec<PathBuf>,
-    pub defines: Vec<String>,
-    pub rebuilt: bool,
+    pub incdirs:  Vec<PathBuf>,
+    pub libdirs:  Vec<PathBuf>,
+    pub archives: Vec<PathBuf>,
+    pub relink:   Vec<PathBuf>,
+    pub defines:  Vec<String>,
+    pub rebuilt:  bool,
 }
 
 pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let home = std::env::home_dir().unwrap();
 
-    let mut incdirs = Vec::new();
-    let mut libdirs = Vec::new();
-    let mut links   = Vec::new();
-    let mut relink  = Vec::new();
-    let mut defines = Vec::new();
-    let mut rebuilt = false;
+    let mut incdirs  = Vec::new();
+    let mut libdirs  = Vec::new();
+    let mut archives = Vec::new();
+    let mut relink   = Vec::new();
+    let mut defines  = Vec::new();
+    let mut rebuilt  = false;
 
     for lib in libraries {
         let (root, version) = split_version(&lib);
@@ -68,10 +68,10 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
 
         if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.lib.json"))? {
             std::fs::read_to_string(path.join("win.lib.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("linux.lib.json"))? {
-            std::fs::read_to_string(path.join("linux.lib.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("macos.lib.json"))? {
-            std::fs::read_to_string(path.join("macos.lib.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.lib.json"))? {
+            std::fs::read_to_string(path.join("lnx.lib.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("mac.lib.json"))? {
+            std::fs::read_to_string(path.join("mac.lib.json")).ok()
         } else {
             std::fs::read_to_string(path.join("lib.json")).ok()
         } {
@@ -82,14 +82,18 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
             if let Some(libdir) = libinfo.libdir {
                 libdirs.push(path.join(libdir));
             }
-            links.extend(libinfo.links);
+            if switches.toolchain.is_msvc() {
+                archives.extend(libinfo.archives.into_iter().map(|l| l.with_extension("lib")));
+            } else {
+                archives.extend(libinfo.archives);
+            }
             defines.extend(libinfo.defines);
         } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.build.json"))? {
             std::fs::read_to_string(path.join("win.build.json")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("linux.build.json"))? {
-            std::fs::read_to_string(path.join("linux.build.json")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("macos.build.json"))? {
-            std::fs::read_to_string(path.join("macos.build.json")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.build.json"))? {
+            std::fs::read_to_string(path.join("lnx.build.json")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("mac.build.json"))? {
+            std::fs::read_to_string(path.join("mac.build.json")).ok()
         } else {
             std::fs::read_to_string(path.join("build.json")).ok()
         } {
@@ -120,14 +124,14 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
                 libdirs.push(path.join(libdir));
             }
             if switches.toolchain.is_msvc() {
-                for l in &libinfo.links {
-                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(l).with_extension("lib"));
-                    links.push(format!("{l}.lib"));
+                for l in libinfo.archives {
+                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(&l).with_extension("lib"));
+                    archives.push(l.with_extension("lib"));
                 }
             } else {
-                for l in &libinfo.links {
-                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(format!("lib{}", l)).with_extension("a"));
-                    links.push(l.to_string());
+                for l in libinfo.archives {
+                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(format!("lib{}", l.display())).with_extension("a"));
+                    archives.push(l);
                 }
             }
             defines.extend(libinfo.defines);
@@ -139,7 +143,7 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
     Ok(Dependencies {
         incdirs,
         libdirs,
-        links,
+        archives,
         relink,
         defines,
         rebuilt,

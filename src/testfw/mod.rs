@@ -1,5 +1,5 @@
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, BuildFile, Error, Lang, log_info};
+use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, BuildFile, BuildProfile, Error, Lang, log_info};
 
 
 struct TestInfo {
@@ -8,18 +8,18 @@ struct TestInfo {
 }
 
 
-fn inherited(build: &BuildFile, switches: BuildSwitches, lang: Lang) -> TestInfo {
+fn inherited(build: &BuildFile, profile: &BuildProfile, switches: &BuildSwitches, lang: Lang) -> TestInfo {
     let mut deps = fetch::libraries(build.dependencies.clone(), switches, lang).unwrap();
-    let mut defines = build.defines.clone();
+    let mut defines = profile.defines.clone();
     defines.extend(deps.defines);
-    deps.incdirs.extend(build.incdirs.clone());
+    deps.incdirs.extend(profile.include.clone());
     TestInfo {
         defines,
         incdirs: deps.incdirs,
     }
 }
 
-pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) -> Result<(), Error> {
+pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
     let inc = std::env::current_exe()?
@@ -27,36 +27,32 @@ pub fn test_lib(build: BuildFile, switches: BuildSwitches, args: Vec<String>) ->
         .unwrap()
         .to_owned();
 
-    let lang: Lang = build.lang.parse()?;
-    let mut partial = inherited(&build, switches, lang);
-    partial.defines.extend([ switches.config.as_define().to_string(), "VANGO_TEST".to_string() ]);
+    let profile = build.take(&switches.profile)?;
+    let mut partial = inherited(&build, &profile, &switches, build.lang);
+    partial.defines.push("VANGO_TEST".to_string());
     partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
-    let mut headers = if let Some(inc) = build.include_public {
-        fetch::source_files(&PathBuf::from(&inc), ".h")?
-    } else {
-        fetch::source_files(&PathBuf::from(&build.srcdir), ".h")?
-    };
+    let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), ".h")?;
     headers.push(inc.join("testframework/vangotest/asserts.h"));
     headers.push(inc.join("testframework/vangotest/casserts.h"));
-    let outdir = PathBuf::from("bin").join(switches.config.to_string());
+    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let relink = vec![
         outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
     ];
 
-    let sources = fetch::source_files(&PathBuf::from("test"), lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
     let outfile = outdir.join(format!("test_{}.exe", build.project));
     let info = BuildInfo {
         projkind: crate::repr::ProjKind::App,
         toolchain: switches.toolchain,
-        config: switches.config,
-        lang,
+        profile:   switches.profile.clone(),
+        lang:      build.lang,
         crtstatic: switches.crtstatic,
 
         defines: partial.defines,
 
         srcdir: "test".into(),
         incdirs: partial.incdirs,
-        libdirs:  vec![ PathBuf::from("bin").join(switches.config.to_string()) ],
+        libdirs:  vec![ PathBuf::from("bin").join(switches.profile.to_string()) ],
         outdir,
 
         pch: None,

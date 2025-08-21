@@ -31,7 +31,7 @@ pub struct Dependencies {
     pub rebuilt:  bool,
 }
 
-pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<String>, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let home = std::env::home_dir().unwrap();
 
     let mut incdirs  = Vec::new();
@@ -42,7 +42,7 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
     let mut rebuilt  = false;
 
     for lib in libraries {
-        let (root, version) = split_version(&lib);
+        let (root, _version) = split_version(&lib);
 
         let path = if root.ends_with(".git") {
             let url = std::path::Path::new(root);
@@ -75,19 +75,16 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
         } else {
             std::fs::read_to_string(path.join("lib.json")).ok()
         } {
-            let libinfo = LibFile::from_str(&build)?
-                .validate(lang)?
-                .linearise(switches.config, version)?;
-            incdirs.push(path.join(libinfo.incdir));
-            if let Some(libdir) = libinfo.libdir {
-                libdirs.push(path.join(libdir));
-            }
+            let mut libinfo = LibFile::from_str(&build)?.validate(lang)?;
+            let profile = libinfo.take(&switches.profile)?;
+            incdirs.push(path.join(profile.include));
+            libdirs.push(path.join(profile.libdirs));
             if switches.toolchain.is_msvc() {
-                archives.extend(libinfo.archives.into_iter().map(|l| l.with_extension("lib")));
+                archives.extend(profile.binaries.into_iter().map(|l| l.with_extension("lib")));
             } else {
-                archives.extend(libinfo.archives);
+                archives.extend(profile.binaries);
             }
-            defines.extend(libinfo.defines);
+            defines.extend(profile.defines);
         } else if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.build.json"))? {
             std::fs::read_to_string(path.join("win.build.json")).ok()
         } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.build.json"))? {
@@ -97,13 +94,13 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
         } else {
             std::fs::read_to_string(path.join("build.json")).ok()
         } {
-            let build: BuildFile = serde_json::from_str(&build)?;
+            let build = BuildFile::from_str(&build)?;
             log_info!("building project dependency: {:-<54}", format!("{} ", build.project));
             let save = std::env::current_dir().unwrap();
             std::env::set_current_dir(&path).unwrap();
             let output = std::process::Command::new("vango")
                 .arg("build")
-                .arg(switches.config.as_arg())
+                .arg(switches.profile.as_arg())
                 .arg(switches.toolchain.as_arg())
                 .args(if switches.crtstatic { Some("--crtstatic") } else { None })
                 .args(if switches.verbose { Some("-v") } else { None })
@@ -116,25 +113,22 @@ pub fn libraries(libraries: Vec<String>, switches: BuildSwitches, lang: Lang) ->
                 println!();
             }
             std::env::set_current_dir(&save).unwrap();
-            let libinfo = LibFile::from(build)
-                .validate(lang)?
-                .linearise(switches.config, version)?;
-            incdirs.push(path.join(libinfo.incdir));
-            if let Some(libdir) = &libinfo.libdir {
-                libdirs.push(path.join(libdir));
-            }
+            let mut libinfo = LibFile::from(build).validate(lang)?;
+            let profile = libinfo.take(&switches.profile)?;
+            incdirs.push(path.join(profile.include));
+            libdirs.push(path.join(&profile.libdirs));
             if switches.toolchain.is_msvc() {
-                for l in libinfo.archives {
-                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(&l).with_extension("lib"));
+                for l in profile.binaries {
+                    relink.push(path.join(&profile.libdirs).join(&l).with_extension("lib"));
                     archives.push(l.with_extension("lib"));
                 }
             } else {
-                for l in libinfo.archives {
-                    relink.push(path.join(libinfo.libdir.as_ref().unwrap()).join(format!("lib{}", l.display())).with_extension("a"));
+                for l in profile.binaries {
+                    relink.push(path.join(&profile.libdirs).join(format!("lib{}", l.display())).with_extension("a"));
                     archives.push(l);
                 }
             }
-            defines.extend(libinfo.defines);
+            defines.extend(profile.defines);
         } else {
             return Err(Error::MissingBuildScript(path))
         }

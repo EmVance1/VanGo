@@ -22,8 +22,10 @@ pub enum Error {
     InvalidCppStd(String),
     #[error("library '{0}' C/C++ standard incompatible with current project")]
     IncompatibleCppStd(String),
-    #[error("library '{0}' does not contain configuration '{1}'")]
-    ConfigUnavailable(String, String),
+    #[error("project '{0}' does not contain profile '{1}'")]
+    ProfileUnavailable(String, String),
+    #[error("custom profile '{0}' must inherit from a builtin profile")]
+    InvalidCustomProfile(String),
     #[error("toolchain '{0}' compiler is unavailable")]
     MissingCompiler(String),
     #[error("toolchain '{0}' archiver is unavailable")]

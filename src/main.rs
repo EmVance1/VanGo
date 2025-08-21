@@ -51,24 +51,20 @@ fn main() -> ExitCode {
                 .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().into()))
                 .unwrap_or_else(|e| exit_failure!("{}", e))
         };
-        let build: BuildFile = serde_json::from_str(&bfile)
-            .map_err(Error::JsonParse)
+        let build = BuildFile::from_str(&bfile)
             .unwrap_or_else(|e| exit_failure!("{}", e));
 
         match cmd {
             input::Action::Build{ switches } => {
-                let build = build.finalise(switches.config);
-                let (rebuilt, _) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                if rebuilt { 8.into() } else { 0.into() }
+                let (_rebuilt, _outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                0.into()
             }
             input::Action::Run{ switches, args } => {
-                let build = build.finalise(switches.config);
-                let (_, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
-                let build = build.finalise(switches.config);
-                action::build(build.clone(), switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, _outfile) = action::build(build.clone(), switches.clone(), true).unwrap_or_else(|e| exit_failure!("{}", e));
                 testfw::test_lib(build, switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 0.into()
             }

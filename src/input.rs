@@ -1,4 +1,4 @@
-use crate::{error::Error, repr::{Config, ToolChain}};
+use crate::{error::Error, repr::{Profile, ToolChain}};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,9 +12,9 @@ pub enum Action {
     Help { action: Option<String> },
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BuildSwitches {
-    pub config: Config,
+    pub profile: Profile,
     pub toolchain: ToolChain,
     pub crtstatic: bool,
     pub echo: bool,
@@ -53,11 +53,10 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            if debug && release { return Err(Error::ExtraArgs("build".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
-            let config = if release { Config::Release } else { Config::Debug };
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Build{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose } })
+                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose } })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -75,11 +74,10 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            if debug && release { return Err(Error::ExtraArgs("run".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
-            let config = if release { Config::Release } else { Config::Debug };
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Run{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose }, args: user_args })
+                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose }, args: user_args })
             } else {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
@@ -90,10 +88,9 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            if debug && release { return Err(Error::ExtraArgs("test".to_string(), vec![ "--release".to_string() ])) }
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
-            let config = if release { Config::Release } else { Config::Debug };
-            Ok(Action::Test{ switches: BuildSwitches{ config, toolchain, crtstatic, echo, verbose }, args })
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
+            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose }, args })
         }
         "clean" | "c" => {
             if args.is_empty() {
@@ -157,6 +154,27 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
     }
 }
 
+fn parse_profile(profile: Option<String>, debug: bool, release: bool) -> Result<Profile, Error> {
+    if debug && release { return Err(Error::ExtraArgs("build".to_string(), vec![ "--release".to_string() ])) }
+    if let Some(prof) = profile {
+        if debug   { return Err(Error::ExtraArgs("build".to_string(), vec![ "--debug".to_string() ])) }
+        if release { return Err(Error::ExtraArgs("build".to_string(), vec![ "--release".to_string() ])) }
+
+        let prof = prof.strip_prefix("--profile=").unwrap();
+        if prof == "debug" {
+            Ok(Profile::Debug)
+        } else if prof == "release" {
+            Ok(Profile::Release)
+        } else {
+            Ok(Profile::Custom(prof.to_string()))
+        }
+    } else if release {
+        Ok(Profile::Release)
+    } else {
+        Ok(Profile::Debug)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -198,20 +216,20 @@ mod tests {
     #[test]
     pub fn parse_action_build_1() {
         let result = parse_input(vec![ "build".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ config: Config::Debug, ..Default::default() } });
+        assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ profile: Profile::Debug, ..Default::default() } });
     }
 
     #[test]
     pub fn parse_action_build_2() {
         let result = parse_input(vec![ "build".to_string(), "-r".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ config: Config::Release, ..Default::default() } });
+        assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ profile: Profile::Release, ..Default::default() } });
     }
 
     #[test]
     pub fn parse_action_build_3() {
         let result = parse_input(vec![ "build".to_string(), "-t=gnu".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
-            switches: BuildSwitches{ config: Config::Release, toolchain: ToolChain::Gnu, ..Default::default() }
+            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Gnu, ..Default::default() }
         });
     }
 
@@ -219,7 +237,7 @@ mod tests {
     pub fn parse_action_build_4() {
         let result = parse_input(vec![ "build".to_string(), "-t=clang".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
-            switches: BuildSwitches{ config: Config::Release, toolchain: ToolChain::Clang, ..Default::default() }
+            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Clang, ..Default::default() }
         });
     }
 
@@ -233,7 +251,7 @@ mod tests {
     #[test]
     pub fn parse_action_run_2() {
         let result = parse_input(vec![ "run".to_string(), "-r".to_string(), "--".to_string() ]);
-        assert_eq!(result.unwrap(), Action::Run{ switches: BuildSwitches{ config: Config::Release, ..Default::default() }, args: vec![] });
+        assert_eq!(result.unwrap(), Action::Run{ switches: BuildSwitches{ profile: Profile::Release, ..Default::default() }, args: vec![] });
     }
 
     #[test]

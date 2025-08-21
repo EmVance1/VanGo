@@ -28,7 +28,7 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
         } else {
             "#pragma once\n\nint func(int a, int b);\n"
         })?;
-        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"dependencies\": [],\n    \"incdirs\": [ \"src/\", \"include/{name}\" ],\n    \"include-public\": \"include/\"\n}}");
+        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"include\": [ \"src\", \"include/{name}\" ],\n    \"include-pub\": \"include\"\n    \"dependencies\": [],\n}}");
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc\n-Iinclude/{name}",
             if !is_c { "-xc++\n" } else { "" });
@@ -49,23 +49,22 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
 }
 
 
-pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
-    let lang: Lang = build.lang.parse()?;
-
-    let mut headers = fetch::source_files(&build.srcdir, ".h").unwrap();
-    for incdir in build.incdirs.iter().chain(&build.include_public) {
+pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
+    let profile = build.take(&switches.profile)?;
+    let mut headers = fetch::source_files(&profile.include_pub, ".h").unwrap();
+    for incdir in profile.include.iter().chain(Some(&profile.src)) {
         headers.extend(fetch::source_files(incdir, ".h").unwrap());
     }
-    let sources = fetch::source_files(&build.srcdir, lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
-    let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
-    deps.defines.extend(build.defines);
-    if test { deps.defines.push("TEST".to_string()); }
-    deps.incdirs.extend(build.incdirs);
+    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
+    deps.defines.extend(profile.defines);
+    if test { deps.defines.push("VANGO_TEST".to_string()); }
+    deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
-    let outdir = PathBuf::from("bin").join(switches.config.to_string());
+    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let outfile = if projkind == ProjKind::App {
         outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
@@ -75,26 +74,26 @@ pub fn build(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(b
     let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
-        config:    switches.config,
-        lang,
+        profile:   switches.profile,
+        lang:      build.lang,
         crtstatic: switches.crtstatic,
 
         defines:  deps.defines,
 
-        srcdir:   build.srcdir,
+        srcdir:   profile.src,
         incdirs:  deps.incdirs,
         libdirs:  deps.libdirs,
         outdir,
 
-        pch:      build.pch,
+        pch:      profile.pch,
         sources,
         headers,
         archives: deps.archives,
         relink:   deps.relink,
         outfile:  outfile.clone(),
 
-        comp_args: build.compiler_options,
-        link_args: build.linker_options,
+        comp_args: profile.compiler_options,
+        link_args: profile.linker_options,
     };
     match exec::run_build(info, switches.echo, switches.verbose) {
         Err(e) => Err(e),
@@ -107,9 +106,6 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
     log_info!("cleaning build files for \"{}\"", build.project);
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
-    if let Some(pch) = build.pch {
-        let _ = std::fs::remove_file(PathBuf::from("src").join(pch).with_extension("gch"));
-    }
     Ok(())
 }
 
@@ -125,8 +121,8 @@ pub fn help(action: Option<String>) {
         println!("  -v, --verbose           Forward '--verbose' to invoked tool, if available");
         println!();
         println!("Profiles:");
-        println!("    debug    Build with no optimization; Generate debug symbols; 'DEBUG' macro defined; Generally faster compile times;");
-        println!("    release  Build with high optimization; 'RELEASE' macro defined; Generally slower compile times;");
+        println!("    debug    Build with no optimization; Generate debug symbols; 'VANGO_DEBUG' macro defined; Generally faster compile times;");
+        println!("    release  Build with high optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times;");
     };
 
     if let Some(action) = action {
@@ -169,7 +165,7 @@ pub fn help(action: Option<String>) {
                 print_build_details();
             }
             "test" => {
-                println!("Build the current project in test configuration, link it to your test app and run it");
+                println!("Build the current project in test configuration, link it to your test app and run it. Defines 'VANGO_TEST'.");
                 println!();
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();
@@ -196,23 +192,22 @@ pub fn help(action: Option<String>) {
 
 
 #[allow(unused)]
-fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
-    let lang: Lang = build.lang.parse()?;
-
-    let sources = fetch::source_files(&build.srcdir, lang.src_ext()).unwrap();
-    let mut headers = fetch::source_files(&build.srcdir, ".h").unwrap();
-    for incdir in build.incdirs.iter().chain(&build.include_public) {
+fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
+    let profile = build.take(&switches.profile)?;
+    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
+    let mut headers = fetch::source_files(&profile.src, ".h").unwrap();
+    for incdir in profile.include.iter().chain(Some(&profile.include_pub)) {
         headers.extend(fetch::source_files(incdir, ".h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
-    let mut deps = fetch::libraries(build.dependencies, switches, lang)?;
-    deps.defines.extend(build.defines);
+    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
+    deps.defines.extend(profile.defines);
     if test { deps.defines.push("VANGO_TEST".to_string()); }
-    deps.incdirs.extend(build.incdirs);
+    deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
-    let outdir = PathBuf::from("bin").join(switches.config.to_string());
+    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let outfile = if projkind == ProjKind::App {
         outdir.join(build.project).with_extension(switches.toolchain.app_ext())
     } else {
@@ -222,26 +217,26 @@ fn check_outdated(build: BuildFile, switches: BuildSwitches, test: bool) -> Resu
     let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
-        config:    switches.config,
-        lang,
+        profile:   switches.profile,
+        lang:      build.lang,
         crtstatic: switches.crtstatic,
 
         defines:  deps.defines,
 
-        srcdir:   build.srcdir,
+        srcdir:   profile.src,
         incdirs:  deps.incdirs,
         libdirs:  deps.libdirs,
         outdir,
 
-        pch:      build.pch,
+        pch:      profile.pch,
         sources,
         headers,
         archives: deps.archives,
         relink:   deps.relink,
         outfile:  outfile.clone(),
 
-        comp_args: build.compiler_options,
-        link_args: build.linker_options,
+        comp_args: profile.compiler_options,
+        link_args: profile.linker_options,
     };
     let rebuilt = exec::run_check_outdated(info)?;
     Ok(rebuilt_dep || rebuilt)

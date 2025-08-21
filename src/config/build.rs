@@ -18,7 +18,6 @@ pub struct Build {
     pub package: String,
     pub version: String,
     pub lang: String,
-
     pub pch: Option<PathBuf>,
 
     #[serde(flatten)]

@@ -26,11 +26,10 @@ pub struct Library {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
 pub struct Profile {
-    pub include:     Option<Vec<PathBuf>>,
-    pub bin_debug:   Option<Vec<PathBuf>>,
-    pub bin_release: Option<Vec<PathBuf>>,
-    pub binaries:    Option<Vec<PathBuf>>,
-    pub macros:      Option<Vec<String>>,
+    pub include:  Option<Vec<PathBuf>>,
+    pub libdirs:  Option<Vec<PathBuf>>,
+    pub binaries: Option<Vec<PathBuf>>,
+    pub macros:   Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]

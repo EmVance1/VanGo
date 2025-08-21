@@ -7,7 +7,7 @@ use std::{ io::Write, num::NonZero, path::{ Path, PathBuf }, process::Command };
 use incremental::BuildLevel;
 use crate::{
     error::Error,
-    repr::{ProjKind, ToolChain, Config, Lang},
+    repr::{ProjKind, ToolChain, Profile, Lang},
     log_error, log_info,
 };
 
@@ -16,7 +16,7 @@ use crate::{
 pub struct BuildInfo {
     pub projkind: ProjKind,
     pub toolchain: ToolChain,
-    pub config: Config,
+    pub profile: Profile,
     pub lang: Lang,
     pub crtstatic: bool,
 
@@ -43,7 +43,7 @@ impl BuildInfo {
     fn compile_info<'a, 'b>(&'a self, pch: &'b PreCompHead) -> CompileInfo<'a, 'b> {
         CompileInfo {
             toolchain: self.toolchain,
-            config: self.config,
+            profile: &self.profile,
             lang: self.lang,
             crtstatic: self.crtstatic,
             outdir: &self.outdir,
@@ -58,7 +58,7 @@ impl BuildInfo {
 #[derive(Debug)]
 struct CompileInfo<'a, 'b> {
     toolchain: ToolChain,
-    config: Config,
+    profile: &'a Profile,
     lang: Lang,
     crtstatic: bool,
     outdir: &'a Path,
@@ -207,7 +207,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
 pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
     log_info!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
-    let ext = outfile.extension().unwrap().to_string_lossy();
+    let ext = outfile.extension().unwrap_or_default().to_string_lossy();
     if ext == "a" || ext == "lib" {
         Err(Error::LibNotExe(outfile.to_owned()))
     } else {

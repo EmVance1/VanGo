@@ -31,12 +31,12 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
     }
 
     if info.crtstatic {
-        cmd.arg(args.crt_static(info.config));
+        cmd.arg(args.crt_static(info.profile));
     } else {
-        cmd.args(args.crt_dynamic(info.config));
+        cmd.args(args.crt_dynamic(info.profile));
     }
 
-    if info.config.is_release() {
+    if info.profile.is_release() {
         cmd.args(args.opt_profile_high());
     } else {
         cmd.args(args.opt_profile_none());
@@ -118,7 +118,7 @@ fn print_command(cmd: &std::process::Command) {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use crate::repr::{ToolChain, Config, Lang};
+    use crate::repr::{ToolChain, Profile, Lang};
     use super::*;
 
     #[test]
@@ -128,7 +128,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.o");
 
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            config: Config::Debug,
+            profile: &Profile::Debug,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
             crtstatic: false,
@@ -159,7 +159,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.o");
 
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            config: Config::Debug,
+            profile: &Profile::Debug,
             toolchain: ToolChain::Clang,
             lang: Lang::Cpp(123),
             crtstatic: false,
@@ -190,7 +190,7 @@ mod tests {
         let obj = PathBuf::from("bin/release/obj/main.o");
 
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            config: Config::Release,
+            profile: &Profile::Release,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
             crtstatic: false,
@@ -220,7 +220,7 @@ mod tests {
         let obj = PathBuf::from("bin/release/obj/main.o");
 
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            config: Config::Release,
+            profile: &Profile::Release,
             toolchain: ToolChain::Gnu,
             lang: Lang::Cpp(120),
             crtstatic: true,

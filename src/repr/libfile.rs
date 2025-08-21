@@ -1,93 +1,139 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-};
-use crate::{Config, error::Error};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use super::{Lang, BuildFile};
+use crate::{error::Error, repr::{self, Lang, BuildFile}};
 
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibFile {
     pub library: String,
-    pub lang:    String,
-    pub include: PathBuf,
-    #[serde(default)]
-    pub all: Option<LibConfig>,
-    #[serde(default)]
-    pub configs: HashMap<String, LibConfig>,
+    pub lang:    Lang,
+    pub profile: HashMap<String, LibProfile>,
 }
 
 impl LibFile {
-    pub fn from_str(s: &str) -> serde_json::Result<Self> {
-        serde_json::from_str(s)
+    pub fn from_str(value: &str) -> Result<LibFile, Error> {
+        let mut file = serde_json::from_str::<SerdeLibFile>(value)?;
+        let mut profile: HashMap<String, LibProfile> = HashMap::new();
+
+        if let Some(d) = file.profile.remove("debug") {
+            profile.insert("debug".to_string(), LibProfile::debug(&file.defaults).merge(d));
+        } else {
+            profile.insert("debug".to_string(), LibProfile::debug(&file.defaults));
+        }
+        if let Some(r) = file.profile.remove("release") {
+            profile.insert("release".to_string(), LibProfile::release(&file.defaults).merge(r));
+        } else {
+            profile.insert("release".to_string(), LibProfile::release(&file.defaults));
+        }
+        for (k, p) in file.profile {
+            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
+            if inherits == "debug" {
+                profile.insert(k, LibProfile::debug(&file.defaults).merge(p));
+            } else if inherits == "release" {
+                profile.insert(k, LibProfile::release(&file.defaults).merge(p));
+            }
+        }
+
+        Ok(LibFile{
+            library: file.library,
+            lang: Lang::from_str(&file.lang)?,
+            profile,
+        })
     }
-}
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct LibConfig {
-    #[serde(rename = "binary.debug")]
-    pub binary_debug: PathBuf,
-    #[serde(rename = "binary.release")]
-    pub binary_release: PathBuf,
-    #[serde(alias = "libs")]
-    #[serde(alias = "links")]
-    pub archives: Vec<PathBuf>,
-    #[serde(default)]
-    pub defines: Vec<String>,
-}
+    pub fn take(&mut self, profile: &repr::Profile) -> Result<LibProfile, Error> {
+        match profile {
+            repr::Profile::Debug => self.profile.remove("debug"),
+            repr::Profile::Release => self.profile.remove("release"),
+            repr::Profile::Custom(s) => self.profile.remove(s),
+        }.ok_or(Error::ProfileUnavailable(self.library.clone(), profile.to_string()))
+    }
 
-#[derive(Debug, Clone)]
-pub struct LibData {
-    pub incdir:   PathBuf,
-    pub libdir:   Option<PathBuf>,
-    pub archives: Vec<PathBuf>,
-    pub defines:  Vec<String>,
-}
-
-impl LibFile {
     pub fn validate(self, max_lang: Lang) -> Result<Self, Error> {
-        if self.lang.parse::<Lang>()? > max_lang {
+        if self.lang > max_lang {
             Err(Error::IncompatibleCppStd(self.library))
         } else {
             Ok(self)
         }
     }
-
-    pub fn linearise(mut self, config: Config, version: Option<&str>) -> Result<LibData, Error> {
-        let cfg = if let Some(ver) = version {
-            self.configs.remove(ver).ok_or(Error::ConfigUnavailable(self.library, ver.to_string()))?
-        } else if let Some(all) = self.all {
-            all
-        } else {
-            return Ok(LibData{ incdir: self.include, libdir: None, archives: vec![], defines: vec![] })
-        };
-
-        Ok(LibData{
-            incdir:   self.include,
-            libdir:   Some(if config.is_release() { cfg.binary_release } else { cfg.binary_debug }),
-            archives: cfg.archives,
-            defines:  cfg.defines,
-        })
-    }
 }
 
 impl From<BuildFile> for LibFile {
     fn from(value: BuildFile) -> Self {
-        let include = value.include_public.unwrap_or(value.srcdir);
+        let project = value.project;
+        let profile: HashMap<_, _> = value.profile.into_iter().map(|(k, p)| {
+            let prof = LibProfile{
+                include: p.include_pub,
+                libdirs: format!("bin/{k}").into(),
+                binaries: vec![ project.clone().into() ],
+                defines: p.defines,
+            };
+            (k, prof)
+        }).collect();
 
         Self {
-            library: value.project.clone(),
+            library: project,
             lang: value.lang,
-            include,
-            all: Some(LibConfig {
-                binary_debug: "bin/debug".into(),
-                binary_release: "bin/release/".into(),
-                archives: vec![ PathBuf::from(value.project) ],
-                defines: value.defines,
-            }),
-            configs: HashMap::default(),
+            profile,
         }
     }
+}
+
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct SerdeLibFile {
+    pub library: String,
+    pub lang:    String,
+
+    #[serde(flatten)]
+    pub defaults: SerdeProfile,
+    #[serde(default)]
+    pub profile: HashMap<String, SerdeProfile>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LibProfile {
+    pub include:  PathBuf,
+    pub libdirs:  PathBuf,
+    pub binaries: Vec<PathBuf>,
+    pub defines:  Vec<String>,
+}
+
+impl LibProfile {
+    fn debug(defaults: &SerdeProfile) -> Self {
+        Self{
+            include: defaults.include.clone().unwrap_or("include".into()),
+            libdirs: defaults.libdirs.clone().unwrap_or("bin/debug".into()),
+            binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
+            defines:  defaults.defines.iter().flatten().map(|d| d.to_owned()).collect(),
+        }
+    }
+
+    fn release(defaults: &SerdeProfile) -> Self {
+        Self{
+            include: defaults.include.clone().unwrap_or("include".into()),
+            libdirs: defaults.libdirs.clone().unwrap_or("bin/release".into()),
+            binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
+            defines:  defaults.defines.iter().flatten().map(|d| d.to_owned()).collect(),
+        }
+    }
+
+    fn merge(mut self, other: SerdeProfile) -> Self {
+        if let Some(inc) = other.include { self.include = inc; }
+        if let Some(dir) = other.libdirs { self.libdirs = dir; }
+        self.binaries.extend(other.binaries.unwrap_or_default());
+        self.defines.extend(other.defines.unwrap_or_default());
+        self
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+struct SerdeProfile {
+    pub inherits: Option<String>,
+    pub include:  Option<PathBuf>,
+    pub libdirs:  Option<PathBuf>,
+    pub binaries: Option<Vec<PathBuf>>,
+    pub defines:  Option<Vec<String>>,
 }
 

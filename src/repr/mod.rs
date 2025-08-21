@@ -166,40 +166,44 @@ impl Display for ToolChain {
 }
 
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum Config {
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum Profile {
     #[default]
     Debug,
     Release,
+    Custom(String),
 }
 
 #[allow(unused)]
-impl Config {
+impl Profile {
     pub fn is_debug(&self) -> bool {
-        *self == Config::Debug
+        *self == Self::Debug
     }
     pub fn is_release(&self) -> bool {
-        *self == Config::Release
+        *self == Self::Release
     }
-    pub fn as_define(&self) -> &'static str {
+    pub fn as_define(&self) -> Option<&'static str> {
         match self {
-            Self::Debug   => "DEBUG",
-            Self::Release => "RELEASE",
+            Self::Debug     => Some("VANGO_DEBUG"),
+            Self::Release   => Some("VANGO_RELEASE"),
+            Self::Custom(s) => None,
         }
     }
-    pub fn as_arg(&self) -> &'static str {
+    pub fn as_arg(&self) -> String {
         match self {
-            Self::Debug   => "--debug",
-            Self::Release => "--release",
+            Self::Debug     => "--debug".to_string(),
+            Self::Release   => "--release".to_string(),
+            Self::Custom(s) => format!("--profile={s}"),
         }
     }
 }
 
-impl Display for Config {
+impl Display for Profile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Debug   => write!(f, "debug"),
-            Self::Release => write!(f, "release"),
+            Self::Debug     => write!(f, "debug"),
+            Self::Release   => write!(f, "release"),
+            Self::Custom(s) => write!(f, "{s}"),
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::{Config, ToolChain, Lang};
+use super::{Profile, ToolChain, Lang};
 
 
 pub struct Args(pub ToolChain);
@@ -73,11 +73,11 @@ impl Args {
         if self.0.is_msvc() { "" } else { "-l" }
     }
 
-    pub fn crt_static(&self, config: Config) -> &'static str {
-        if self.0.is_msvc() { if config.is_release() { "/MT" } else { "/MTd" } } else { "-static" }
+    pub fn crt_static(&self, profile: &Profile) -> &'static str {
+        if self.0.is_msvc() { if profile.is_release() { "/MT" } else { "/MTd" } } else { "-static" }
     }
-    pub fn crt_dynamic(&self, config: Config) -> Option<&'static str> {
-        if self.0.is_msvc() { if config.is_release() { Some("/MD") } else { Some("/MDd") } } else { None }
+    pub fn crt_dynamic(&self, profile: &Profile) -> Option<&'static str> {
+        if self.0.is_msvc() { if profile.is_release() { Some("/MD") } else { Some("/MDd") } } else { None }
     }
 
     pub fn opt_profile_none(&self) -> Vec<String> {

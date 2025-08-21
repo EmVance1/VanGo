@@ -52,7 +52,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
 
         srcdir: "test".into(),
         incdirs: partial.incdirs,
-        libdirs:  vec![ PathBuf::from("bin").join(switches.profile.to_string()) ],
+        libdirs: vec![ PathBuf::from("bin").join(switches.profile.to_string()) ],
         outdir,
 
         pch: None,

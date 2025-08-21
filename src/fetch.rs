@@ -78,7 +78,7 @@ pub fn libraries(libraries: Vec<String>, switches: &BuildSwitches, lang: Lang) -
             let mut libinfo = LibFile::from_str(&build)?.validate(lang)?;
             let profile = libinfo.take(&switches.profile)?;
             incdirs.push(path.join(profile.include));
-            libdirs.push(path.join(profile.libdirs));
+            libdirs.push(path.join(profile.libdir));
             if switches.toolchain.is_msvc() {
                 archives.extend(profile.binaries.into_iter().map(|l| l.with_extension("lib")));
             } else {
@@ -116,15 +116,15 @@ pub fn libraries(libraries: Vec<String>, switches: &BuildSwitches, lang: Lang) -
             let mut libinfo = LibFile::from(build).validate(lang)?;
             let profile = libinfo.take(&switches.profile)?;
             incdirs.push(path.join(profile.include));
-            libdirs.push(path.join(&profile.libdirs));
+            libdirs.push(path.join(&profile.libdir));
             if switches.toolchain.is_msvc() {
                 for l in profile.binaries {
-                    relink.push(path.join(&profile.libdirs).join(&l).with_extension("lib"));
+                    relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));
                     archives.push(l.with_extension("lib"));
                 }
             } else {
                 for l in profile.binaries {
-                    relink.push(path.join(&profile.libdirs).join(format!("lib{}", l.display())).with_extension("a"));
+                    relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a"));
                     archives.push(l);
                 }
             }

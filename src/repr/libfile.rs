@@ -64,7 +64,7 @@ impl From<BuildFile> for LibFile {
         let profile: HashMap<_, _> = value.profile.into_iter().map(|(k, p)| {
             let prof = LibProfile{
                 include: p.include_pub,
-                libdirs: format!("bin/{k}").into(),
+                libdir: format!("bin/{k}").into(),
                 binaries: vec![ project.clone().into() ],
                 defines: p.defines,
             };
@@ -94,7 +94,7 @@ struct SerdeLibFile {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibProfile {
     pub include:  PathBuf,
-    pub libdirs:  PathBuf,
+    pub libdir:  PathBuf,
     pub binaries: Vec<PathBuf>,
     pub defines:  Vec<String>,
 }
@@ -103,7 +103,7 @@ impl LibProfile {
     fn debug(defaults: &SerdeProfile) -> Self {
         Self{
             include: defaults.include.clone().unwrap_or("include".into()),
-            libdirs: defaults.libdirs.clone().unwrap_or("bin/debug".into()),
+            libdir: defaults.libdir.clone().unwrap_or("bin/debug".into()),
             binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
             defines:  defaults.defines.iter().flatten().map(|d| d.to_owned()).collect(),
         }
@@ -112,7 +112,7 @@ impl LibProfile {
     fn release(defaults: &SerdeProfile) -> Self {
         Self{
             include: defaults.include.clone().unwrap_or("include".into()),
-            libdirs: defaults.libdirs.clone().unwrap_or("bin/release".into()),
+            libdir: defaults.libdir.clone().unwrap_or("bin/release".into()),
             binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
             defines:  defaults.defines.iter().flatten().map(|d| d.to_owned()).collect(),
         }
@@ -120,7 +120,7 @@ impl LibProfile {
 
     fn merge(mut self, other: SerdeProfile) -> Self {
         if let Some(inc) = other.include { self.include = inc; }
-        if let Some(dir) = other.libdirs { self.libdirs = dir; }
+        if let Some(dir) = other.libdir { self.libdir = dir; }
         self.binaries.extend(other.binaries.unwrap_or_default());
         self.defines.extend(other.defines.unwrap_or_default());
         self
@@ -132,7 +132,7 @@ impl LibProfile {
 struct SerdeProfile {
     pub inherits: Option<String>,
     pub include:  Option<PathBuf>,
-    pub libdirs:  Option<PathBuf>,
+    pub libdir:  Option<PathBuf>,
     pub binaries: Option<Vec<PathBuf>>,
     pub defines:  Option<Vec<String>>,
 }

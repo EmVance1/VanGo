@@ -8,26 +8,26 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
     "dependencies": []
 }
 ```
-The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
+The above uration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 
 The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see chapter on [cross-compilation](#Cross-Compilation).
 
 ### Features supported so far
 - New, Build, Run, Test, and Clean actions
-- Specify header-only and binary libraries with a lib.json, supports multiple configurations...
+- Specify header-only and binary libraries with a lib.json, supports custom profiles...
 ```json
 {
     "library": "SFML",
     "lang" : "C++11",
-    "include": "include/",
-    "configs": {
+    "include": "include",
+    "profile": {
         ...
     }
 },
 ```
 - ...and plug and play at will in main project. Libraries can be placed in `./lib` or specified otherwise
 ```json
-"dependencies": [ "SFML:static", "../SFUtils" ],
+"dependencies": [ "SFML", "../SFUtils" ],
 ```
 - Incremental building based on recent file changes
 - Source code dependencies are automatically built recursively in the case of updates
@@ -40,10 +40,13 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 ```json
 "pch": "pch.h",
 ```
-- Debug and Release configurations (work in progress)
+- Modify Debug and Release urations, or add your own
 ```json
-"SETTING.debug": { ... },
-"SETTING.release": { ... },
+"profile": {
+    "debug": { ... },
+    "release": { ... },
+    "minsizerel": { "inherits": "release", ... }
+}
 ```
 - Cross compilation via Clang/Zig
 
@@ -61,7 +64,7 @@ Some examples of invocations are as follows, but for a more complete list see th
 
 VanGo is opinionated for simplicity and makes some base assumptions and decisions:
 - You have a valid build script in the project root (`build.json`)
-- All of your source files are in the `src` directory, and all output files are generated in in `bin/{config}/`.
+- All of your source files are in the `src` directory, and all output files are generated in in `bin/{profile}/`.
 - Your output binary is named the same as your project.
 - To build as a library, you have a `lib.h` somewhere in your project.
 - All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
@@ -80,19 +83,21 @@ All `build.json` files are expected to have 3 base declarations at the root:
 
 - `lang` takes any valid C or C++ standard, case insensitive.
 
-- `dependences` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. The dependency string also supports an optional version, separated by a ':' (see chapter on library version definitions) as in `SFML:static`. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
+- `dependencies` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
 
     There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
 
     As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
 
+- **Profiles**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile` object. All of the following options can be defined globally (same level as `project`) as a default, or inside a subobject of `profile`.
+
 - Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `DEBUG` or `RELEASE` definitions, aswell as `TEST` for test builds.
 
 - If you want to precompile a header, just specify the header file relative to `src/` that you want precompiled as shown above (All source files will be assumed to use it).
 
-- Source directory and (project) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or appended to through the `srcdir` and `incdirs` options.
+- Source directory and (project) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or appended to through the `src` and `include` options.
 
-- If the project you are defining is going to be a library, you may want to add an `include-public` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
+- If the project you are defining is going to be a library, you may want to add an `include-pub` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
 
 - For finer control, the option is provided to pass compiler and linker flags directly, using the `compiler-options` and `linker-options` array fields. These are prepended to the arguments generated by vango. In the near future, this system is being phased out in favour of a toolchain agnostic variant.
 
@@ -104,32 +109,24 @@ A `lib.json` file specifies for prebuilt libraries how they should be correctly 
 {
     "library": "foobar",
     "lang": "C++XX",
-    "include": "include/"
-    ..
+    ...
 }
 ```
 `lang` in this case declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. that header files use 'clean' C).
 
-In addition, all libraries may have one of the following (neither in the case of header only libraries, never both):
-```json
-    "all": { ... },
-    "configs": { "name": { ... }, ... },
-```
+In addition, libraries may have a `profile` table. Like their `build.json` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
 
-Configs represent different ways of linking a given library, for example if a library supports both static and dynamic linking. It is defined by 3 required fields:
-```json
-{
-    "links": [ ... ],
-    "binary.debug": "foo/",
-    "binary.release": "bar/"
-}
-```
-`links` being for the name of the static library, and `binary.*` being the directory where they are found relative to the library root.
-Optionally specify a field for version specific preprocessor flags.
-```json
-    "defines": [ "MACRO" ]
-```
-The `all` field represents a standard configuration if versions are not necessary for a project.
+- `include` is a string that declares where the libraries header files are.
+
+- `libdir` is a string that declares where the library binaries are.
+
+- The `binaries` is a list of the binaries that the library provides. These are specified in name only (no file extension, no 'lib' prefix for .a files).
+
+- The `defines` array lists preprocessor definitions.
+
+- Custom profile definitions require a base of settings to build upon, which is declared with the `inherits` field.
+
+In the case of header only libraries, most of these can be ignored in favour of a globally default `include` field.
 
 ### Automated Testing
 Testing is made easy by assuming all tests are in a `test/` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
@@ -145,7 +142,7 @@ test(basic_math) {
     assert_eq(a, 10);
 }
 ```
-In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test urations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
 To forward declare a test, use the `decl_test(test_name)` macro.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.

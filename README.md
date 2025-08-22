@@ -178,3 +178,19 @@ and the correct binary will be generated.
 
 In future, I hope to implement this bundling myself via the package manager (which I have yet to begin working on), as it does seem silly to require 3 different compilers just to build Hello World to an ELF file on windows, but for now this is a relatively simple solution to an unnecessarily overcomplicated problem. For more info, see article [Zig Makes Rust Cross-compilation Just Work](https://actually.fyi/posts/zig-makes-rust-cross-compilation-just-work/).
 
+## Planned Features
+### Platform Agnostic TOML Manifest
+Migration from JSON to TOML, fully agnostic compiler and linker options for improved cross-platform and cross-compilation functionality
+
+### Smart Sem-Ver
+Improved integration with Git tags to enable versioned dependencies, lockfiles
+
+### Package Manager
+Registry of popular libraries and build recipes to enable full environment automation for open-source projects
+
+### Zig-like Cross-Compilation
+System libraries as packages accessible via the package manager
+
+### Generator Functionality
+The ability to transpile a build script to other popular tools such as CMake, Make, MSBuild and more
+

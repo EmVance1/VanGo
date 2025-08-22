@@ -5,6 +5,8 @@
 #include <exception>
 
 
+namespace vango {
+
 class AssertionFail : public std::exception {
 public:
     std::string msg;
@@ -21,54 +23,54 @@ public:
     }
 };
 
-
-#define VANGO_TEST_OUTPUT std::stringstream _test_assert_output; _test_assert_output
-#define VANGO_TEST_THROW(type) throw AssertionFail(_test_assert_output.str(), type, __LINE__)
-
-#define FAIL_TRUE 1
-#define FAIL_EQ 2
-#define FAIL_NE 3
-#define FAIL_NULL 4
-#define FAIL_NON_NULL 5
-#define FAIL_THROWS 6
-
-#define assert(a)           do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
-    VANGO_TEST_THROW(FAIL_TRUE); } } while (0)
-
-#define assert_eq(a, b)     do { if ((a) != (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
-    VANGO_TEST_THROW(FAIL_EQ); } } while (0)
-
-#define assert_ne(a, b)     do { if ((a) == (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
-    VANGO_TEST_THROW(FAIL_NE); } } while (0)
-
-#define assert_null(a)      do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
-    VANGO_TEST_THROW(FAIL_NULL); } } while (0)
-
-#define assert_non_null(a)  do { if (a)          { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
-    VANGO_TEST_THROW(FAIL_NON_NULL); } } while (0)
-
-#define assert_throws(a, e) do { try { a; \
-        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              VANGO_TEST_THROW(FAIL_THROWS); \
-    } catch (const e&) {} catch (...) { \
-        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; VANGO_TEST_THROW(FAIL_THROWS); \
-    } } while (0)
-
-
 typedef void(*TestFunc)();
 
-typedef struct TestFuncArray {
+struct TestFuncArray {
     const char** names;
     TestFunc* funcs;
     size_t size;
     size_t cap;
-} TestFuncArray;
-
-
-#define test(name) void name(); TestFuncArray* _##name##_runner = init_testfunc( #name, name, false ); void name()
-#define decl_test(name) void name()
-
+};
 
 TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
+
+}
+
+
+#define VANGO_TEST_OUTPUT std::stringstream _vango_test_assert_output; _vango_test_assert_output
+#define VANGO_TEST_THROW(type) throw ::vango::AssertionFail(_vango_test_assert_output.str(), type, __LINE__)
+
+#define VANGO_FAIL_TRUE 1
+#define VANGO_FAIL_EQ 2
+#define VANGO_FAIL_NE 3
+#define VANGO_FAIL_NULL 4
+#define VANGO_FAIL_NON_NULL 5
+#define VANGO_FAIL_THROWS 6
+
+#define assert(a)           do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
+    VANGO_TEST_THROW(VANGO_FAIL_TRUE); } } while (0)
+
+#define assert_eq(a, b)     do { if ((a) != (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+    VANGO_TEST_THROW(VANGO_FAIL_EQ); } } while (0)
+
+#define assert_ne(a, b)     do { if ((a) == (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+    VANGO_TEST_THROW(VANGO_FAIL_NE); } } while (0)
+
+#define assert_null(a)      do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+    VANGO_TEST_THROW(VANGO_FAIL_NULL); } } while (0)
+
+#define assert_non_null(a)  do { if (a)          { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+    VANGO_TEST_THROW(VANGO_FAIL_NON_NULL); } } while (0)
+
+#define assert_throws(a, e) do { try { a; \
+        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              VANGO_TEST_THROW(VANGO_FAIL_THROWS); \
+    } catch (const e&) {} catch (...) { \
+        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; VANGO_TEST_THROW(VANGO_FAIL_THROWS); \
+    } } while (0)
+
+
+#define test(name) void name(); ::vango::TestFuncArray* _##name##_runner = ::vango::init_testfunc( #name, name, false ); void name()
+#define decl_test(name) void name()
 
 
 #ifdef VANGO_TEST_ROOT
@@ -76,9 +78,11 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
 #define run_test(k, f) try { \
         f(); \
         std::cerr << "\033[32m[VanGo:  info] passed: '" << k << "'\033[m\n"; \
-    } catch (const AssertionFail& e) { \
+    } catch (const ::vango::AssertionFail& e) { \
         std::cerr << "\033[32m[VanGo:  info] \033[31mfailed: '" << k << "' on line " << e.failline << ": \033[m" << e.msg << "\n"; \
     }
+
+namespace vango {
 
 TestFuncArray init_testfuncarray(size_t size) {
     return TestFuncArray{
@@ -99,8 +103,10 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign) {
     return &testfuncarray;
 }
 
+}
+
 int main(int argc, char** argv) {
-    TestFuncArray* arr = init_testfunc(nullptr, nullptr, true);
+    ::vango::TestFuncArray* arr = ::vango::init_testfunc(nullptr, nullptr, true);
     if (argc == 1) {
         for (size_t i = 0; i < arr->size; i++) {
             run_test(arr->names[i], arr->funcs[i]);

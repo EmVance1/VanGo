@@ -3,34 +3,34 @@
 #include <stdlib.h>
 
 
-typedef struct VangoTestResult {
+struct VangoTestResult {
     size_t failtype;
     size_t failline;
     char* msg;
-} VangoTestResult;
+};
 
 
-#define FAIL_TRUE     1
-#define FAIL_EQ       2
-#define FAIL_NE       3
-#define FAIL_NULL     4
-#define FAIL_NON_NULL 5
+#define VANGO_FAIL_TRUE     1
+#define VANGO_FAIL_EQ       2
+#define VANGO_FAIL_NE       3
+#define VANGO_FAIL_NULL     4
+#define VANGO_FAIL_NON_NULL 5
 
 
-#define assert(a)          do { if (!(a))       { _test_result->failtype=FAIL_TRUE,     _test_result->failline=__LINE__; \
-    _test_result->msg="assertion fail: expression expected to be 'true' was 'false'"; return; } } while (0)
-#define assert_eq(a, b)    do { if ((a) != (b)) { _test_result->failtype=FAIL_EQ,       _test_result->failline=__LINE__; \
-    _test_result->msg="assertion fail: expressions expected to be equal were not equal"; return; } } while (0)
-#define assert_ne(a, b)    do { if ((a) == (b)) { _test_result->failtype=FAIL_NE,       _test_result->failline=__LINE__; \
-    _test_result->msg="assertion fail: expressions expected not to be equal were equal"; return; } } while (0)
-#define assert_null(a)     do { if ((a))        { _test_result->failtype=FAIL_NULL,     _test_result->failline=__LINE__; \
-    _test_result->msg="assertion fail: expected 'NULL', received other address"; return; } } while (0)
-#define assert_non_null(a) do { if (!(a))       { _test_result->failtype=FAIL_NON_NULL; _test_result->failline=__LINE__; \
-    _test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; } } while (0)
+#define assert(a)          do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_TRUE,     _vango_test_result->failline=__LINE__; \
+    _vango_test_result->msg="assertion fail: expression expected to be 'true' was 'false'"; return; } } while (0)
+#define assert_eq(a, b)    do { if ((a) != (b)) { _vango_test_result->failtype=VANGO_FAIL_EQ,       _vango_test_result->failline=__LINE__; \
+    _vango_test_result->msg="assertion fail: expressions expected to be equal were not equal"; return; } } while (0)
+#define assert_ne(a, b)    do { if ((a) == (b)) { _vango_test_result->failtype=VANGO_FAIL_NE,       _vango_test_result->failline=__LINE__; \
+    _vango_test_result->msg="assertion fail: expressions expected not to be equal were equal"; return; } } while (0)
+#define assert_null(a)     do { if ((a))        { _vango_test_result->failtype=VANGO_FAIL_NULL,     _vango_test_result->failline=__LINE__; \
+    _vango_test_result->msg="assertion fail: expected 'NULL', received other address"; return; } } while (0)
+#define assert_non_null(a) do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_NON_NULL; _vango_test_result->failline=__LINE__; \
+    _vango_test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; } } while (0)
 
 
-#define test(name) void name(VangoTestResult* _test_result)
-#define decl_test(name) void name(VangoTestResult* _test_result)
+#define test(name) void name(struct VangoTestResult* _vango_test_result)
+#define decl_test(name) void name(struct VangoTestResult* _vango_test_result)
 
 
 #ifdef VANGO_TEST_ROOT
@@ -38,11 +38,11 @@ typedef struct VangoTestResult {
 #include <stdio.h>
 #include <string.h>
 
-#define test_register(name) _test_register_impl(argc, argv, #name, name)
+#define test_register(name) _vango_test_register_impl(argc, argv, #name, name)
 #define test_main(tests) int main(int argc, char** argv) { tests }
 
 
-void _test_register_impl(int argc, char** argv, const char* name, void(*f)(VangoTestResult*)) {
+void _vango_test_register_impl(int argc, char** argv, const char* name, void(*f)(struct VangoTestResult*)) {
     if (argc == 1) {
         goto run_test;
     } else {
@@ -55,7 +55,7 @@ void _test_register_impl(int argc, char** argv, const char* name, void(*f)(Vango
     return;
 
 run_test:
-    VangoTestResult test_result = { .failtype=0, .failline=0, .msg=NULL };
+    struct VangoTestResult test_result = { .failtype=0, .failline=0, .msg=NULL };
     f(&test_result);
     if (test_result.failtype == 0) {
         fprintf(stderr, "\033[32m[VanGo:  info] passed '%s'\033[m\n", name);

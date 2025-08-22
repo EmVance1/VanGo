@@ -91,7 +91,7 @@ All `build.json` files are expected to have 3 base declarations at the root:
 
 - **Profiles**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile` object. All of the following options can be defined globally (same level as `project`) as a default, or inside a subobject of `profile`.
 
-- Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `DEBUG` or `RELEASE` definitions, aswell as `TEST` for test builds.
+- Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `VANGO_DEBUG` or `VANGO_RELEASE` definitions, aswell as `VANGO_TEST` for test builds.
 
 - If you want to precompile a header, just specify the header file relative to `src/` that you want precompiled as shown above (All source files will be assumed to use it).
 
@@ -145,7 +145,7 @@ test(basic_math) {
 In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
 To forward declare a test, use the `decl_test(test_name)` macro.
-In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
+In one file and one file only, the include statement must be preceded by the `VANGO_TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp
 #define TEST_ROOT

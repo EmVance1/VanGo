@@ -33,7 +33,7 @@ typedef struct VangoTestResult {
 #define decl_test(name) void name(VangoTestResult* _test_result)
 
 
-#ifdef TEST_ROOT
+#ifdef VANGO_TEST_ROOT
 
 #include <stdio.h>
 #include <string.h>

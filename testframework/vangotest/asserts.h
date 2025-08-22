@@ -71,7 +71,7 @@ typedef struct TestFuncArray {
 TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
 
 
-#ifdef TEST_ROOT
+#ifdef VANGO_TEST_ROOT
 
 #define run_test(k, f) try { \
         f(); \

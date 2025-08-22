@@ -8,7 +8,7 @@ This app is a build system designed with rusts cargo philosophy in mind. You can
     "dependencies": []
 }
 ```
-The above uration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
+The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
 
 The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see chapter on [cross-compilation](#Cross-Compilation).
 
@@ -40,7 +40,7 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 ```json
 "pch": "pch.h",
 ```
-- Modify Debug and Release urations, or add your own
+- Modify Debug and Release configurations, or add your own
 ```json
 "profile": {
     "debug": { ... },
@@ -142,7 +142,7 @@ test(basic_math) {
     assert_eq(a, 10);
 }
 ```
-In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test urations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
 To forward declare a test, use the `decl_test(test_name)` macro.
 In one file and one file only, the include statement must be preceded by the `TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.

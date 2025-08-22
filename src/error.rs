@@ -18,6 +18,8 @@ pub enum Error {
     MissingBuildScript(PathBuf),
     #[error("json error: {0}")]
     JsonParse(#[from] serde_json::Error),
+    #[error("toml error: {0}")]
+    TomlParse(#[from] toml::de::Error),
     #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
     #[error("library '{0}' C/C++ standard incompatible with current project")]

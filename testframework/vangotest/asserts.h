@@ -32,26 +32,26 @@ public:
 #define FAIL_NON_NULL 5
 #define FAIL_THROWS 6
 
-#define assert(a)           if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
-    VANGO_TEST_THROW(FAIL_TRUE); }
+#define assert(a)           do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'true', received 'false'";                  \
+    VANGO_TEST_THROW(FAIL_TRUE); } } while (0)
 
-#define assert_eq(a, b)     if ((a) != (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
-    VANGO_TEST_THROW(FAIL_EQ); }
+#define assert_eq(a, b)     do { if ((a) != (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected '" << a << "', received '" << b << "'";     \
+    VANGO_TEST_THROW(FAIL_EQ); } } while (0)
 
-#define assert_ne(a, b)     if ((a) == (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
-    VANGO_TEST_THROW(FAIL_NE); }
+#define assert_ne(a, b)     do { if ((a) == (b)) { VANGO_TEST_OUTPUT << "assertion fail: expected not '" << a << "', received '" << b << "'"; \
+    VANGO_TEST_THROW(FAIL_NE); } } while (0)
 
-#define assert_null(a)      if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
-    VANGO_TEST_THROW(FAIL_NULL); }
+#define assert_null(a)      do { if (!(a))       { VANGO_TEST_OUTPUT << "assertion fail: expected 'nullptr', received valid pointer";         \
+    VANGO_TEST_THROW(FAIL_NULL); } } while (0)
 
-#define assert_non_null(a)  if (a)          { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
-    VANGO_TEST_THROW(FAIL_NON_NULL); }
+#define assert_non_null(a)  do { if (a)          { VANGO_TEST_OUTPUT << "assertion fail: expected valid pointer, received 'nullptr'";         \
+    VANGO_TEST_THROW(FAIL_NON_NULL); } } while (0)
 
-#define assert_throws(a, e) { try { a; \
+#define assert_throws(a, e) do { try { a; \
         VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              VANGO_TEST_THROW(FAIL_THROWS); \
     } catch (const e&) {} catch (...) { \
         VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; VANGO_TEST_THROW(FAIL_THROWS); \
-    } }
+    } } while (0)
 
 
 typedef void(*TestFunc)();

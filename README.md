@@ -1,5 +1,7 @@
 # VanGo - A C/C++ Build System for Cargo Lovers
 
+## Motivation
+
 This app is a build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Use JSON to define a minimal build script, for example:
 ```json
 {
@@ -12,7 +14,7 @@ The above configuration is already the minimum requirement. `./src` is assumed a
 
 The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see chapter on [cross-compilation](#Cross-Compilation).
 
-### Features supported so far
+## Features supported so far
 - New, Build, Run, Test, and Clean actions
 - Specify header-only and binary libraries with a lib.json, supports custom profiles...
 ```json
@@ -50,10 +52,9 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 ```
 - Cross compilation via Clang/Zig
 
-### It just works
-Even without boilerplate generation, slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard C++ standards commitee?
+**Conclusion**: It just works. Even without boilerplate generation via `vango new`, slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard everybody?
 
-## How-to:
+## How To:
 Some examples of invocations are as follows, but for a more complete list see the help action.
 
 - `vango new     [--lib] [--c] <name>`
@@ -118,22 +119,22 @@ A `lib.json` file specifies for prebuilt libraries how they should be correctly 
 
 In addition, libraries may have a `profile` table. Like their `build.json` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
 
-- `include` is a string that declares where the libraries header files are.
+- `include` is a string that declares where the library header files are.
 
 - `libdir` is a string that declares where the library binaries are.
 
-- The `binaries` is a list of the binaries that the library provides. These are specified in name only (no file extension, no 'lib' prefix for .a files).
+- The `binaries` array is a list of the binaries that the library provides. These are specified in name only (no file extension, no 'lib' prefix for .a files).
 
 - The `defines` array lists preprocessor definitions.
 
 - Custom profile definitions require a base of settings to build upon, which is declared with the `inherits` field.
 
-In the case of header only libraries, most of these can be ignored in favour of a globally default `include` field.
+In the case of header only libraries, most of these can be ignored in favour of a globally default `include` field, although one may prefer to simply add the directory to the project include paths. This will however bypass compatibility checking.
 
 ### Automated Testing
-Testing is made easy by assuming all tests are in a `test/` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
+Testing is made easy by assuming all tests are in a `test` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
 ```cpp
-#define TEST_ROOT
+#define VANGO_TEST_ROOT
 #include <vango/asserts.h>
 
 test(basic_math) {
@@ -150,7 +151,7 @@ To forward declare a test, use the `decl_test(test_name)` macro.
 In one file and one file only, the include statement must be preceded by the `VANGO_TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
 In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
 ```cpp
-#define TEST_ROOT
+#define VANGO_TEST_ROOT
 #include <vango/casserts.h>
 
 test(basic_math) {
@@ -162,16 +163,18 @@ test_main(
     test_register(basic_math);
 )
 ```
-Given these prerequisites, tests can be run on a case by case basis by specifying their names on the command line,by specifying their names on the command line, or all at once by not specifying anything.
+Given these prerequisites, tests can be run on a case by case basis by specifying their names on the command line (see `vango help test`), or all at once by not specifying anything.
 
 
 ### Cross-Compilation
-If you're familiar with the Clang/LLVM toolchain, you already know that these tools support cross-compilation out of the box. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
+If you're familiar with the Clang toolchain, you already know that these tools support cross-compilation out of the box via its LLVM backend. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the json `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
 
-As referenced earlier, vango supports the usage of zig as a compilation toolchain (not for the zig language itself unfortunately). This works because zig includes clang as part of its ecosystem, however, the main benefit of using zigs wrappers vs clang, is that zig *does* ship with system libraries for many many platforms. This means that if you have zig on your system, no messing around with `sysroot`s is necessary. In fact, you do not need to so much as touch the target platform until you ship. All that's required is to specify the target triple like so:
+As referenced earlier, vango supports the usage of zig as a C/C++ compiler (not for the zig language itself unfortunately). This works because zig includes clang as part of its ecosystem, however, the main benefit of using zig's wrappers vs plain clang, is that zig *does* ship with system libraries for many many platforms. This means that if you have zig on your system, no messing around with `sysroot`s is necessary. In fact, you do not need to so much as touch the target platform until you ship. All that's required is to specify the (zig style) target triple like so:
 ```json
     "compiler-options": [ "-target", "<machine>-<os>-<abi>" ],
     "linker-options": [ "-target", "<machine>-<os>-<abi>" ],
 ```
 and the correct binary will be generated.
+
+In future, I hope to implement this bundling myself via the package manager (which I have yet to begin working on), as it does seem silly to require 3 different compilers just to build Hello World to an ELF file on windows, but for now this is a relatively simple solution to an unnecessarily overcomplicated problem. For more info, see article [Zig Makes Rust Cross-compilation Just Work](https://actually.fyi/posts/zig-makes-rust-cross-compilation-just-work/).
 

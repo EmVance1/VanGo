@@ -2,7 +2,6 @@ mod error;
 mod exec;
 mod fetch;
 mod input;
-mod repr;
 mod config;
 mod testfw;
 #[macro_use]
@@ -10,7 +9,6 @@ mod log;
 mod action;
 
 use error::Error;
-use repr::*;
 use std::{
     io::Write,
     process::ExitCode,
@@ -40,19 +38,20 @@ fn main() -> ExitCode {
         0.into()
 
     } else {
-        let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.build.json").unwrap() {
-            std::fs::read_to_string("win.build.json").unwrap()
-        } else if cfg!(target_os = "linux") && std::fs::exists("lnx.build.json").unwrap() {
-            std::fs::read_to_string("lnx.build.json").unwrap()
-        } else if cfg!(target_os = "macos") && std::fs::exists("mac.build.json").unwrap() {
-            std::fs::read_to_string("mac.build.json").unwrap()
+        let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.vango.toml").unwrap() {
+            std::fs::read_to_string("win.vango.toml").unwrap()
+        } else if cfg!(target_os = "linux") && std::fs::exists("lnx.vango.toml").unwrap() {
+            std::fs::read_to_string("lnx.vango.toml").unwrap()
+        } else if cfg!(target_os = "macos") && std::fs::exists("mac.vango.json").unwrap() {
+            std::fs::read_to_string("mac.vango.toml").unwrap()
         } else {
-            std::fs::read_to_string("build.json")
+            std::fs::read_to_string("vango.toml")
                 .map_err(|_| Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().into()))
                 .unwrap_or_else(|e| exit_failure!("{}", e))
         };
-        let build = BuildFile::from_str(&bfile)
-            .unwrap_or_else(|e| exit_failure!("{}", e));
+        let build = config::VangoFile::from_str(&bfile)
+            .unwrap_or_else(|e| exit_failure!("{}", e))
+            .unwrap_build();
 
         match cmd {
             input::Action::Build{ switches } => {

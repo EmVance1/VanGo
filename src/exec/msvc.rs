@@ -149,7 +149,7 @@ fn print_command(cmd: &std::process::Command) {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use crate::repr::{ToolChain, Profile, Lang};
+    use crate::config::{ToolChain, Profile, Lang};
     use super::*;
 
     #[test]

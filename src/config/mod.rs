@@ -1,28 +1,54 @@
 #![allow(dead_code)]
 mod build;
 mod lib;
+mod settings;
 
-// pub use build::*;
-// pub use lib::*;
+pub use build::*;
+pub use lib::*;
+pub use settings::*;
 use crate::error::Error;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VangoFile {
-    Build(build::BuildFile),
-    Lib(lib::LibFile),
+    Build(BuildFile),
+    Lib(LibFile),
 }
 
 impl VangoFile {
     pub fn from_str(value: &str) -> Result<VangoFile, Error> {
         let table: toml::Table = toml::from_str(value)?;
         if table.contains_key("build") {
-            Ok(VangoFile::Build(build::BuildFile::from_table(table)?))
+            Ok(VangoFile::Build(BuildFile::from_table(table)?))
         } else if table.contains_key("library") {
-            Ok(VangoFile::Lib(lib::LibFile::from_table(table)?))
+            Ok(VangoFile::Lib(LibFile::from_table(table)?))
         } else {
             Err(Error::Unknown)
         }
+    }
+
+    pub fn get_build(self) -> Option<BuildFile> {
+        if let Self::Build(b) = self {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_lib(self) -> Option<LibFile> {
+        if let Self::Lib(l) = self {
+            Some(l)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_build(self) -> BuildFile {
+        self.get_build().unwrap()
+    }
+
+    pub fn unwrap_lib(self) -> LibFile {
+        self.get_lib().unwrap()
     }
 }
 
@@ -30,8 +56,7 @@ impl VangoFile {
 
 #[cfg(test)]
 mod tests {
-    use super::{VangoFile, build::*, lib::*};
-    use crate::repr::Lang;
+    use super::{VangoFile, build::*, lib::*, Lang};
     use std::{collections::HashMap, str::FromStr};
 
     #[test]

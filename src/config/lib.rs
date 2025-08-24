@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use crate::{error::Error, repr::{self, Lang}};
-use super::build::BuildFile;
+use crate::error::Error;
+use super::{build::BuildFile, Profile, Lang};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,11 +44,11 @@ impl LibFile {
         })
     }
 
-    pub fn take(&mut self, profile: &repr::Profile) -> Result<LibProfile, Error> {
+    pub fn take(&mut self, profile: &Profile) -> Result<LibProfile, Error> {
         match profile {
-            repr::Profile::Debug => self.profile.remove("debug"),
-            repr::Profile::Release => self.profile.remove("release"),
-            repr::Profile::Custom(s) => self.profile.remove(s),
+            Profile::Debug => self.profile.remove("debug"),
+            Profile::Release => self.profile.remove("release"),
+            Profile::Custom(s) => self.profile.remove(s),
         }.ok_or(Error::ProfileUnavailable(self.library.package.clone(), profile.to_string()))
     }
 

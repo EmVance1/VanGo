@@ -1,4 +1,4 @@
-use crate::{error::Error, repr::{Profile, ToolChain}};
+use crate::{error::Error, config::{Profile, ToolChain}};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]

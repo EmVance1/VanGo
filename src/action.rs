@@ -2,7 +2,7 @@ use std::{io::Write, path::PathBuf};
 use crate::{
     error::Error,
     exec::{self, BuildInfo},
-    input::BuildSwitches, repr::*,
+    input::BuildSwitches, config::*,
     fetch,
 };
 
@@ -28,20 +28,20 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
         } else {
             "#pragma once\n\nint func(int a, int b);\n"
         })?;
-        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"include\": [ \"src\", \"include/{name}\" ],\n    \"include-pub\": \"include\"\n    \"dependencies\": [],\n}}");
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\ninclude = [ \"src\", \"include/{name}\" ]\ninclude-pub = \"include\"\n\n[dependencies]\n");
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc\n-Iinclude/{name}",
             if !is_c { "-xc++\n" } else { "" });
         std::fs::write(format!("src/lib.{ext}"), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n")?;
-        std::fs::write("build.json", json)?;
+        std::fs::write("vango.toml", toml)?;
         std::fs::write("compile_flags.txt", flags)?;
     } else {
-        let json = format!("{{\n    \"project\": \"{name}\",\n    \"lang\": \"{lang}\",\n    \"dependencies\": []\n}}");
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\n\n[dependencies]\n");
         let flags = format!(
             "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc",
             if !is_c { "-xc++\n" } else { "" });
         std::fs::write(format!("src/main.{ext}"), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"))?;
-        std::fs::write("build.json", json)?;
+        std::fs::write("vango.toml", toml)?;
         std::fs::write("compile_flags.txt", flags)?;
     }
     log_info!("successfully created project '{name}'");
@@ -55,10 +55,10 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
     for incdir in profile.include.iter().chain(Some(&profile.src)) {
         headers.extend(fetch::source_files(incdir, ".h").unwrap());
     }
-    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
-    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
     deps.defines.extend(profile.defines);
     if test { deps.defines.push("VANGO_TEST".to_string()); }
     deps.incdirs.extend(profile.include);
@@ -66,16 +66,16 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
     let rebuilt_dep = deps.rebuilt;
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let outfile = if projkind == ProjKind::App {
-        outdir.join(build.project).with_extension(switches.toolchain.app_ext())
+        outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
     } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.build.package)).with_extension(switches.toolchain.lib_ext())
     };
 
     let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
         profile:   switches.profile,
-        lang:      build.lang,
+        lang:      build.build.lang,
         crtstatic: switches.crtstatic,
 
         defines:  deps.defines,
@@ -103,7 +103,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
 
 
 pub fn clean(build: BuildFile) -> Result<(), Error> {
-    log_info!("cleaning build files for \"{}\"", build.project);
+    log_info!("cleaning build files for \"{}\"", build.build.package);
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
     Ok(())
@@ -194,14 +194,14 @@ pub fn help(action: Option<String>) {
 #[allow(unused)]
 fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
     let profile = build.take(&switches.profile)?;
-    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
     let mut headers = fetch::source_files(&profile.src, ".h").unwrap();
     for incdir in profile.include.iter().chain(Some(&profile.include_pub)) {
         headers.extend(fetch::source_files(incdir, ".h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
-    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
     deps.defines.extend(profile.defines);
     if test { deps.defines.push("VANGO_TEST".to_string()); }
     deps.incdirs.extend(profile.include);
@@ -209,16 +209,16 @@ fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> 
     let rebuilt_dep = deps.rebuilt;
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let outfile = if projkind == ProjKind::App {
-        outdir.join(build.project).with_extension(switches.toolchain.app_ext())
+        outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
     } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.project)).with_extension(switches.toolchain.lib_ext())
+        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.build.package)).with_extension(switches.toolchain.lib_ext())
     };
 
     let info = BuildInfo{
         projkind,
         toolchain: switches.toolchain,
         profile:   switches.profile,
-        lang:      build.lang,
+        lang:      build.build.lang,
         crtstatic: switches.crtstatic,
 
         defines:  deps.defines,

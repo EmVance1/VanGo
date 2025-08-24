@@ -7,7 +7,7 @@ use std::{ io::Write, num::NonZero, path::{ Path, PathBuf }, process::Command };
 use incremental::BuildLevel;
 use crate::{
     error::Error,
-    repr::{ProjKind, ToolChain, Profile, Lang},
+    config::{ProjKind, ToolChain, Profile, Lang},
     log_error, log_info,
 };
 

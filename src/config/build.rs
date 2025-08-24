@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use crate::{error::Error, repr::{Lang, Profile}};
+use crate::error::Error;
+use super::{Lang, Profile};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]

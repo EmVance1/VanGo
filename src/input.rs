@@ -133,7 +133,11 @@ impl<T> RemoveIf for Vec<T> {
 
 fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
     if let Some(tc) = toolchain {
-        let tc = tc.strip_prefix("-t=").unwrap();
+        let tc = if let Some(tc) = tc.strip_prefix("-t=") {
+            tc.to_ascii_lowercase()
+        } else {
+            tc.strip_prefix("--toolchain=").unwrap().to_ascii_lowercase()
+        };
         if tc == "msvc" {
             if cfg!(target_os = "windows") {
                 Ok(ToolChain::Msvc)

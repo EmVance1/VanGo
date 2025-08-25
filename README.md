@@ -2,57 +2,38 @@
 
 ## Motivation
 
-This app is a build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Use JSON to define a minimal build script, for example:
-```json
-{
-    "project": "example",
-    "lang": "C++20",
-    "dependencies": []
-}
-```
-The above configuration is already the minimum requirement. `./src` is assumed as the main source file directory (what the hell else are you putting there?) and added to the include path. `./bin` holds any incremental build files (usually object files).
+This app is a build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Vango uses project file structure as a component of its project configuration, minimizing the need for a build script. `./src` is assumed as the main source file directory and added to the include path. `./bin` holds any incremental build files (usually object files). `./test` is for source files that contain tests. All manual configuration is done via the `Vango.toml` manifest file in the project root.
 
 The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see chapter on [cross-compilation](#Cross-Compilation).
 
-## Features supported so far
-- New, Build, Run, Test, and Clean actions
-- Specify header-only and binary libraries with a lib.json, supports custom profiles...
-```json
-{
-    "library": "SFML",
-    "lang" : "C++11",
-    "include": "include",
-    "profile": {
-        ...
-    }
-},
+## Features Available So Far
+- Subcommands for creating, building, running, testing, and cleaning C/C++ projects
+- File change detection and incremental rebuilds
+- Source, static, and header-only  dependency automation
+- Configure static libraries with a library-type toml file
+```toml
+[library]
+package = "SFML",
+version = "3.0.1"
+lang = "C++17"
+include = "include"
+...
 ```
-- ...and plug and play at will in main project. Libraries can be placed in `./lib` or specified otherwise
-```json
-"dependencies": [ "SFML", "../SFUtils" ],
+- Cross-platform precompiled headers
+```toml
+pch = "pch.h"
 ```
-- Incremental building based on recent file changes
-- Source code dependencies are automatically built recursively in the case of updates
-- Preprocessor definitions
-```json
-"defines": [ "MACRO" ],
-"defines": [ "VALUE=10" ],
-```
-- Precompiling a header was never easier
-```json
-"pch": "pch.h",
-```
-- Modify Debug and Release configurations, or add your own
-```json
-"profile": {
-    "debug": { ... },
-    "release": { ... },
-    "minsizerel": { "inherits": "release", ... }
-}
+- Complete per-profile freedom of configuration
+```toml
+[profile.debug]
+defines = [ "MACRO", "VALUE=10" ],
+
+[profile.myprofile]
+include = [ "src", "../some/other/headers" ],
 ```
 - Cross compilation via Clang/Zig
 
-**Conclusion**: It just works. Even without boilerplate generation via `vango new`, slap a `build.json` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard everybody?
+**Conclusion**: It just works. Even without boilerplate generation via `vango new`, slap a `Vango.toml` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard everybody?
 
 ## How To:
 Some examples of invocations are as follows, but for a more complete list see the help action.
@@ -64,60 +45,66 @@ Some examples of invocations are as follows, but for a more complete list see th
 - `vango help    [action]`
 
 VanGo is opinionated for simplicity and makes some base assumptions and decisions:
-- You have a valid build script in the project root (`build.json`)
-- All of your source files are in the `src` directory, and all output files are generated in in `bin/{profile}/`.
+- You have a valid `Vango.toml` in the project root.
+- All of your source files are in the `src` directory, and all output files are generated in `bin/{profile}/`.
 - Your output binary is named the same as your project.
-- To build as a library, you have a `lib.h` somewhere in your project.
 - All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
 
-### build.json
-All `build.json` files are expected to have 3 base declarations at the root:
-```json
-{
-    "project": "foobar"
-    "lang": "C++XX",
-    "dependencies": [ ... ],
-    ...
-}
+A correct `Vango.toml` may begin with one of 2 sections - `[build]` and `[library]`.
+
+### Build Configuration
+All manifests that begin with `[build]` are expected to have 3 base declarations at the root:
+```toml
+[build]
+package = "foobar"
+version = "x.y.z"
+lang = "C++XX"
 ```
-- `project` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
+- `package` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
+
+- `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for future use cases.
 
 - `lang` takes any valid C or C++ standard, case insensitive.
 
-- `dependencies` is the main workhorse of the build system. It takes 0 or more strings representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency must have a definition in its root directory. This may either be a `build.json` for source, or a `lib.json` for binary or header only libraries. Source libraries will be automatically built recursively by any project that includes them.
+- **dependencies**: The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
+```toml
+[dependencies]
+MyLib     = { path="../MyLib" } # source, local, contains build toml-config
+SFML      = { path="../SFML" }  # binary, local, contains static lib toml-config
+SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains build toml-config
+stb_image = { headers="lib/stb_image" } # headers, local, contains no config
+```
+    Support for git dependencies is currently very basic. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
 
-    There is currently basic support for git dependencies by specifying the full URL. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.).
+    As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build recipes, but this is a ways away for now.
 
-    As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build scripts, but this is a ways away for now.
+- **profile**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[build]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.
 
-- **Profiles**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile` object. All of the following options (except `inherits`) can be defined globally (same level as `project`) as a default, or inside a subobject of `profile`.
-
-- Preprocessor definitions can be loaded through the optional `defines` array. By default, this array will contain `VANGO_DEBUG` or `VANGO_RELEASE` definitions, aswell as `VANGO_TEST` for test builds.
+- Preprocessor definitions can be extended through the `defines` array. By default, this array will contain `VANGO_DEBUG` or `VANGO_RELEASE` definitions, aswell as `VANGO_TEST` for test builds.
 
 - If you want to precompile a header, just specify the header file relative to `src/` that you want precompiled as shown above (All source files will be assumed to use it).
 
-- Source directory and (project) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or appended to through the `src` and `include` options.
+- Source directory and (internal) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or extended through the `src` and `include` options respectively.
 
 - If the project you are defining is going to be a library, you may want to add an `include-pub` field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
 
 - For finer control, the option is provided to pass compiler and linker flags directly, using the `compiler-options` and `linker-options` array fields. These are prepended to the arguments generated by vango. In the near future, this system is being phased out in favour of a toolchain agnostic variant.
 
-- For a given project, you can make a platform specific build definition by naming the file 'win.build.json', 'lnx.build.json', or 'mac.build.json'. The same applies to the lib definitions in the following chapter.
+- For a given project, you can make a platform specific build definition by naming the file 'win.vango.toml', 'lnx.vango.toml', or 'mac.vango.toml'. The same applies to the lib definitions in the following chapter.
 
 - Custom profile definitions require a base of settings to build upon, which is declared with the `inherits` field.
 
-### lib.json
-A `lib.json` file specifies for prebuilt libraries how they should be correctly linked. It must contain:
-```json
-{
-    "library": "foobar",
-    "lang": "C++XX",
-    ...
-}
+### Static Library Configuration
+Manifests that begin with `[library]` are specialized for static library linking and are expected to have 3 base declarations at the root:
+```toml
+[library]
+package = "foobar"
+version = "x.y.z"
+lang = "C++XX"
 ```
 `lang` in this case declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. that header files use 'clean' C).
 
-In addition, libraries may have a `profile` table. Like their `build.json` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
+In addition, libraries may have `profile.*` sections. Like their `[build]` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
 
 - `include` is a string that declares where the library header files are.
 
@@ -128,8 +115,6 @@ In addition, libraries may have a `profile` table. Like their `build.json` count
 - The `defines` array lists preprocessor definitions.
 
 - Custom profile definitions require a base of settings to build upon, which is declared with the `inherits` field.
-
-In the case of header only libraries, most of these can be ignored in favour of a globally default `include` field, although one may prefer to simply add the directory to the project include paths. This will however bypass compatibility checking.
 
 ### Automated Testing
 Testing is made easy by assuming all tests are in a `test` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
@@ -167,20 +152,23 @@ Given these prerequisites, tests can be run on a case by case basis by specifyin
 
 
 ### Cross-Compilation
-If you're familiar with the Clang toolchain, you already know that these tools support cross-compilation out of the box via its LLVM backend. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the json `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
+If you're familiar with the Clang toolchain, you already know that these tools support cross-compilation out of the box via its LLVM backend. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the toml `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
 
 As referenced earlier, vango supports the usage of zig as a C/C++ compiler (not for the zig language itself unfortunately). This works because zig includes clang as part of its ecosystem, however, the main benefit of using zig's wrappers vs plain clang, is that zig *does* ship with system libraries for many many platforms. This means that if you have zig on your system, no messing around with `sysroot`s is necessary. In fact, you do not need to so much as touch the target platform until you ship. All that's required is to specify the (zig style) target triple like so:
-```json
-    "compiler-options": [ "-target", "<machine>-<os>-<abi>" ],
-    "linker-options": [ "-target", "<machine>-<os>-<abi>" ],
+```toml
+compiler-options = [ "-target", "<machine>-<os>-<abi>" ]
+linker-options = [ "-target", "<machine>-<os>-<abi>" ]
 ```
 and the correct binary will be generated.
 
 In future, I hope to implement this bundling myself via the package manager (which I have yet to begin working on), as it does seem silly to require 3 different compilers just to build Hello World to an ELF file on windows, but for now this is a relatively simple solution to an unnecessarily overcomplicated problem. For more info, see article [Zig Makes Rust Cross-compilation Just Work](https://actually.fyi/posts/zig-makes-rust-cross-compilation-just-work/).
 
 ## Planned Features
+### Feature Flags
+Conditional compilation based on requested features
+
 ### Platform Agnostic TOML Manifest
-Migration from JSON to TOML, fully agnostic compiler and linker options for improved cross-platform and cross-compilation functionality
+Fully platform agnostic compiler and linker options for improved cross-platform and cross-compilation functionality
 
 ### Smart Sem-Ver
 Improved integration with Git tags to enable versioned dependencies, lockfiles

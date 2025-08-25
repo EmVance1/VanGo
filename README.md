@@ -26,10 +26,10 @@ pch = "pch.h"
 - Complete per-profile freedom of configuration
 ```toml
 [profile.debug]
-defines = [ "MACRO", "VALUE=10" ],
+defines = [ "MACRO", "VALUE=10" ]
 
 [profile.myprofile]
-include = [ "src", "../some/other/headers" ],
+include = [ "src", "../some/other/headers" ]
 ```
 - Cross compilation via Clang/Zig
 
@@ -74,9 +74,9 @@ SFML      = { path="../SFML" }  # binary, local, contains static lib toml-config
 SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains build toml-config
 stb_image = { headers="lib/stb_image" } # headers, local, contains no config
 ```
-    Support for git dependencies is currently very basic. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
+Support for git dependencies is currently very basic. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
 
-    As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build recipes, but this is a ways away for now.
+As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build recipes, but this is a ways away for now.
 
 - **profile**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[build]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.
 

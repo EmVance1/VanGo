@@ -49,13 +49,26 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                 let stem = url.file_stem().unwrap().to_string_lossy();
                 let dir = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&dir).unwrap() {
+                    let version: Vec<PathBuf> = if let Some(tag) = tag {
+                        vec![ "--branch".into(), tag.into(), "--depth".into(), "1".into() ]
+                    } else {
+                        vec![]
+                    };
                     log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
                     std::process::Command::new("git")
                         .arg("clone")
+                        .args(version)
                         .arg(format!("{}", url.to_string_lossy()))
                         .arg(&dir)
                         .output()
                         .unwrap();
+                    if let Some(recipe) = recipe {
+                        log_info!("building project dependency according to '{}'", recipe.display());
+                        std::process::Command::new(PathBuf::from(".").join(recipe))
+                            .current_dir(&dir)
+                            .output()
+                            .unwrap();
+                    }
                 }
                 dir
             }

@@ -16,8 +16,6 @@ pub enum Error {
     DirectoryNotFound(PathBuf),
     #[error("directory '{0}' does not contain a build script")]
     MissingBuildScript(PathBuf),
-    #[error("json error: {0}")]
-    JsonParse(#[from] serde_json::Error),
     #[error("toml error: {0}")]
     TomlParse(#[from] toml::de::Error),
     #[error("'{0}' is not a valid C/C++ standard")]

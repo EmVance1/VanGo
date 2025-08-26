@@ -97,7 +97,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
     let pch_use = if let Some(pch) = &info.pch {
         let inpch = info.srcdir.join(pch);
-        let incpp = info.outdir.join("pch/pch_impl.cpp");
+        let incpp = info.outdir.join(format!("pch/pch_impl{}", info.lang.src_ext()));
         let outfile = if info.toolchain.is_msvc() {
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.to_string_lossy()));
             info.outdir.join("obj").join(pch).with_extension("obj")

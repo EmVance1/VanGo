@@ -40,6 +40,7 @@ impl BuildFile {
                 package: file.build.package,
                 version: file.build.version,
                 lang: Lang::from_str(&file.build.lang)?,
+                binding: file.build.binding.and_then(|b| Some(Lang::from_str(&b).unwrap())),
             },
             dependencies: file.dependencies,
             profile,
@@ -61,6 +62,7 @@ pub struct Build {
     pub package: String,
     pub version: String,
     pub lang: Lang,
+    pub binding: Option<Lang>,
 }
 
 
@@ -178,6 +180,7 @@ struct SerdeBuild {
     package: String,
     version: String,
     lang: String,
+    binding: Option<String>,
 
     #[serde(flatten)]
     defaults: SerdeBuildProfile,

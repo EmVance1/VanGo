@@ -106,6 +106,7 @@ include = [ "dbg_headers" ]
                 package: "Shimmy".to_string(),
                 version: "0.1.0".to_string(),
                 lang: Lang::from_str("C++20").unwrap(),
+                binding: None,
             },
             dependencies,
             profile,

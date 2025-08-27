@@ -51,9 +51,9 @@ pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
 
 pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
-    let mut headers = fetch::source_files(&profile.include_pub, ".h").unwrap();
+    let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     for incdir in profile.include.iter().chain(Some(&profile.src)) {
-        headers.extend(fetch::source_files(incdir, ".h").unwrap());
+        headers.extend(fetch::source_files(incdir, "h").unwrap());
     }
     let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
@@ -195,9 +195,9 @@ pub fn help(action: Option<String>) {
 fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
     let profile = build.take(&switches.profile)?;
     let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
-    let mut headers = fetch::source_files(&profile.src, ".h").unwrap();
+    let mut headers = fetch::source_files(&profile.src, "h").unwrap();
     for incdir in profile.include.iter().chain(Some(&profile.include_pub)) {
-        headers.extend(fetch::source_files(incdir, ".h").unwrap());
+        headers.extend(fetch::source_files(incdir, "h").unwrap());
     }
     let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 

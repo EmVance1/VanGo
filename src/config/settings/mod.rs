@@ -224,8 +224,8 @@ impl Lang {
 
     pub fn src_ext(&self) -> &'static str {
         match self {
-            Self::Cpp(..) => ".cpp",
-            Self::C(..)   => ".c",
+            Self::Cpp(..) => "cpp",
+            Self::C(..)   => "c",
         }
     }
 

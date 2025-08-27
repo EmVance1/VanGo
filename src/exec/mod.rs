@@ -97,7 +97,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
     let pch_use = if let Some(pch) = &info.pch {
         let inpch = info.srcdir.join(pch);
-        let incpp = info.outdir.join(format!("pch/pch_impl{}", info.lang.src_ext()));
+        let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext()));
         let outfile = if info.toolchain.is_msvc() {
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.to_string_lossy()));
             info.outdir.join("obj").join(pch).with_extension("obj")
@@ -189,14 +189,14 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
     log_info!("linking:   {}", info.outfile.display());
     if info.toolchain.is_msvc() {
-        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".obj")?;
+        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         if info.projkind == ProjKind::App {
             msvc::link_exe(all_objs, info, echo, verbose)
         } else {
             msvc::link_lib(all_objs, info, echo, verbose)
         }
     } else {
-        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), ".o")?;
+        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
         if info.projkind == ProjKind::App {
             posix::link_exe(all_objs, info, echo, verbose)
         } else {

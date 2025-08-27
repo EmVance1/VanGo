@@ -31,7 +31,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     let mut partial = inherited(&build, &profile, &switches, build.build.lang);
     partial.defines.push("VANGO_TEST".to_string());
     partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
-    let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), ".h")?;
+    let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), "h")?;
     headers.push(inc.join("testframework/vangotest/asserts.h"));
     headers.push(inc.join("testframework/vangotest/casserts.h"));
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());

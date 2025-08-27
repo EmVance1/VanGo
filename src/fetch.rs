@@ -10,8 +10,7 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
         if e.path().is_dir() {
             res.extend(source_files(&e.path(), ext)?);
         } else if e.path().is_file() {
-            let filename = e.path().file_name().unwrap().to_string_lossy().to_string();
-            if filename.ends_with(ext) {
+            if e.path().extension().unwrap() == ext {
                 res.push(e.path());
             }
         }

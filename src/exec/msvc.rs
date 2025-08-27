@@ -82,7 +82,7 @@ pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
         eprintln!();
         Err(Error::ArchiverFail(info.outfile))
     } else {
-        log_info!("successfully built project {}\n", info.outfile.display());
+        log_info!("successfully built project {}", info.outfile.display());
         Ok(true)
     }
 }
@@ -115,7 +115,7 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
         eprintln!();
         Err(Error::LinkerFail(info.outfile))
     } else {
-        log_info!("successfully built project {}\n", info.outfile.display());
+        log_info!("successfully built project {}", info.outfile.display());
         Ok(true)
     }
 }

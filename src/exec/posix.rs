@@ -30,12 +30,6 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
         _ => (),
     }
 
-    if info.crtstatic {
-        cmd.arg(args.crt_static(info.profile));
-    } else {
-        cmd.args(args.crt_dynamic(info.profile));
-    }
-
     if info.profile.is_release() {
         cmd.args(args.opt_profile_high());
     } else {
@@ -81,7 +75,7 @@ pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
 }
 
 pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
+    let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp() || info.cpprt));
     let args = info.toolchain.args();
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
     cmd.args(info.link_args);
@@ -90,6 +84,12 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
     cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
     cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
+    if info.crtstatic {
+        if info.lang.is_cpp() || info.cpprt {
+            cmd.arg("-static-libstdc++");
+        }
+        cmd.arg("-static-libgcc");
+    }
 
     if echo { print_command(&cmd); }
     if verbose { cmd.arg("--verbose"); }
@@ -238,7 +238,6 @@ mod tests {
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
                 "-Isrc",
-                "-static",
                 "-O2",
             ]
         );

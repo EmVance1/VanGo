@@ -47,6 +47,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         profile:   switches.profile.clone(),
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
+        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
 
         defines: partial.defines,
 

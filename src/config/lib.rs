@@ -78,7 +78,7 @@ impl From<BuildFile> for LibFile {
             library: Library {
                 package,
                 version: value.build.version,
-                lang:    value.build.binding.unwrap_or(value.build.lang),
+                lang:    value.build.interface,
             },
             profile,
         }

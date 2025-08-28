@@ -34,15 +34,17 @@ impl BuildFile {
                 profile.insert(k, BuildProfile::release(&file.build.defaults).merge(p));
             }
         }
+        let lang = Lang::from_str(&file.build.lang)?;
 
         Ok(BuildFile{
             build: Build{
-                package: file.build.package,
-                version: file.build.version,
-                lang: Lang::from_str(&file.build.lang)?,
-                binding: file.build.binding.and_then(|b| Some(Lang::from_str(&b).unwrap())),
+                package:   file.build.package,
+                version:   file.build.version,
+                lang,
+                interface: file.build.interface.map(|i| Lang::from_str(&i).unwrap()).unwrap_or(lang),
+                runtime:   file.build.runtime,
             },
-            dependencies: file.dependencies,
+            dependencies:  file.dependencies,
             profile,
         })
     }
@@ -62,7 +64,8 @@ pub struct Build {
     pub package: String,
     pub version: String,
     pub lang: Lang,
-    pub binding: Option<Lang>,
+    pub interface: Lang,
+    pub runtime: Option<String>,
 }
 
 
@@ -180,7 +183,9 @@ struct SerdeBuild {
     package: String,
     version: String,
     lang: String,
-    binding: Option<String>,
+    #[serde(alias = "binding")]
+    interface: Option<String>,
+    runtime: Option<String>,
 
     #[serde(flatten)]
     defaults: SerdeBuildProfile,

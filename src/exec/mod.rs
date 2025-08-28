@@ -19,6 +19,7 @@ pub struct BuildInfo {
     pub profile: Profile,
     pub lang: Lang,
     pub crtstatic: bool,
+    pub cpprt: bool,
 
     pub defines:  Vec<String>,
 
@@ -43,12 +44,12 @@ impl BuildInfo {
     fn compile_info<'a, 'b>(&'a self, pch: &'b PreCompHead) -> CompileInfo<'a, 'b> {
         CompileInfo {
             toolchain: self.toolchain,
-            profile: &self.profile,
-            lang: self.lang,
+            profile:  &self.profile,
+            lang:      self.lang,
             crtstatic: self.crtstatic,
-            outdir: &self.outdir,
-            defines: &self.defines,
-            incdirs: &self.incdirs,
+            outdir:   &self.outdir,
+            defines:  &self.defines,
+            incdirs:  &self.incdirs,
             pch,
             comp_args: &self.comp_args,
         }

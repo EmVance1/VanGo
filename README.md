@@ -62,7 +62,7 @@ package = "foobar"
 version = "x.y.z"
 lang = "C++XX"
 # optional
-binding = "CXX"
+interface = [ "CXX" ]
 ```
 - `package` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
 
@@ -70,7 +70,7 @@ binding = "CXX"
 
 - `lang` takes any valid C or C++ standard, case insensitive.
 
-- `binding`: in the case where you are implementing a library in C++, but you (additionally) provide a C interface, this field is necessary to please compatibility checking, as by default a project with `lang=C++XX` is flagged as incompatible with C. `binding` uses the same format as `lang`.
+- `interface`: at times you may want to implement a library using one standard, but provide interfaces for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` array, which lists all standards your headers are compatible with. Elements of `interface` use the same format as `lang`.
 
 - **dependencies**: The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
 ```toml

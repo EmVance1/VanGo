@@ -105,8 +105,9 @@ include = [ "dbg_headers" ]
             build: Build{
                 package: "Shimmy".to_string(),
                 version: "0.1.0".to_string(),
-                lang: Lang::from_str("C++20").unwrap(),
-                binding: None,
+                lang: Lang::Cpp(120),
+                interface: Lang::Cpp(120),
+                runtime: None,
             },
             dependencies,
             profile,

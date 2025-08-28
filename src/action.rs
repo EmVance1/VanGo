@@ -77,6 +77,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
         profile:   switches.profile,
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
+        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
 
         defines:  deps.defines,
 
@@ -220,6 +221,7 @@ fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> 
         profile:   switches.profile,
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
+        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
 
         defines:  deps.defines,
 

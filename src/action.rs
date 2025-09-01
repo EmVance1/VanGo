@@ -101,6 +101,11 @@ pub fn help(action: Option<String>) {
                 println!();
                 println!("Usage: vango clean");
             }
+            "clangd" => {
+                println!("Generate 'compile_flags.txt corresponding to the current project (language standard, include dirs, definitions");
+                println!();
+                println!("Usage: vango clangd");
+            }
             "build" => {
                 println!("Build the current project");
                 println!();
@@ -137,6 +142,7 @@ pub fn help(action: Option<String>) {
         println!("    build, b    Build the current project");
         println!("    run,   r    Build the current project and run it");
         println!("    test,  t    Build the current project and test it");
+        println!("    clangd      Generate 'compile_flags.txt for the current project");
     }
     println!();
 }

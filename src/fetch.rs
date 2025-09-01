@@ -98,16 +98,8 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                     log_info!("building project dependency: {:-<54}", format!("{} ", build.build.package));
                     let save = std::env::current_dir().unwrap();
                     std::env::set_current_dir(&path).unwrap();
-                    let output = std::process::Command::new("vango")
-                        .arg("build")
-                        .arg(switches.profile.as_arg())
-                        .arg(switches.toolchain.as_arg())
-                        .args(if switches.crtstatic { Some("--crtstatic") } else { None })
-                        .args(if switches.verbose { Some("-v") } else { None })
-                        .args(if switches.echo { Some("--echo") } else { None })
-                        .status()
-                        .unwrap();
-                    if output.code() == Some(8) {
+                    let (_rebuilt, _) = crate::action::build(build.clone(), switches.clone(), false).unwrap();
+                    if _rebuilt {
                         rebuilt = true;
                     } else {
                         println!();

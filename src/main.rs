@@ -27,15 +27,12 @@ fn main() -> ExitCode {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let cmd = input::parse_input(args).unwrap_or_else(|e| exit_failure!("{}", e));
 
-    if let input::Action::New { library, is_c, name } = &cmd {
-        action::new(*library, *is_c, name).unwrap_or_else(|e| exit_failure!("{}", e));
-        0.into()
-    } else if let input::Action::Init{ library, is_c } = &cmd {
-        action::init(*library, *is_c).unwrap_or_else(|e| exit_failure!("{}", e));
-        0.into()
-    } else if let input::Action::Help{ action } = &cmd {
+    if let input::Action::Help{ action } = &cmd {
         action::help(action.clone());
-        0.into()
+    } else if let input::Action::New { library, is_c, clangd, name } = &cmd {
+        action::new(*library, *is_c, *clangd, name).unwrap_or_else(|e| exit_failure!("{}", e));
+    } else if let input::Action::Init{ library, is_c, clangd } = &cmd {
+        action::init(*library, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
 
     } else {
         let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.vango.toml").unwrap() {
@@ -56,23 +53,25 @@ fn main() -> ExitCode {
         match cmd {
             input::Action::Build{ switches } => {
                 let (_rebuilt, _outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                0.into()
             }
             input::Action::Run{ switches, args } => {
                 let (_rebuilt, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
+                return exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
                 let (_rebuilt, _outfile) = action::build(build.clone(), switches.clone(), true).unwrap_or_else(|e| exit_failure!("{}", e));
                 testfw::test_lib(build, switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
-                0.into()
             }
             input::Action::Clean => {
                 action::clean(build).unwrap_or_else(|e| exit_failure!("{}", e));
-                0.into()
             }
-            _ => 0.into()
+            input::Action::Gen{ target: _ } => {
+                action::generate(build).unwrap_or_else(|e| exit_failure!("{}", e));
+            }
+            _ => {}
         }
     }
+
+    0.into()
 }
 

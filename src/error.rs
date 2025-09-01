@@ -6,6 +6,8 @@ use std::path::PathBuf;
 pub enum Error {
     #[error("action '{0}' is not valid - see 'help' for list of actions")]
     BadAction(String),
+    // #[error("not enough arguments provided to '{0}' action")]
+    // MissingArgs(String),
     #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
     ExtraArgs(String, Vec<String>),
     #[error("toolchain 'MSVC' unavailable on non-windows platforms")]

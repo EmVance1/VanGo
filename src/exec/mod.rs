@@ -151,7 +151,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                     if let Some((_, proc)) = handle.as_mut() {
                         if proc.try_wait().unwrap().is_some() {
                             let (src, proc) = std::mem::take(handle).unwrap();
-                            failure = failure || on_compile_finish(src, proc);
+                            failure = on_compile_finish(src, proc) || failure;
                             count -= 1;
                             *handle = None;
                             slot = Some(i);
@@ -165,7 +165,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 let slot = slot.unwrap_or_else(|| {
                     // ALL SLOTS FULL - BLOCK ON FIRST ONE
                     let (src, proc) = std::mem::take(&mut handles[0]).unwrap();
-                    failure = failure || on_compile_finish(src, proc);
+                    failure = on_compile_finish(src, proc) || failure;
                     count -= 1;
                     0
                 });
@@ -181,7 +181,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
             }
 
             for (src, proc) in handles.into_iter().flatten() {
-                failure = failure || on_compile_finish(src, proc);
+                failure = on_compile_finish(src, proc) || failure;
             }
 
             if failure { return Err(Error::CompilerFail(info.outfile)); }
@@ -221,50 +221,4 @@ pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
             .unwrap() as u8)
     }
 }
-
-
-#[allow(unused)]
-pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
-    Ok(true)
-}
-
-/*
-pub fn run_check_outdated(info: BuildInfo) -> Result<bool, Error> {
-    log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.path.display()));
-    prep::ensure_out_dirs(&info.srcdir, &info.outdir);
-
-    if let Some(pch) = &info.pch {
-        let inpch = format!("{}{}", info.srcdir, pch);
-        let incpp = format!("{}pch/pch_impl.cpp", info.outdir);
-        let outfile = if info.toolchain.is_msvc() {
-            std::fs::write(&incpp, format!("#include \"{pch}\"")).unwrap();
-            format!("{}obj/{}.obj", info.outdir, pch)
-        } else {
-            format!("{}pch/{}.gch", info.outdir, pch)
-        };
-
-        if !std::fs::exists(&outfile).unwrap() ||
-            (std::fs::metadata(&inpch).unwrap().modified().unwrap() > std::fs::metadata(&outfile).unwrap().modified().unwrap())
-        {
-            built_pch = true;
-            log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.path.display()));
-            log_info!("precompiling header: '{inpch}'");
-            let mut cmd = if info.toolchain.is_msvc() {
-                msvc::compile_cmd(&incpp, &outfile, info.compile_info(), PreCompHead::Create(pch), verbose)
-            } else {
-                posix::compile_cmd(&inpch, &outfile, info.compile_info(), verbose)
-            };
-            if on_compile_finish(&inpch, cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
-                return Err(Error::CompilerFail(info.outfile.path));
-            }
-        }
-    }
-
-    if let BuildLevel::UpToDate = incremental::get_build_level(&info) {
-        Ok(false)
-    } else {
-        Ok(true)
-    }
-}
-*/
 

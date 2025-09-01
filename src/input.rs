@@ -3,9 +3,10 @@ use crate::{error::Error, config::{Profile, ToolChain}};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
-    New { library: bool, is_c: bool, name: String },
-    Init{ library: bool, is_c: bool },
+    New { library: bool, is_c: bool, clangd: bool, name: String },
+    Init{ library: bool, is_c: bool, clangd: bool },
     Clean,
+    Gen  { target: String },
     Build{ switches: BuildSwitches },
     Run  { switches: BuildSwitches, args: Vec<String> },
     Test { switches: BuildSwitches, args: Vec<String> },
@@ -31,18 +32,20 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
     match args.remove(0).as_str() {
         "new" => {
             let library = args.remove_if(|s| *s == "--lib").is_some();
-            let is_c = args.remove_if(|s| *s == "--c").is_some();
+            let is_c    = args.remove_if(|s| *s == "--c").is_some();
+            let clangd  = args.remove_if(|s| *s == "--clangd").is_some();
             if args.len() == 1 {
-                Ok(Action::New{ library, is_c, name: args.remove(0) })
+                Ok(Action::New{ library, is_c, clangd, name: args.remove(0) })
             } else {
                 Err(Error::ExtraArgs("new".to_string(), args))
             }
         }
         "init" => {
             let library = args.remove_if(|s| *s == "--lib").is_some();
-            let is_c = args.remove_if(|s| *s == "--c").is_some();
+            let is_c    = args.remove_if(|s| *s == "--c").is_some();
+            let clangd  = args.remove_if(|s| *s == "--clangd").is_some();
             if args.is_empty() {
-                Ok(Action::Init{ library, is_c })
+                Ok(Action::Init{ library, is_c, clangd })
             } else {
                 Err(Error::ExtraArgs("init".to_string(), args))
             }
@@ -97,6 +100,13 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
                 Ok(Action::Clean)
             } else {
                 Err(Error::ExtraArgs("clean".to_string(), args))
+            }
+        }
+        "clangd" => {
+            if args.is_empty() {
+                Ok(Action::Gen{ target: "clangd".to_string() })
+            } else {
+                Err(Error::ExtraArgs("gen".to_string(), args))
             }
         }
         "help" => {
@@ -189,7 +199,7 @@ mod tests {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), name.clone() ];
         let result = parse_input(action);
-        assert_eq!(result.unwrap(), Action::New{ name, library: false, is_c: false });
+        assert_eq!(result.unwrap(), Action::New{ name, library: false, is_c: false, clangd: false });
     }
 
     #[test]
@@ -197,7 +207,7 @@ mod tests {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), name.clone(), "--lib".to_string() ];
         let result = parse_input(action);
-        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false });
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false, clangd: false });
     }
 
     #[test]
@@ -205,7 +215,7 @@ mod tests {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), "--lib".to_string(), name.clone() ];
         let result = parse_input(action);
-        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false });
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false, clangd: false });
     }
 
     #[test]
@@ -213,7 +223,7 @@ mod tests {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), "--lib".to_string(), name.clone(), "--c".to_string() ];
         let result = parse_input(action);
-        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: true });
+        assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: true, clangd: false });
     }
 
 

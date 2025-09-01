@@ -7,48 +7,6 @@ use crate::{
 };
 
 
-pub fn new(library: bool, is_c: bool, name: &str) -> Result<(), Error> {
-    std::fs::create_dir(name)?;
-    std::env::set_current_dir(name)?;
-    init(library, is_c)
-}
-
-
-pub fn init(library: bool, is_c: bool) -> Result<(), Error> {
-    let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
-    let ext =    if is_c { "c" } else { "cpp" };
-    let lang =   if is_c { "c11" } else { "c++17" };
-    let header = if is_c { "stdio.h" } else { "cstdio" };
-    std::fs::create_dir("src")?;
-    if library {
-        std::fs::create_dir_all(format!("include/{name}"))?;
-        std::fs::write(format!("include/{name}/lib.h"), if is_c {
-            "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif"
-        } else {
-            "#pragma once\n\nint func(int a, int b);\n"
-        })?;
-        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\ninclude = [ \"src\", \"include/{name}\" ]\ninclude-pub = \"include\"\n\n[dependencies]\n");
-        let flags = format!(
-            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc\n-Iinclude/{name}",
-            if !is_c { "-xc++\n" } else { "" });
-        std::fs::write(format!("src/lib.{ext}"), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n")?;
-        std::fs::write("vango.toml", toml)?;
-        std::fs::write("compile_flags.txt", flags)?;
-    } else {
-        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\n\n[dependencies]\n");
-        let flags = format!(
-            "-Wall\n-Wextra\n-Wshadow\n-Wconversion\n-Wfloat-equal\n-Wno-unused-const-variable\n-Wno-sign-conversion\n-std={lang}\n{}-DDEBUG\n-Isrc",
-            if !is_c { "-xc++\n" } else { "" });
-        std::fs::write(format!("src/main.{ext}"), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"))?;
-        std::fs::write("vango.toml", toml)?;
-        std::fs::write("compile_flags.txt", flags)?;
-    }
-    log_info!("successfully created project '{name}'");
-    Ok(())
-}
-
-
 pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
@@ -77,7 +35,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
         profile:   switches.profile,
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
-        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
+        cpprt:     build.build.runtime.map(|rt| rt.to_ascii_lowercase() == "c++").unwrap_or_default(),
 
         defines:  deps.defines,
 
@@ -100,14 +58,6 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
         Err(e) => Err(e),
         Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outfile)),
     }
-}
-
-
-pub fn clean(build: BuildFile) -> Result<(), Error> {
-    log_info!("cleaning build files for \"{}\"", build.build.package);
-    let _ = std::fs::remove_dir_all("bin/debug/");
-    let _ = std::fs::remove_dir_all("bin/release/");
-    Ok(())
 }
 
 
@@ -192,55 +142,128 @@ pub fn help(action: Option<String>) {
 }
 
 
-#[allow(unused)]
-fn check_outdated(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<bool, Error> {
-    let profile = build.take(&switches.profile)?;
-    let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
-    let mut headers = fetch::source_files(&profile.src, "h").unwrap();
-    for incdir in profile.include.iter().chain(Some(&profile.include_pub)) {
-        headers.extend(fetch::source_files(incdir, "h").unwrap());
-    }
-    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
+pub fn new(library: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Error> {
+    std::fs::create_dir(name)?;
+    std::env::set_current_dir(name)?;
+    init(library, is_c, clangd)
+}
 
-    let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
-    deps.defines.extend(profile.defines);
-    if test { deps.defines.push("VANGO_TEST".to_string()); }
-    deps.incdirs.extend(profile.include);
 
-    let rebuilt_dep = deps.rebuilt;
-    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let outfile = if projkind == ProjKind::App {
-        outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
+pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
+    let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
+    log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
+    let ext =    if is_c { "c" } else { "cpp" };
+    let lang =   if is_c { "c11" } else { "c++17" };
+    let header = if is_c { "stdio.h" } else { "cstdio" };
+    std::fs::create_dir("src")?;
+    if library {
+        std::fs::create_dir_all(format!("include/{name}"))?;
+        std::fs::write(format!("include/{name}/lib.h"), if is_c {
+            "#ifndef LIB_H\n#define LIB_H\n\nint func(int a, int b);\n\n#endif"
+        } else {
+            "#pragma once\n\nint func(int a, int b);\n"
+        })?;
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\ninclude = [ \"src\", \"include/{name}\" ]\ninclude-pub = \"include\"\n\n[dependencies]\n");
+        std::fs::write(format!("src/lib.{ext}"), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n")?;
+        std::fs::write("Vango.toml", &toml)?;
+        if clangd {
+            let build = VangoFile::from_str(&toml).unwrap();
+            generate(build.unwrap_build())?;
+        }
     } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.build.package)).with_extension(switches.toolchain.lib_ext())
-    };
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\n\n[dependencies]\n");
+        std::fs::write(format!("src/main.{ext}"), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"))?;
+        std::fs::write("Vango.toml", &toml)?;
+        if clangd {
+            let build = VangoFile::from_str(&toml).unwrap();
+            generate(build.unwrap_build())?;
+        }
+    }
+    log_info!("successfully created project '{name}'");
+    Ok(())
+}
 
-    let info = BuildInfo{
-        projkind,
-        toolchain: switches.toolchain,
-        profile:   switches.profile,
-        lang:      build.build.lang,
-        crtstatic: switches.crtstatic,
-        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
 
-        defines:  deps.defines,
+pub fn clean(build: BuildFile) -> Result<(), Error> {
+    log_info!("cleaning build files for \"{}\"", build.build.package);
+    let _ = std::fs::remove_dir_all("bin/debug/");
+    let _ = std::fs::remove_dir_all("bin/release/");
+    Ok(())
+}
 
-        srcdir:   profile.src,
-        incdirs:  deps.incdirs,
-        libdirs:  deps.libdirs,
-        outdir,
 
-        pch:      profile.pch,
-        sources,
-        headers,
-        archives: deps.archives,
-        relink:   deps.relink,
-        outfile:  outfile.clone(),
+pub fn generate(build: BuildFile) -> Result<(), Error> {
+    log_info!("generating 'compile_flags.txt' for \"{}\"", build.build.package);
+    let mut flags = format!(
+"-Wall
+-Wextra
+-Wshadow
+-Wconversion
+-Wfloat-equal
+-Wno-unused-const-variable
+-Wno-sign-conversion
+-std={}
+{}-DVANGO_DEBUG\n",
+        build.build.lang, if build.build.lang.is_cpp() { "-xc++\n" } else { "" });
 
-        comp_args: profile.compiler_options,
-        link_args: profile.linker_options,
-    };
-    let rebuilt = exec::run_check_outdated(info)?;
-    Ok(rebuilt_dep || rebuilt)
+    let mut incdirs = Vec::new();
+    let mut defines = Vec::new();
+
+    for (_name, lib) in build.dependencies {
+        let path = match lib {
+            #[allow(unused)]
+            Dependency::Local { path, features } => {
+                path
+            }
+            #[allow(unused)]
+            Dependency::Git { git, tag, recipe, features } => {
+                continue;
+            }
+            #[allow(unused)]
+            Dependency::Headers { headers, features } => {
+                incdirs.push(headers);
+                continue;
+            }
+        };
+
+        if !std::fs::exists(&path).unwrap() {
+            return Err(Error::DirectoryNotFound(path))
+        }
+
+        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.vango.toml"))? {
+            std::fs::read_to_string(path.join("win.vango.toml")).ok()
+        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.vango.toml"))? {
+            std::fs::read_to_string(path.join("lnx.vango.toml")).ok()
+        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("mac.vango.toml"))? {
+            std::fs::read_to_string(path.join("mac.vango.toml")).ok()
+        } else {
+            std::fs::read_to_string(path.join("vango.toml")).ok()
+        } {
+            match VangoFile::from_str(&build)? {
+                VangoFile::Build(build) => {
+                    let mut libinfo = LibFile::from(build);
+                    let profile = libinfo.take(&Profile::Debug)?;
+                    incdirs.push(path.join(profile.include));
+                    defines.extend(profile.defines);
+                }
+                VangoFile::Lib(mut lib) => {
+                    let profile = lib.take(&Profile::Debug)?;
+                    incdirs.push(path.join(profile.include));
+                    defines.extend(profile.defines);
+                }
+            }
+        } else {
+            return Err(Error::MissingBuildScript(path))
+        }
+    }
+
+    for inc in incdirs {
+        flags.push_str(&format!("-I{}\n", inc.display()));
+    }
+    flags.push_str(&format!("-I{}\n", build.profile.get("debug").unwrap().src.display()));
+
+
+    std::fs::write("compile_flags.txt", flags)?;
+    Ok(())
 }
 

@@ -1,14 +1,15 @@
 mod incremental;
+mod queue;
 mod msvc;
 mod posix;
 mod prep;
 
-use std::{ io::Write, num::NonZero, path::{ Path, PathBuf }, process::Command };
+use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;
 use crate::{
     error::Error,
     config::{ProjKind, ToolChain, Profile, Lang},
-    log_error, log_info,
+    log_error_ln, log_info_ln, log_info
 };
 
 
@@ -79,16 +80,14 @@ enum PreCompHead<'a> {
 }
 
 
-fn on_compile_finish(src: &Path, proc: std::process::Child) -> bool {
-    let output = proc.wait_with_output().unwrap();
+fn on_compile_finish(src: &Path, output: std::process::Output) -> bool {
     if !output.status.success() {
-        log_error!("failed to compile '{}'", src.display());
+        log_error_ln!("failed to compile '{}'", src.display());
         let _ = std::io::stderr().write_all(&output.stderr);
         let _ = std::io::stderr().write_all(&output.stdout);
-        eprintln!();
-        true
+        return false
     } else {
-        false
+        return true
     }
 }
 
@@ -108,15 +107,17 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
         if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
             built_pch = true;
-            log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
-            log_info!("precompiling header: '{}'", inpch.display());
+            log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
+            log_info_ln!("precompiling header: '{}'", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut cmd = if info.toolchain.is_msvc() {
                 msvc::compile_cmd(&incpp, &outfile, info.compile_info(&var), echo, verbose)
             } else {
                 posix::compile_cmd(&inpch, &outfile, info.compile_info(&var), echo, verbose)
             };
-            if on_compile_finish(&inpch, cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
+            let proc = cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
+            let output = proc.wait_with_output().unwrap();
+            if !on_compile_finish(&inpch, output) {
                 return Err(Error::CompilerFail(info.outfile));
             }
         }
@@ -127,7 +128,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
     match incremental::get_build_level(&info) {
         BuildLevel::UpToDate => {
-            log_info!("build up to date for \"{}\"", info.outfile.display());
+            log_info_ln!("build up to date for \"{}\"", info.outfile.display());
             return Ok(false);
         }
         BuildLevel::LinkOnly => {
@@ -135,60 +136,36 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         }
         BuildLevel::CompileAndLink(elems) => {
             if !built_pch {
-                log_info!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
+                log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
             }
             let _ = std::fs::remove_file(&info.outfile);
-            let mut handles: Vec<Option<(&Path, std::process::Child)>> = Vec::new();
-            handles.resize_with(std::thread::available_parallelism().unwrap_or(NonZero::new(4).unwrap()).get(), || None);
+
+            let mut queue = queue::ProcQueue::new();
             let mut failure = false;
-            let mut count = 0;
 
             for (src, obj) in elems {
-                log_info!("compiling: {}", src.to_string_lossy());
-                let mut slot = None;
-                for (i, handle) in handles.iter_mut().enumerate() {
-                    // IF SLOT IS FULL :: AND ::  SLOT IS FINISHED :: THEN :: FLUSH SLOT
-                    if let Some((_, proc)) = handle.as_mut() {
-                        if proc.try_wait().unwrap().is_some() {
-                            let (src, proc) = std::mem::take(handle).unwrap();
-                            failure = on_compile_finish(src, proc) || failure;
-                            count -= 1;
-                            *handle = None;
-                            slot = Some(i);
-                        }
-                    // ELSE SLOT IS FREE
-                    } else {
-                        slot = Some(i);
-                    }
-                }
-
-                let slot = slot.unwrap_or_else(|| {
-                    // ALL SLOTS FULL - BLOCK ON FIRST ONE
-                    let (src, proc) = std::mem::take(&mut handles[0]).unwrap();
-                    failure = on_compile_finish(src, proc) || failure;
-                    count -= 1;
-                    0
-                });
-
-                if info.toolchain.is_msvc() {
-                    handles[slot] = Some((src, msvc::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
+                log_info_ln!("compiling: {}", src.to_string_lossy());
+                let finished = if info.toolchain.is_msvc() {
+                    queue.push((src, msvc::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
+                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish)
                 } else {
-                    handles[slot] = Some((src, posix::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?));
+                    queue.push((src, posix::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
+                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish)
                 };
-                count += 1;
+                if finished.is_err() {
+                    failure = true;
+                }
             }
 
-            for (src, proc) in handles.into_iter().flatten() {
-                failure = on_compile_finish(src, proc) || failure;
+            if queue.flush_all(on_compile_finish).is_err() {
+                failure = true;
             }
 
             if failure { return Err(Error::CompilerFail(info.outfile)); }
         }
     }
 
-    log_info!("linking:   {}", info.outfile.display());
+    log_info_ln!("linking:   {: <30}", info.outfile.display());
     if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         if info.projkind == ProjKind::App {
@@ -207,7 +184,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 }
 
 pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
-    log_info!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
+    log_info_ln!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
     let ext = outfile.extension().unwrap_or_default().to_string_lossy();
     if ext == "a" || ext == "lib" {
         Err(Error::LibNotExe(outfile.to_owned()))

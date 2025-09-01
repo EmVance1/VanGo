@@ -5,7 +5,7 @@ use std::{
     fmt::Display,
     io::Write,
 };
-use crate::{log_warn, Error};
+use crate::{log_warn_ln, Error};
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,9 +32,9 @@ impl Default for ToolChain {
                 "gnu"   => return ToolChain::Gnu,
                 "clang" => return ToolChain::Clang,
                 "zig"   => return ToolChain::Zig,
-                _ => log_warn!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
+                _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             }
-            Err(std::env::VarError::NotUnicode(..)) => log_warn!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
+            Err(std::env::VarError::NotUnicode(..)) => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             _ => ()
         }
         sysdef

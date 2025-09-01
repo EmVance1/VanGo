@@ -1,5 +1,5 @@
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, config::{BuildFile, BuildProfile, Lang}, Error, log_info};
+use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, config::{BuildFile, BuildProfile, Lang}, Error, log_info_ln};
 
 
 struct TestInfo {
@@ -67,7 +67,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         link_args: vec![],
     };
     exec::run_build(info, switches.echo, false)?;
-    log_info!(
+    log_info_ln!(
         "running tests for project {:=<57}",
         format!("\"{}\" ", build.build.package)
     );

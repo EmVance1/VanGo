@@ -20,6 +20,7 @@ pub struct BuildSwitches {
     pub crtstatic: bool,
     pub echo: bool,
     pub verbose: bool,
+    pub is_test: bool,
 }
 
 
@@ -59,7 +60,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose } })
+                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: false } })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -80,7 +81,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose }, args: user_args })
+                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: false }, args: user_args })
             } else {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
@@ -93,7 +94,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
-            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose }, args })
+            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: true }, args })
         }
         "clean" | "c" => {
             if args.is_empty() {

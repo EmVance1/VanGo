@@ -1,5 +1,5 @@
 use std::{ io::Write, path::{Path, PathBuf}, collections::HashMap };
-use crate::{config::{Dependency, Lang, LibFile, VangoFile}, error::Error, input::BuildSwitches, log_info};
+use crate::{config::{Dependency, Lang, LibFile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
 
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -51,7 +51,7 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                     } else {
                         vec![]
                     };
-                    log_info!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
+                    log_info_ln!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
                     std::process::Command::new("git")
                         .arg("clone")
                         .args(version)
@@ -60,7 +60,7 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                         .output()
                         .unwrap();
                     if let Some(recipe) = recipe {
-                        log_info!("building project dependency according to '{}'", recipe.display());
+                        log_info_ln!("building project dependency according to '{}'", recipe.display());
                         std::process::Command::new(PathBuf::from(".").join(recipe))
                             .current_dir(&dir)
                             .output()
@@ -95,10 +95,10 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
         } {
             match VangoFile::from_str(&build)? {
                 VangoFile::Build(build) => {
-                    log_info!("building project dependency: {:-<54}", format!("{} ", build.build.package));
+                    log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.build.package));
                     let save = std::env::current_dir().unwrap();
                     std::env::set_current_dir(&path).unwrap();
-                    let (_rebuilt, _) = crate::action::build(build.clone(), switches.clone(), false).unwrap();
+                    let (_rebuilt, _) = crate::action::build(build.clone(), switches.clone()).unwrap();
                     if _rebuilt {
                         rebuilt = true;
                     } else {

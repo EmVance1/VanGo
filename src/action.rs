@@ -7,7 +7,7 @@ use crate::{
 };
 
 
-pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Result<(bool, PathBuf), Error> {
+pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     for incdir in profile.include.iter().chain(Some(&profile.src)) {
@@ -18,7 +18,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches, test: bool) -> Resul
 
     let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
     deps.defines.extend(profile.defines);
-    if test { deps.defines.push("VANGO_TEST".to_string()); }
+    if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
     deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
@@ -151,7 +151,7 @@ pub fn new(library: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Er
 
 pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    log_info!("creating new {} project: {}", if library { "library" } else { "application" }, name);
+    log_info_ln!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext =    if is_c { "c" } else { "cpp" };
     let lang =   if is_c { "c11" } else { "c++17" };
     let header = if is_c { "stdio.h" } else { "cstdio" };
@@ -179,13 +179,13 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
             generate(build.unwrap_build())?;
         }
     }
-    log_info!("successfully created project '{name}'");
+    log_info_ln!("successfully created project '{name}'");
     Ok(())
 }
 
 
 pub fn clean(build: BuildFile) -> Result<(), Error> {
-    log_info!("cleaning build files for \"{}\"", build.build.package);
+    log_info_ln!("cleaning build files for \"{}\"", build.build.package);
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
     Ok(())
@@ -193,7 +193,7 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
 
 
 pub fn generate(build: BuildFile) -> Result<(), Error> {
-    log_info!("generating 'compile_flags.txt' for \"{}\"", build.build.package);
+    log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.build.package);
     let mut flags = format!(
 "-Wall
 -Wextra

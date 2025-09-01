@@ -17,7 +17,7 @@ use std::{
 
 macro_rules! exit_failure {
     ($($arg:tt)*) => { {
-        log_error!($($arg)*);
+        log_error_ln!($($arg)*);
         std::process::exit(1);
     } };
 }
@@ -52,14 +52,14 @@ fn main() -> ExitCode {
 
         match cmd {
             input::Action::Build{ switches } => {
-                let (_rebuilt, _outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, _outfile) = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Run{ switches, args } => {
-                let (_rebuilt, outfile) = action::build(build, switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, outfile) = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
                 return exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
-                let (_rebuilt, _outfile) = action::build(build.clone(), switches.clone(), true).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, _outfile) = action::build(build.clone(), switches.clone()).unwrap_or_else(|e| exit_failure!("{}", e));
                 testfw::test_lib(build, switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Clean => {

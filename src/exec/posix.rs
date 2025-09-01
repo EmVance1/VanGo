@@ -1,6 +1,6 @@
 use std::{ffi::OsString, io::Write, path::{Path, PathBuf}, process::Command};
 use super::{BuildInfo, CompileInfo, PreCompHead};
-use crate::{Error, log_info};
+use crate::{Error, log_info_ln};
 
 
 pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool, verbose: bool) -> std::process::Command {
@@ -69,7 +69,7 @@ pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
         eprintln!();
         Err(Error::ArchiverFail(info.outfile))
     } else {
-        log_info!("successfully built project {}\n", info.outfile.display());
+        log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
     }
 }
@@ -100,7 +100,7 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
         eprintln!();
         Err(Error::LinkerFail(info.outfile))
     } else {
-        log_info!("successfully built project {}\n", info.outfile.display());
+        log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
     }
 }

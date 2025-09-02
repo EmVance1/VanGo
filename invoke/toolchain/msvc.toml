@@ -19,7 +19,7 @@ output =  [ "/Fo:{objfile}" ]
 standard =   [ "/std:{lang}" ]
 comp-only =  [ "/c" ]
 eh-default = [ "/EHsc" ]
-debug-info = [ "/Zi", "/Fd:{outdir}/obj/vc143.pdb", "/FS" ]
+debug-info = [ "/Zi", "/Fd:{outdir}\\obj\\", "/FS" ]
 
 include =  [ "/I{incdir}" ]
 define =   [ "/D{define}" ]

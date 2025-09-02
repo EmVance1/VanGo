@@ -1,5 +1,4 @@
 /target/
-spec.md
 todo.md
 
 build.bat
@@ -8,4 +7,5 @@ vango-linux/
 vango-win/
 recipes/
 *.zip
+toolchain/warnings.txt
 

@@ -20,8 +20,6 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
 
     cmd.args(info.incdirs.iter().map(|inc| format!("{}{}", args.I(), inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("{}{}", args.D(), def)));
-    cmd.arg("/DUNICODE");
-    cmd.arg("/D_UNICODE");
 
     if info.crtstatic {
         cmd.arg(args.crt_static(info.profile));
@@ -71,7 +69,7 @@ pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(info.toolchain.archiver_as_arg());
     cmd.args(info.link_args);
 
-    cmd.args(objs.into_iter().map(|o| format!("{}{}", args.l(), o.display())));
+    cmd.args(objs);
     cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
     cmd.arg("/MACHINE:X64");
     if echo { print_command(&cmd); }
@@ -101,11 +99,11 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(DEFAULT_LIBS);
     cmd.arg("/MACHINE:X64");
     cmd.arg("/DYNAMICBASE");
-        // "/LTCG".to_string(),
-        // format!("/{}", info.config.as_arg()),
         // "/OPT:REF".to_string(),
     if info.profile.is_debug() {
         cmd.arg("/DEBUG");
+    } else if info.profile.is_release() {
+        cmd.arg("/LTCG");
     }
     if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;

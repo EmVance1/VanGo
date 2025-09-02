@@ -19,6 +19,10 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
+    if cfg!(target_os = "windows") {
+        deps.defines.push("/DUNICODE".to_string());
+        deps.defines.push("/D_UNICODE".to_string());
+    }
     deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
@@ -35,7 +39,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
         profile:   switches.profile,
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
-        cpprt:     build.build.runtime.map(|rt| rt.to_ascii_lowercase() == "c++").unwrap_or_default(),
+        cpprt:     build.build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
 
         defines:  deps.defines,
 

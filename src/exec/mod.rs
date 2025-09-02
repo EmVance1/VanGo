@@ -9,7 +9,7 @@ use incremental::BuildLevel;
 use crate::{
     error::Error,
     config::{ProjKind, ToolChain, Profile, Lang},
-    log_error_ln, log_info_ln, log_info
+    log_error_ln, log_info_ln,
 };
 
 
@@ -85,9 +85,9 @@ fn on_compile_finish(src: &Path, output: std::process::Output) -> bool {
         log_error_ln!("failed to compile '{}'", src.display());
         let _ = std::io::stderr().write_all(&output.stderr);
         let _ = std::io::stderr().write_all(&output.stdout);
-        return false
+        false
     } else {
-        return true
+        true
     }
 }
 

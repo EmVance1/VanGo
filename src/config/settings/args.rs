@@ -82,7 +82,7 @@ impl Args {
 
     pub fn opt_profile_none(&self) -> Vec<String> {
         if self.0.is_msvc() {
-            vec![ self.O0().to_string(), self.dbg_symbols().to_string(), "/Fd:bin/debug/obj/vc143.pdb".to_string(), "/FS".to_string() ]
+            vec![ self.O0().to_string(), self.dbg_symbols().to_string(), "/Fd:bin\\debug\\obj\\".to_string(), "/FS".to_string() ]
         } else {
             vec![ self.O0().to_string(), self.dbg_symbols().to_string() ]
         }
@@ -91,7 +91,7 @@ impl Args {
         if self.0.is_msvc() {
             vec![ self.O2().to_string(), "/Oi".to_string(), "/GL".to_string() ]
         } else {
-            vec![ self.O2().to_string() ]
+            vec![ self.O2().to_string(), "-flto".to_string() ]
         }
     }
 }

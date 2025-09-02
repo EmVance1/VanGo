@@ -20,8 +20,8 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
     if cfg!(target_os = "windows") {
-        deps.defines.push("/DUNICODE".to_string());
-        deps.defines.push("/D_UNICODE".to_string());
+        deps.defines.push("UNICODE".to_string());
+        deps.defines.push("_UNICODE".to_string());
     }
     deps.incdirs.extend(profile.include);
 

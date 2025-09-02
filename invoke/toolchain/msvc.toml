@@ -40,6 +40,9 @@ runtime-static-release =  [ "/MT" ]
 runtime-dynamic-debug =   [ "/MDd" ]
 runtime-dynamic-release = [ "/MD" ]
 
+aslr-app = []
+aslr-lib = []
+
 iso-compliant = [ "/permissive-" ]
 
 warn-none =     [ "/w" ]
@@ -55,7 +58,10 @@ libdir =  [ "/LIBPATH:{libdir}" ]
 library = [ "{library}" ]
 output =  [ "/OUT:{binary}" ]
 
-opt-linktime = [ "/LTCG" ]
+opt-linktime = [ "/LTCG", "OPT:REF" ]
+
+aslr-app = [ "/DYNAMICBASE" ]
+aslr-lib = [ "/DYNAMICBASE" ]
 
 default-libs = [
     "kernel32",

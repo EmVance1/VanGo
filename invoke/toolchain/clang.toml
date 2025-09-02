@@ -40,6 +40,9 @@ runtime-static-release =  []
 runtime-dynamic-debug =   []
 runtime-dynamic-release = []
 
+aslr-app = [ "-fpie" ]
+aslr-lib = [ "-fpic" ]
+
 iso-compliant = [ "-pedantic-errors" ]
 
 warn-none =     [ "-w" ]
@@ -55,6 +58,9 @@ object =  [ "{objfile}" ]
 libdir =  [ "-L{libdir}" ]
 library = [ "-l{library}" ]
 output =  [ "-o{binary}" ]
+
+aslr-app = [ "-pie" ]
+aslr-lib = [ "-shared" ]
 
 opt-linktime = [ "-flto" ]
 

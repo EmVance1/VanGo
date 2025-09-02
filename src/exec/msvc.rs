@@ -90,11 +90,11 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(info.link_args);
     cmd.arg("/MACHINE:X64");
     cmd.arg("/DYNAMICBASE");
-        // "/OPT:REF".to_string(),
     if info.profile.is_debug() {
         cmd.arg("/DEBUG");
     } else if info.profile.is_release() {
         cmd.arg("/LTCG");
+        cmd.arg("/OPT:REF");
     }
     cmd.args(objs);
     cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));

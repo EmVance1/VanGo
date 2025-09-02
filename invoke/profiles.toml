@@ -1,0 +1,26 @@
+
+[debug]
+src = "src"
+include = [ "src" ]
+defines = [ "VANGO_DEBUG" ]
+eh = "default"
+aslr = true
+debug-info = true
+opt = "0"
+opt-linktime = false
+warn = "high"
+runtime = "dynamic-debug"
+
+
+[release]
+src = "src"
+include = [ "src" ]
+defines = [ "VANGO_RELEASE" ]
+eh = "default"
+aslr = true
+debug-info = false
+opt = "3"
+opt-linktime = true
+warn = "high"
+runtime = "dynamic-release"
+

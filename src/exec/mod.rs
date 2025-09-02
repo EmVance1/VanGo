@@ -3,6 +3,7 @@ mod queue;
 mod msvc;
 mod posix;
 mod prep;
+mod agnostic;
 
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;

@@ -7,20 +7,20 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
     let mut cmd = std::process::Command::new(info.toolchain.compiler(info.lang.is_cpp()));
     let args = info.toolchain.args();
     cmd.args(info.toolchain.compiler_as_arg(info.lang.is_cpp()));
-    cmd.args(info.comp_args);
 
+    cmd.args(info.comp_args);
     if info.lang.is_cpp() {
         cmd.args(args.eh_default_cpp());
     }
-
     cmd.arg(args.std(info.lang));
     cmd.arg(args.no_link());
-    cmd.arg(src);
-    cmd.arg(args.comp_output(&obj.to_string_lossy()));
-
+    if info.profile.is_release() {
+        cmd.args(args.opt_profile_high());
+    } else {
+        cmd.args(args.opt_profile_none());
+    }
     cmd.args(info.incdirs.iter().map(|inc| format!("{}{}", args.I(), inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("{}{}", args.D(), def)));
-
     match info.pch {
         PreCompHead::Use(_) => {
             let mut fparg = OsString::from("-I");
@@ -30,11 +30,8 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
         _ => (),
     }
 
-    if info.profile.is_release() {
-        cmd.args(args.opt_profile_high());
-    } else {
-        cmd.args(args.opt_profile_none());
-    }
+    cmd.arg(src);
+    cmd.arg(args.comp_output(&obj.to_string_lossy()));
 
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
@@ -52,15 +49,16 @@ pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     let mut cmd = Command::new(info.toolchain.archiver());
     // let args = info.toolchain.args();
     cmd.args(info.toolchain.archiver_as_arg());
+
     if verbose {
         cmd.arg("rcsv");
     } else {
         cmd.arg("rcs");
     }
-    cmd.args(info.link_args);
-
     cmd.arg(&info.outfile);
+    cmd.args(info.link_args);
     cmd.args(objs);
+
     if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
     if !output.status.success() {
@@ -78,18 +76,22 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp() || info.cpprt));
     let args = info.toolchain.args();
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
-    cmd.args(info.link_args);
 
-    cmd.args(objs);
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
-    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
+    cmd.args(info.link_args);
     if info.crtstatic {
         if info.lang.is_cpp() || info.cpprt {
             cmd.arg("-static-libstdc++");
         }
         cmd.arg("-static-libgcc");
     }
+    if info.profile.is_release() {
+        cmd.arg("-flto");
+    }
+
+    cmd.args(objs);
+    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
+    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
+    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
 
     if echo { print_command(&cmd); }
     if verbose { cmd.arg("--verbose"); }
@@ -143,11 +145,11 @@ mod tests {
         assert_eq!(cmd, [
                 "-std=c++20",
                 "-c",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-                "-Isrc",
                 "-O0",
                 "-g",
+                "-Isrc",
+                src.to_str().unwrap(),
+                &format!("-o{}", obj.display()),
             ]
         );
     }
@@ -174,11 +176,11 @@ mod tests {
         assert_eq!(cmd, [
                 "-std=c++23",
                 "-c",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-                "-Isrc",
                 "-O0",
                 "-g",
+                "-Isrc",
+                src.to_str().unwrap(),
+                &format!("-o{}", obj.display()),
             ]
         );
     }
@@ -205,10 +207,11 @@ mod tests {
         assert_eq!(cmd, [
                 "-std=c++20",
                 "-c",
+                "-O2",
+                "-flto",
+                "-Isrc",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
-                "-Isrc",
-                "-O2",
             ]
         );
     }
@@ -235,10 +238,11 @@ mod tests {
         assert_eq!(cmd, [
                 "-std=c++20",
                 "-c",
+                "-O2",
+                "-flto",
+                "-Isrc",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
-                "-Isrc",
-                "-O2",
             ]
         );
     }

@@ -62,6 +62,7 @@ package = "foobar"
 version = "x.y.z"
 lang = "C++XX"
 # optional
+kind = "app|staticlib|sharedlib"
 interface = [ "CXX" ]
 ```
 - `package` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
@@ -69,6 +70,10 @@ interface = [ "CXX" ]
 - `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for future use cases.
 
 - `lang` takes any valid C or C++ standard, case insensitive.
+
+- `kind` is for declaring whether your project builds to an executable or a library. The default value here is `"app"`, though it can be written explicitly. `staticlib` will produce a symbol archive file for your platform (.a, .lib, etc.). `sharedlib` as you might expect builds shared libraries, although these can very widely per platform. On linux this produces a .so file, while on windows it will produce a '.dll' binary and a '.lib' *import* library that is required for symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a dll file on windows, for all your `__declspec` needs.
+
+**note**: Currently fully automatic linking for shared libraries is not quite functional on windows due to the way loading dlls works.
 
 - `interface`: at times you may want to implement a library using one standard, but provide interfaces for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` array, which lists all standards your headers are compatible with. Elements of `interface` use the same format as `lang`.
 

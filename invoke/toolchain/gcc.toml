@@ -1,7 +1,18 @@
-[compiler]
-app-c =   [ "gcc" ]
-app-cpp = [ "g++" ]
+[toolchain]
+name = "GCC"
+compiler-c =   [ "gcc" ]
+compiler-cpp = [ "g++" ]
+linker-c =     [ "gcc" ]
+linker-cpp =   [ "g++" ]
+archiver-c =   [ "ar", "rcs" ]
+archiver-cpp = [ "ar", "rcs" ]
+exe-fmt     = "{name}"
+obj-fmt     = "{name}.o"
+archive-fmt = "lib{name}.a"
 
+
+# =============================================================================================
+[compiler]
 input =   [ "{srcfile}" ]
 output =  [ "-o", "{objfile}" ]
 
@@ -38,10 +49,8 @@ warn-high =     [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conv
 warn-as-error = [ "-Werror" ]
 
 
+# =============================================================================================
 [linker]
-app-c =   [ "gcc" ]
-app-cpp = [ "g++" ]
-
 object =  [ "{objfile}" ]
 libdir =  [ "-L{libdir}" ]
 library = [ "-l{library}" ]
@@ -52,10 +61,8 @@ opt-linktime = [ "-flto" ]
 default-libs = []
 
 
+# =============================================================================================
 [archiver]
-app-c =   [ "ar", "rcs" ]
-app-cpp = [ "ar", "rcs" ]
-
 object =  [ "{objfile}" ]
 output =  [ "{archive}" ]
 

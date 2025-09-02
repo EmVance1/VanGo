@@ -1,11 +1,11 @@
 [toolchain]
-name = "Clang"
-compiler-c =   [ "clang" ]
-compiler-cpp = [ "clang++" ]
-linker-c =     [ "clang" ]
-linker-cpp =   [ "clang++" ]
-archiver-c =   [ "llvm-ar", "rcs" ]
-archiver-cpp = [ "llvm-ar", "rcs" ]
+name = "Zig/Clang"
+compiler-c =   [ "zig", "cc" ]
+compiler-cpp = [ "zig", "c++" ]
+linker-c =     [ "zig", "cc" ]
+linker-cpp =   [ "zig", "c++" ]
+archiver-c =   [ "zig", "ar", "rcs" ]
+archiver-cpp = [ "zig", "ar", "rcs" ]
 exe-fmt     = "{name}"
 obj-fmt     = "{name}.o"
 archive-fmt = "lib{name}.a"

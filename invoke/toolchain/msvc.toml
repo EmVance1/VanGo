@@ -1,7 +1,18 @@
-[compiler]
-app-c =   [ "cl.exe" ]
-app-cpp = [ "cl.exe" ]
+[toolchain]
+name = "MSVC"
+compiler-c =   [ "cl.exe" ]
+compiler-cpp = [ "cl.exe" ]
+linker-c =     [ "LINK.exe" ]
+linker-cpp =   [ "LINK.exe" ]
+archiver-c =   [ "LIB.exe" ]
+archiver-cpp = [ "LIB.exe" ]
+exe-fmt     = "{name}.exe"
+obj-fmt     = "{name}.obj"
+archive-fmt = "{name}.lib"
 
+
+# =============================================================================================
+[compiler]
 input =   [ "{srcfile}" ]
 output =  [ "/Fo:{objfile}" ]
 
@@ -36,10 +47,9 @@ warn-basic =    [ "/W1" ]
 warn-high =     [ "/W4" ]
 warn-as-error = [ "/WX" ]
 
-[linker]
-app-c =   [ "LINK.exe" ]
-app-cpp = [ "LINK.exe" ]
 
+# =============================================================================================
+[linker]
 object =  [ "{objfile}" ]
 libdir =  [ "/LIBPATH:{libdir}" ]
 library = [ "{library}" ]
@@ -48,24 +58,23 @@ output =  [ "/OUT:{binary}" ]
 opt-linktime = [ "/LTCG" ]
 
 default-libs = [
-    "kernel32.lib",
-    "user32.lib",
-    "winspool.lib",
-    "comdlg32.lib",
-    "advapi32.lib",
-    "shell32.lib",
-    "ole32.lib",
-    "oleaut32.lib",
-    "uuid.lib",
-    "odbc32.lib",
-    "odbccp32.lib",
-    "gdi32.lib"
+    "kernel32",
+    "user32",
+    "winspool",
+    "comdlg32",
+    "advapi32",
+    "shell32",
+    "ole32",
+    "oleaut32",
+    "uuid",
+    "odbc32",
+    "odbccp32",
+    "gdi32"
 ]
 
-[archiver]
-app-c =   [ "LIB.exe" ]
-app-cpp = [ "LIB.exe" ]
 
+# =============================================================================================
+[archiver]
 object =  [ "{objfile}" ]
 output =  [ "/OUT:{archive}" ]
 

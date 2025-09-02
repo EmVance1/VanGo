@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+strfmt = "0.2.5"
 termcolor = "1.4.1"
 thiserror = "2.0.0"
 toml = "0.9.5"

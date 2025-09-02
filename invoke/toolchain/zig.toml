@@ -60,7 +60,7 @@ library = [ "-l{library}" ]
 output =  [ "-o{binary}" ]
 
 aslr-app = [ "-pie" ]
-aslr-lib = []
+aslr-lib = [ "-shared" ]
 
 opt-linktime = [ "-flto" ]
 

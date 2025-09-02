@@ -2,6 +2,8 @@
 mod repr;
 
 use std::{collections::HashMap, ffi::OsString, path::Path};
+use crate::config::ProjKind;
+
 use super::{CompileInfo, PreCompHead};
 
 
@@ -23,6 +25,7 @@ enum Setting {
     RuntimeStaticRelease,
     RuntimeDynamicDebug,
     RuntimeDynamicRelease,
+    Aslr,
 }
 
 /*
@@ -39,23 +42,28 @@ pub fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool, verbos
     cmd.args(tc.compiler.comp_only);
     for set in info.profile.settings {
         match set {
-            Setting::Opt0         => cmd.args(tc.compiler.opt_0),
-            Setting::Opt1         => cmd.args(tc.compiler.opt_1),
-            Setting::Opt2         => cmd.args(tc.compiler.opt_2),
-            Setting::Opt3         => cmd.args(tc.compiler.opt_3),
-            Setting::OptSize      => cmd.args(tc.compiler.opt_size),
-            Setting::OptSpeed     => cmd.args(tc.compiler.opt_speed),
-            Setting::OptLinkTime  => cmd.args(tc.compiler.opt_linktime),
-            Setting::IsoCompliant => cmd.args(tc.compiler.iso_compliant),
-            Setting::WarnNone     => cmd.args(tc.compiler.warn_none),
-            Setting::WarnBasic    => cmd.args(tc.compiler.warn_basic),
-            Setting::WarnHigh     => cmd.args(tc.compiler.warn_high),
-            Setting::WarnAsError  => cmd.args(tc.compiler.warn_as_error),
-            Setting::DebugInfo    => cmd.args(tc.compiler.debug_info),
-            Setting::RuntimeStaticDebug    => cmd.args(tc.compiler.runtime_static_debug),
-            Setting::RuntimeStaticRelease  => cmd.args(tc.compiler.runtime_static_release),
-            Setting::RuntimeDynamicDebug   => cmd.args(tc.compiler.runtime_dynamic_debug),
-            Setting::RuntimeDynamicRelease => cmd.args(tc.compiler.runtime_dynamic_release),
+            Setting::Opt0         => { cmd.args(tc.compiler.opt_0); }
+            Setting::Opt1         => { cmd.args(tc.compiler.opt_1); }
+            Setting::Opt2         => { cmd.args(tc.compiler.opt_2); }
+            Setting::Opt3         => { cmd.args(tc.compiler.opt_3); }
+            Setting::OptSize      => { cmd.args(tc.compiler.opt_size); }
+            Setting::OptSpeed     => { cmd.args(tc.compiler.opt_speed); }
+            Setting::OptLinkTime  => { cmd.args(tc.compiler.opt_linktime); }
+            Setting::IsoCompliant => { cmd.args(tc.compiler.iso_compliant); }
+            Setting::WarnNone     => { cmd.args(tc.compiler.warn_none); }
+            Setting::WarnBasic    => { cmd.args(tc.compiler.warn_basic); }
+            Setting::WarnHigh     => { cmd.args(tc.compiler.warn_high); }
+            Setting::WarnAsError  => { cmd.args(tc.compiler.warn_as_error); }
+            Setting::DebugInfo    => { cmd.args(tc.compiler.debug_info); }
+            Setting::RuntimeStaticDebug    => { cmd.args(tc.compiler.runtime_static_debug); }
+            Setting::RuntimeStaticRelease  => { cmd.args(tc.compiler.runtime_static_release); }
+            Setting::RuntimeDynamicDebug   => { cmd.args(tc.compiler.runtime_dynamic_debug); }
+            Setting::RuntimeDynamicRelease => { cmd.args(tc.compiler.runtime_dynamic_release); }
+            Setting::Aslr => match info.projkind {
+                ProjKind::App       => { cmd.args(tc.compiler.aslr_app); }
+                ProjKind::SharedLib => { cmd.args(tc.compiler.aslr_lib); }
+                _ => (),
+            }
         };
     }
     for inc in info.incdirs { cmd.args(tc.compiler.include); }

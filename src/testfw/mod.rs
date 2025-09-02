@@ -32,17 +32,18 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     partial.defines.push("VANGO_TEST".to_string());
     partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
     let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), "h")?;
+    headers.extend(fetch::source_files(&PathBuf::from(&profile.include_pub), "hpp")?);
     headers.push(inc.join("testframework/vangotest/asserts.h"));
     headers.push(inc.join("testframework/vangotest/casserts.h"));
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let relink = vec![
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.build.package)).with_extension(switches.toolchain.lib_ext())
-    ];
+    let relink = [
+        outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package)).with_extension(switches.toolchain.static_lib_ext())
+    ].into_iter().collect();
 
     let sources = fetch::source_files(&PathBuf::from("test"), build.build.lang.src_ext()).unwrap();
     let outfile = outdir.join(format!("test_{}.exe", build.build.package));
     let info = BuildInfo {
-        projkind: crate::config::ProjKind::App,
+        projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,
         profile:   switches.profile.clone(),
         lang:      build.build.lang,
@@ -53,13 +54,13 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
 
         srcdir: "test".into(),
         incdirs: partial.incdirs,
-        libdirs: vec![ PathBuf::from("bin").join(switches.profile.to_string()) ],
+        libdirs: [ PathBuf::from("bin").join(switches.profile.to_string()) ].into_iter().collect(),
         outdir,
 
         pch: None,
         sources,
         headers,
-        archives: vec![ PathBuf::from(&build.build.package).with_extension("lib") ],
+        archives: [ PathBuf::from(&build.build.package).with_extension("lib") ].into_iter().collect(),
         relink,
         outfile: outfile.clone(),
 

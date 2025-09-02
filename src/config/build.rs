@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use crate::error::Error;
+use crate::{config::ProjKind, error::Error};
 use super::{Lang, Profile};
 
 
@@ -40,8 +40,9 @@ impl BuildFile {
             build: Build{
                 package:   file.build.package,
                 version:   file.build.version,
+                kind:      file.build.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default(),
                 lang,
-                interface: file.build.interface.map(|i| Lang::from_str(&i).unwrap()).unwrap_or(lang),
+                interface: file.build.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
                 runtime:   file.build.runtime,
             },
             dependencies:  file.dependencies,
@@ -63,6 +64,7 @@ impl BuildFile {
 pub struct Build {
     pub package: String,
     pub version: String,
+    pub kind: ProjKind,
     pub lang: Lang,
     pub interface: Lang,
     pub runtime: Option<String>,
@@ -155,6 +157,7 @@ impl BuildProfile {
     }
 }
 
+
 impl Default for BuildProfile {
     fn default() -> Self {
         Self{
@@ -182,8 +185,8 @@ struct SerdeBuildFile {
 struct SerdeBuild {
     package: String,
     version: String,
+    kind: Option<String>,
     lang: String,
-    #[serde(alias = "binding")]
     interface: Option<String>,
     runtime: Option<String>,
 

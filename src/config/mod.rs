@@ -56,7 +56,7 @@ impl VangoFile {
 
 #[cfg(test)]
 mod tests {
-    use super::{VangoFile, build::*, lib::*, Lang};
+    use super::{build::*, lib::*, VangoFile, ProjKind, Lang};
     use std::{collections::HashMap, str::FromStr};
 
     #[test]
@@ -105,6 +105,7 @@ include = [ "dbg_headers" ]
             build: Build{
                 package: "Shimmy".to_string(),
                 version: "0.1.0".to_string(),
+                kind: ProjKind::App,
                 lang: Lang::Cpp(120),
                 interface: Lang::Cpp(120),
                 runtime: None,

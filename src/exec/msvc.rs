@@ -59,29 +59,6 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
     cmd
 }
 
-pub(super) fn link_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = Command::new(info.toolchain.archiver());
-    let args = info.toolchain.args();
-    cmd.args(info.toolchain.archiver_as_arg());
-
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
-    cmd.args(info.link_args);
-    cmd.arg("/MACHINE:X64");
-    cmd.args(objs);
-
-    if echo { print_command(&cmd); }
-    let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
-    if !output.status.success() {
-        if verbose { let _ = std::io::stderr().write_all(&output.stderr); }
-        let _ = std::io::stderr().write_all(&output.stdout);
-        eprintln!();
-        Err(Error::ArchiverFail(info.outfile))
-    } else {
-        log_info_ln!("successfully built project {}", info.outfile.display());
-        Ok(true)
-    }
-}
-
 pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
     let args = info.toolchain.args();
@@ -109,6 +86,64 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
         let _ = std::io::stderr().write_all(&output.stdout);
         eprintln!();
         Err(Error::LinkerFail(info.outfile))
+    } else {
+        log_info_ln!("successfully built project {}", info.outfile.display());
+        Ok(true)
+    }
+}
+
+pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+    let mut cmd = Command::new(info.toolchain.linker(info.lang.is_cpp()));
+    let args = info.toolchain.args();
+    cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
+
+    cmd.args(info.link_args);
+    cmd.arg("/DLL");
+    cmd.arg("/MACHINE:X64");
+    cmd.arg("/DYNAMICBASE");
+    if info.profile.is_debug() {
+        cmd.arg("/DEBUG");
+    } else if info.profile.is_release() {
+        cmd.arg("/LTCG");
+        cmd.arg("/OPT:REF");
+    }
+    cmd.args(objs);
+    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
+    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
+    // cmd.args(DEFAULT_LIBS);
+    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
+    cmd.arg(format!("/IMPLIB:{}", info.outfile.with_extension("lib").display()));
+
+    if echo { print_command(&cmd); }
+    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
+    if !output.status.success() {
+        if verbose { let _ = std::io::stderr().write_all(&output.stderr); }
+        let _ = std::io::stderr().write_all(&output.stdout);
+        eprintln!();
+        Err(Error::LinkerFail(info.outfile))
+    } else {
+        log_info_ln!("successfully built project {}", info.outfile.display());
+        Ok(true)
+    }
+}
+
+pub(super) fn link_static_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+    let mut cmd = Command::new(info.toolchain.archiver());
+    let args = info.toolchain.args();
+    cmd.args(info.toolchain.archiver_as_arg());
+
+    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
+    cmd.args(info.link_args);
+    cmd.arg("/MACHINE:X64");
+    cmd.args(objs);
+
+    if echo { print_command(&cmd); }
+    let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
+    if !output.status.success() {
+        if verbose { let _ = std::io::stderr().write_all(&output.stderr); }
+        let _ = std::io::stderr().write_all(&output.stdout);
+        eprintln!();
+        Err(Error::ArchiverFail(info.outfile))
     } else {
         log_info_ln!("successfully built project {}", info.outfile.display());
         Ok(true)
@@ -144,7 +179,7 @@ fn print_command(cmd: &std::process::Command) {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use crate::config::{ToolChain, Profile, Lang};
+    use crate::config::{ToolChain, Profile, ProjKind, Lang};
     use super::*;
 
     #[test]
@@ -156,6 +191,7 @@ mod tests {
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
             profile: &Profile::Debug,
             toolchain: ToolChain::Msvc,
+            projkind: ProjKind::App,
             lang: Lang::Cpp(120),
             crtstatic: false,
             outdir: &out,
@@ -193,6 +229,7 @@ mod tests {
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
             profile: &Profile::Debug,
             toolchain: ToolChain::Msvc,
+            projkind: ProjKind::App,
             lang: Lang::Cpp(123),
             crtstatic: false,
             outdir: &out,
@@ -230,11 +267,12 @@ mod tests {
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
             profile: &Profile::Release,
             toolchain: ToolChain::Msvc,
+            projkind: ProjKind::App,
             lang: Lang::Cpp(123),
             crtstatic: false,
             outdir: &out,
             defines: &vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            incdirs: &vec![ "src/".into() ],
+            incdirs: &vec![ "src".into() ],
             pch: &PreCompHead::None,
             comp_args: &vec![],
         }, false, false);
@@ -266,6 +304,7 @@ mod tests {
         let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
             profile: &Profile::Release,
             toolchain: ToolChain::Msvc,
+            projkind: ProjKind::App,
             lang: Lang::Cpp(123),
             crtstatic: true,
             outdir: &out,

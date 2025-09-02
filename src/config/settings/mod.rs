@@ -8,10 +8,24 @@ use std::{
 use crate::{log_warn_ln, Error};
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ProjKind {
+    #[default]
     App,
-    Lib,
+    StaticLib,
+    SharedLib,
+}
+
+impl FromStr for ProjKind {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "app"       => Ok(ProjKind::App),
+            "sharedlib" => Ok(ProjKind::SharedLib),
+            "staticlib" => Ok(ProjKind::StaticLib),
+            _ => Err(Error::Unknown)
+        }
+    }
 }
 
 
@@ -70,7 +84,14 @@ impl ToolChain {
         matches!(self, Self::Clang|Self::Zig)
     }
 
-    pub fn lib_prefix(&self) -> &'static str {
+    pub fn shared_lib_prefix(&self) -> &'static str {
+        if cfg!(target_os = "windows") {
+            ""
+        } else {
+            "lib"
+        }
+    }
+    pub fn static_lib_prefix(&self) -> &'static str {
         match self {
             Self::Msvc => "",
             _ => "lib",
@@ -79,7 +100,8 @@ impl ToolChain {
     pub fn ext(&self, kind: ProjKind) -> &'static str {
         match kind {
             ProjKind::App => self.app_ext(),
-            ProjKind::Lib => self.lib_ext(),
+            ProjKind::SharedLib => self.shared_lib_ext(),
+            ProjKind::StaticLib => self.static_lib_ext(),
         }
     }
     pub fn app_ext(&self) -> &'static str {
@@ -88,7 +110,14 @@ impl ToolChain {
             _ => "",
         }
     }
-    pub fn lib_ext(&self) -> &'static str {
+    pub fn shared_lib_ext(&self) -> &'static str {
+        if cfg!(target_os = "windows") {
+            "dll"
+        } else {
+            "so"
+        }
+    }
+    pub fn static_lib_ext(&self) -> &'static str {
         match self {
             Self::Msvc => "lib",
             _ => "a",

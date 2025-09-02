@@ -10,11 +10,16 @@ use crate::{
 pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
+    if build.build.lang.is_cpp() {
+        headers.extend(fetch::source_files(&profile.include_pub, "hpp").unwrap());
+    }
     for incdir in profile.include.iter().chain(Some(&profile.src)) {
         headers.extend(fetch::source_files(incdir, "h").unwrap());
+        if build.build.lang.is_cpp() {
+            headers.extend(fetch::source_files(incdir, "hpp").unwrap());
+        }
     }
     let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
-    let projkind = if headers.iter().any(|f| f.file_name().unwrap() == "lib.h") { ProjKind::Lib } else { ProjKind::App };
 
     let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
     deps.defines.extend(profile.defines);
@@ -22,19 +27,28 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     if cfg!(target_os = "windows") {
         deps.defines.push("UNICODE".to_string());
         deps.defines.push("_UNICODE".to_string());
+        if build.build.kind == ProjKind::SharedLib {
+            deps.defines.push("VANGO_EXPORT_SHARED".to_string());
+        }
     }
     deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let outfile = if projkind == ProjKind::App {
-        outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
-    } else {
-        outdir.join(format!("{}{}", switches.toolchain.lib_prefix(), build.build.package)).with_extension(switches.toolchain.lib_ext())
+    let outfile = match build.build.kind {
+        ProjKind::App => {
+            outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
+        }
+        ProjKind::SharedLib => {
+            outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package)).with_extension(switches.toolchain.shared_lib_ext())
+        }
+        ProjKind::StaticLib => {
+            outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package)).with_extension(switches.toolchain.static_lib_ext())
+        }
     };
 
     let info = BuildInfo{
-        projkind,
+        projkind:  build.build.kind,
         toolchain: switches.toolchain,
         profile:   switches.profile,
         lang:      build.build.lang,

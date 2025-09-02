@@ -1,4 +1,4 @@
-use std::{ io::Write, path::{Path, PathBuf}, collections::HashMap };
+use std::{ collections::HashMap, io::Write, path::{Path, PathBuf} };
 use crate::{config::{Dependency, Lang, LibFile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
 
 
@@ -120,7 +120,7 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                             archives.push(l);
                         }
                     }
-                    defines.extend(profile.defines);
+                    defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
                 }
                 VangoFile::Lib(mut lib) => {
                     let profile = lib.take(&switches.profile)?;
@@ -131,7 +131,7 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
                     } else {
                         archives.extend(profile.binaries);
                     }
-                    defines.extend(profile.defines);
+                    defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
                 }
             }
         } else {

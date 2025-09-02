@@ -71,6 +71,9 @@ pub struct CompilerArgs {
     pub runtime_dynamic_debug:   Vec<String>,
     pub runtime_dynamic_release: Vec<String>,
 
+    pub aslr_app: Vec<String>,
+    pub aslr_lib: Vec<String>,
+
     pub iso_compliant: Vec<String>,
 
     pub warn_none:     Vec<String>,
@@ -85,6 +88,9 @@ pub struct LinkerArgs {
     pub libdir:  Vec<String>,
     pub library: Vec<String>,
     pub output:  Vec<String>,
+
+    pub aslr_app: Vec<String>,
+    pub aslr_lib: Vec<String>,
 
     pub opt_linktime: Vec<String>,
 

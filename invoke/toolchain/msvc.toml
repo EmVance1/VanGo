@@ -1,0 +1,71 @@
+[compiler]
+app-c =   [ "cl.exe" ]
+app-cpp = [ "cl.exe" ]
+
+input =   [ "{srcfile}" ]
+output =  [ "/Fo:{objfile}" ]
+
+standard =   [ "/std:{lang}" ]
+comp-only =  [ "/c" ]
+eh-default = [ "/EHsc" ]
+debug-info = [ "/Zi", "/Fd:{outdir}/obj/vc143.pdb", "/FS" ]
+
+include =  [ "/I{incdir}" ]
+define =   [ "/D{define}" ]
+
+opt-0 =     [ "/Od" ]
+opt-1 =     [ "/O1" ]
+opt-2 =     [ "/O1" ]
+opt-3 =     [ "/O2", "Oi" ]
+opt-size =  [ "/Os" ]
+opt-speed = [ "/Ot" ]
+opt-linktime = [ "/GL" ]
+
+pch-create =  [ "/Yc{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
+pch-include = [ "/Yu{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
+
+runtime-static-debug =    [ "/MTd" ]
+runtime-static-release =  [ "/MT" ]
+runtime-dynamic-debug =   [ "/MDd" ]
+runtime-dynamic-release = [ "/MD" ]
+
+iso-compliant = [ "/permissive-" ]
+
+warn-none =     [ "/w" ]
+warn-basic =    [ "/W1" ]
+warn-high =     [ "/W4" ]
+warn-as-error = [ "/WX" ]
+
+[linker]
+app-c =   [ "LINK.exe" ]
+app-cpp = [ "LINK.exe" ]
+
+object =  [ "{objfile}" ]
+libdir =  [ "/LIBPATH:{libdir}" ]
+library = [ "{library}" ]
+output =  [ "/OUT:{binary}" ]
+
+opt-linktime = [ "/LTCG" ]
+
+default-libs = [
+    "kernel32.lib",
+    "user32.lib",
+    "winspool.lib",
+    "comdlg32.lib",
+    "advapi32.lib",
+    "shell32.lib",
+    "ole32.lib",
+    "oleaut32.lib",
+    "uuid.lib",
+    "odbc32.lib",
+    "odbccp32.lib",
+    "gdi32.lib"
+]
+
+[archiver]
+app-c =   [ "LIB.exe" ]
+app-cpp = [ "LIB.exe" ]
+
+object =  [ "{objfile}" ]
+output =  [ "/OUT:{archive}" ]
+

@@ -13,7 +13,7 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
         match info.projkind {
             ProjKind::App           => { cmd.arg("-fpie"); },
             ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
-            _ => (),
+            ProjKind::StaticLib     => { cmd.arg("-fpie"); },
         }
     }
     if info.lang.is_cpp() {

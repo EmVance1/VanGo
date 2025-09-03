@@ -196,7 +196,7 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
         } else {
             "#pragma once\n\nint func(int a, int b);\n"
         })?;
-        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\ninclude = [ \"src\", \"include/{name}\" ]\ninclude-pub = \"include\"\n\n[dependencies]\n");
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = \"0.1.0\"\nlang = \"{lang}\"\nkind = \"staticlib\"\ninclude = [ \"src\", \"include/{name}\" ]\ninclude-pub = \"include\"\n\n[dependencies]\n");
         std::fs::write(format!("src/lib.{ext}"), "#include \"lib.h\"\n\nint func(int a, int b) {\n    return a + b;\n}\n")?;
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
@@ -204,7 +204,7 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
             generate(build.unwrap_build())?;
         }
     } else {
-        let toml = format!("[build]\npackage = \"{name}\"\nversion = 0.1.0\nlang = \"{lang}\"\n\n[dependencies]\n");
+        let toml = format!("[build]\npackage = \"{name}\"\nversion = \"0.1.0\"\nlang = \"{lang}\"\n\n[dependencies]\n");
         std::fs::write(format!("src/main.{ext}"), format!("#include <{header}>\n\n\nint main() {{\n    printf(\"Hello World!\\n\");\n}}\n"))?;
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
@@ -274,7 +274,7 @@ pub fn generate(build: BuildFile) -> Result<(), Error> {
         } {
             match VangoFile::from_str(&build)? {
                 VangoFile::Build(build) => {
-                    let mut libinfo = LibFile::from(build);
+                    let mut libinfo = LibFile::try_from(build).unwrap();
                     let profile = libinfo.take(&Profile::Debug)?;
                     incdirs.push(path.join(profile.include));
                     defines.extend(profile.defines);

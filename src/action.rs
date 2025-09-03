@@ -242,7 +242,7 @@ pub fn generate(build: BuildFile) -> Result<(), Error> {
     let mut incdirs = Vec::new();
     let mut defines = Vec::new();
 
-    for (_name, lib) in build.dependencies {
+    for lib in build.dependencies {
         let path = match lib {
             #[allow(unused)]
             Dependency::Local { path, features } => {

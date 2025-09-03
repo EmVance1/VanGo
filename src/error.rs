@@ -46,6 +46,8 @@ pub enum Error {
     InvalidExe(PathBuf),
     #[error("static library '{0}' is not executable")]
     LibNotExe(PathBuf),
+    #[error("executable '{0}' was killed by the host OS (potential segfault)")]
+    ExeKilled(PathBuf),
     #[error("OS or IO error: {0}")]
     FileSystem(#[from] std::io::Error),
     #[error("build failed")]

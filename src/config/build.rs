@@ -7,7 +7,7 @@ use super::{Lang, Profile};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildFile {
     pub build: Build,
-    pub dependencies: HashMap<String, Dependency>,
+    pub dependencies: Vec<Dependency>,
     pub profile: HashMap<String, BuildProfile>,
 }
 
@@ -49,7 +49,7 @@ impl BuildFile {
                 interface:  file.build.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
                 runtime:    file.build.runtime,
             },
-            dependencies:   file.dependencies,
+            dependencies:   file.build.dependencies,
             profile,
         })
     }
@@ -180,7 +180,6 @@ impl Default for BuildProfile {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct SerdeBuildFile {
     build: SerdeBuild,
-    dependencies: HashMap<String, Dependency>,
     #[serde(default)]
     profile: HashMap<String, SerdeBuildProfile>,
 }
@@ -195,6 +194,7 @@ struct SerdeBuild {
     implib: Option<bool>,
     interface: Option<String>,
     runtime: Option<String>,
+    dependencies: Vec<Dependency>,
 
     #[serde(flatten)]
     defaults: SerdeBuildProfile,

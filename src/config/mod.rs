@@ -79,13 +79,13 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 include = [ "dbg_headers" ]
 "#;
 
-        let mut dependencies: HashMap<String, Dependency> = HashMap::new();
-        dependencies.insert("engine".into(),  Dependency::Local{ path: "../engine".into(),     features: vec![] });
-        dependencies.insert("NavMesh".into(), Dependency::Local{ path: "../../NavMesh".into(), features: vec![] });
-        dependencies.insert("SFML".into(),    Dependency::Git{
+        let mut dependencies = Vec::new();
+        dependencies.push(Dependency::Local{ path: "../engine".into(),     features: vec![] });
+        dependencies.push(Dependency::Local{ path: "../../NavMesh".into(), features: vec![] });
+        dependencies.push(Dependency::Git{
             git: "https://github.com/SFML/SFML.git".into(), tag: None, recipe: Some("recipes/SFML.bat".into()), features: vec![ "graphics".into() ]
         });
-        dependencies.insert("LuaJIT".into(), Dependency::Git{
+        dependencies.push(Dependency::Git{
             git: "https://github.com/LuaJIT/LuaJIT.git".into(), tag: None, recipe: Some("recipes/LuaJIT.bat".into()), features: vec![]
         });
 

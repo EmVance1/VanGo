@@ -199,7 +199,7 @@ pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
             .status()
             .map_err(|_| Error::InvalidExe(outfile.to_owned()))?
             .code()
-            .unwrap() as u8)
+            .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
     }
 }
 

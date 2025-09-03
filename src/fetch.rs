@@ -1,4 +1,4 @@
-use std::{ collections::HashMap, io::Write, path::{Path, PathBuf} };
+use std::{ffi::OsStr, io::Write, path::{Path, PathBuf}};
 use crate::{config::{Dependency, Lang, LibFile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
 
 
@@ -9,7 +9,7 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
         let e = e?;
         if e.path().is_dir() {
             res.extend(source_files(&e.path(), ext)?);
-        } else if e.path().is_file() && e.path().extension().unwrap() == ext {
+        } else if e.path().is_file() && e.path().extension().unwrap_or(OsStr::new("")) == ext {
             res.push(e.path());
         }
     }
@@ -28,7 +28,7 @@ pub struct Dependencies {
     pub rebuilt:  bool,
 }
 
-pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let home = std::env::home_dir().unwrap();
 
     let mut incdirs  = Vec::new();
@@ -38,7 +38,7 @@ pub fn libraries(libraries: HashMap<String, Dependency>, switches: &BuildSwitche
     let mut defines  = Vec::new();
     let mut rebuilt  = false;
 
-    for (_name, lib) in libraries {
+    for lib in libraries {
         let path = match lib {
             #[allow(unused)]
             Dependency::Git { git, tag, recipe, features } => {

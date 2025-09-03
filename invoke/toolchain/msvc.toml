@@ -60,8 +60,10 @@ output =  [ "/OUT:{binary}" ]
 
 opt-linktime = [ "/LTCG", "OPT:REF" ]
 
-aslr-app = [ "/DYNAMICBASE" ]
-aslr-lib = [ "/DYNAMICBASE" ]
+aslr = [ "/DYNAMICBASE" ]
+
+shared-lib = [ "/DLL" ]
+import-lib = [ "/IMPLIB:{library}" ]
 
 default-libs = [
     "kernel32",

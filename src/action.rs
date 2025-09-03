@@ -27,7 +27,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     if cfg!(target_os = "windows") {
         deps.defines.push("UNICODE".to_string());
         deps.defines.push("_UNICODE".to_string());
-        if build.build.kind == ProjKind::SharedLib {
+        if let ProjKind::SharedLib{..} = build.build.kind {
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
@@ -35,15 +35,23 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
 
     let rebuilt_dep = deps.rebuilt;
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let outfile = match build.build.kind {
+    let (outfile, implib) = match build.build.kind {
         ProjKind::App => {
-            outdir.join(build.build.package).with_extension(switches.toolchain.app_ext())
+            (outdir.join(build.build.package).with_extension(switches.toolchain.app_ext()), None)
         }
-        ProjKind::SharedLib => {
-            outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package)).with_extension(switches.toolchain.shared_lib_ext())
+        ProjKind::SharedLib{implib: false} => {
+            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package))
+             .with_extension(switches.toolchain.shared_lib_ext()), None)
+        }
+        ProjKind::SharedLib{implib: true} => {
+            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package))
+             .with_extension(switches.toolchain.shared_lib_ext()),
+             Some(outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package))
+             .with_extension(switches.toolchain.static_lib_ext())))
         }
         ProjKind::StaticLib => {
-            outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package)).with_extension(switches.toolchain.static_lib_ext())
+            (outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package))
+             .with_extension(switches.toolchain.static_lib_ext()), None)
         }
     };
 
@@ -68,6 +76,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
         archives: deps.archives,
         relink:   deps.relink,
         outfile:  outfile.clone(),
+        implib:   implib,
 
         comp_args: profile.compiler_options,
         link_args: profile.linker_options,

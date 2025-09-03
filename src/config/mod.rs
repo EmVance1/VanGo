@@ -105,8 +105,8 @@ include = [ "dbg_headers" ]
             build: Build{
                 package: "Shimmy".to_string(),
                 version: "0.1.0".to_string(),
-                kind: ProjKind::App,
                 lang: Lang::Cpp(120),
+                kind: ProjKind::App,
                 interface: Lang::Cpp(120),
                 runtime: None,
             },

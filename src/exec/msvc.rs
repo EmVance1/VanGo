@@ -112,7 +112,9 @@ pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, v
     cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
     // cmd.args(DEFAULT_LIBS);
     cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
-    cmd.arg(format!("/IMPLIB:{}", info.outfile.with_extension("lib").display()));
+    if let Some(lib) = info.implib {
+        cmd.arg(format!("/IMPLIB:{}", lib.display()));
+    }
 
     if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;

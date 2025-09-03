@@ -11,8 +11,8 @@ pub(super) fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool,
     cmd.args(info.comp_args);
     if !cfg!(target_os = "windows") {
         match info.projkind {
-            ProjKind::App       => { cmd.arg("-fpie"); },
-            ProjKind::SharedLib => { cmd.arg("-fPIC"); },
+            ProjKind::App           => { cmd.arg("-fpie"); },
+            ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
             _ => (),
         }
     }
@@ -93,9 +93,15 @@ pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, v
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
 
     cmd.args(info.link_args);
-    cmd.arg("-shared");
+    if cfg!(target_os = "macos") {
+        cmd.arg("-dynamiclib");
+    } else {
+        cmd.arg("-shared");
+    }
     if cfg!(target_os = "windows") {
-        cmd.arg(format!("-Wl,--out-implib,{}", info.outfile.with_extension("a").display()));
+        if let Some(lib) = info.implib {
+            cmd.arg(format!("-Wl,--out-implib,{}", lib.display()));
+        }
     } else {
         cmd.arg("-fPIC");
     }

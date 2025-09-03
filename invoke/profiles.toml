@@ -10,6 +10,7 @@ opt = "0"
 opt-linktime = false
 warn = "high"
 runtime = "dynamic-debug"
+dll-import-lib = true
 
 
 [release]
@@ -23,4 +24,5 @@ opt = "3"
 opt-linktime = true
 warn = "high"
 runtime = "dynamic-release"
+dll-import-lib = true
 

@@ -12,8 +12,8 @@ use crate::{log_warn_ln, Error};
 pub enum ProjKind {
     #[default]
     App,
+    SharedLib{ implib: bool },
     StaticLib,
-    SharedLib,
 }
 
 impl FromStr for ProjKind {
@@ -21,7 +21,7 @@ impl FromStr for ProjKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "app"       => Ok(ProjKind::App),
-            "sharedlib" => Ok(ProjKind::SharedLib),
+            "sharedlib" => Ok(ProjKind::SharedLib{ implib: true }),
             "staticlib" => Ok(ProjKind::StaticLib),
             _ => Err(Error::Unknown)
         }
@@ -100,7 +100,7 @@ impl ToolChain {
     pub fn ext(&self, kind: ProjKind) -> &'static str {
         match kind {
             ProjKind::App => self.app_ext(),
-            ProjKind::SharedLib => self.shared_lib_ext(),
+            ProjKind::SharedLib{..} => self.shared_lib_ext(),
             ProjKind::StaticLib => self.static_lib_ext(),
         }
     }
@@ -113,6 +113,8 @@ impl ToolChain {
     pub fn shared_lib_ext(&self) -> &'static str {
         if cfg!(target_os = "windows") {
             "dll"
+        } else if cfg!(target_os = "macos") {
+            "dylib"
         } else {
             "so"
         }

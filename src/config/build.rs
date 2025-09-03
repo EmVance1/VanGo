@@ -35,17 +35,21 @@ impl BuildFile {
             }
         }
         let lang = Lang::from_str(&file.build.lang)?;
+        let mut kind = file.build.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default();
+        if let ProjKind::SharedLib{ implib } = &mut kind {
+            *implib = file.build.implib.unwrap_or(true);
+        }
 
         Ok(BuildFile{
             build: Build{
-                package:   file.build.package,
-                version:   file.build.version,
-                kind:      file.build.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default(),
+                package:    file.build.package,
+                version:    file.build.version,
                 lang,
-                interface: file.build.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
-                runtime:   file.build.runtime,
+                kind,
+                interface:  file.build.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
+                runtime:    file.build.runtime,
             },
-            dependencies:  file.dependencies,
+            dependencies:   file.dependencies,
             profile,
         })
     }
@@ -64,8 +68,8 @@ impl BuildFile {
 pub struct Build {
     pub package: String,
     pub version: String,
-    pub kind: ProjKind,
     pub lang: Lang,
+    pub kind: ProjKind,
     pub interface: Lang,
     pub runtime: Option<String>,
 }
@@ -185,8 +189,10 @@ struct SerdeBuildFile {
 struct SerdeBuild {
     package: String,
     version: String,
-    kind: Option<String>,
     lang: String,
+    kind: Option<String>,
+    #[serde(alias = "import-lib")]
+    implib: Option<bool>,
     interface: Option<String>,
     runtime: Option<String>,
 

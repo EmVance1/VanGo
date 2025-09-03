@@ -63,6 +63,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         archives: [ PathBuf::from(&build.build.package).with_extension("lib") ].into_iter().collect(),
         relink,
         outfile: outfile.clone(),
+        implib: None,
 
         comp_args: vec![],
         link_args: vec![],

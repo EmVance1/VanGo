@@ -59,8 +59,10 @@ libdir =  [ "-L{libdir}" ]
 library = [ "-l{library}" ]
 output =  [ "-o{binary}" ]
 
-aslr-app = [ "-pie" ]
-aslr-lib = [ "-shared" ]
+aslr = [ "-pie" ]
+
+shared-lib = [ "-shared" ]
+import-lib = [ "-Wl,--out-implib,{library}" ]
 
 opt-linktime = [ "-flto" ]
 

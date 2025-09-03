@@ -105,7 +105,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                         println!();
                     }
                     std::env::set_current_dir(&save).unwrap();
-                    let mut libinfo = LibFile::from(build).validate(lang)?;
+                    let mut libinfo = LibFile::try_from(build)?.validate(lang)?;
                     let profile = libinfo.take(&switches.profile)?;
                     incdirs.push(path.join(profile.include));
                     libdirs.push(path.join(&profile.libdir));

@@ -28,6 +28,8 @@ pub enum Error {
     ProfileUnavailable(String, String),
     #[error("custom profile '{0}' must inherit from a builtin profile")]
     InvalidCustomProfile(String),
+    #[error("project dependency '{0}' is not a library")]
+    InvalidDependency(String),
     #[error("toolchain '{0}' compiler is unavailable")]
     MissingCompiler(String),
     #[error("toolchain '{0}' archiver is unavailable")]

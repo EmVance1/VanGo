@@ -57,7 +57,11 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     cmd.args(info.toolchain.linker_as_arg(info.lang.is_cpp()));
 
     cmd.args(info.link_args);
-    cmd.arg("-pie");
+    if cfg!(target_os = "windows") {
+        cmd.arg("-Wl,--dynamicbase");
+    } else {
+        cmd.arg("-pie");
+    }
     if info.crtstatic {
         if info.lang.is_cpp() || info.cpprt {
             cmd.arg("-static-libstdc++");
@@ -99,9 +103,11 @@ pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, v
         cmd.arg("-shared");
     }
     if cfg!(target_os = "windows") {
+        let mut ld_opts = "--dynamicbase".to_string();
         if let Some(lib) = info.implib {
-            cmd.arg(format!("-Wl,--out-implib,{}", lib.display()));
+            ld_opts.push_str(&format!(",--out-implib,{}", lib.display()));
         }
+        cmd.arg(format!("-Wl,{}", ld_opts));
     } else {
         cmd.arg("-fPIC");
     }

@@ -74,7 +74,7 @@ interface = [ "CXX" ]
 
 - `kind` is for declaring whether your project builds to an executable or a library. The default value here is `"app"`, though it can be written explicitly. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib, etc.). In contrast to other kinds, the behaviour of `sharedlib` varies widely per platform, *regardless of toolchain*. On linux, we produce a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and (by default) a static *import* archive that allows automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a dll file on windows, for all your `__declspec` needs.
 
-    **Note**: At time of writing, windows dlls must after building be manually moved to the dependent projects working directory for correct linkage.
+    **Note**: At time of writing, windows dlls must be manually moved to the dependent projects working directory for correct linkage.
 
 - `interface`: at times you may want to implement a library using one standard, but provide interfaces for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` array, which lists all standards your headers are compatible with. Elements of `interface` use the same format as `lang`.
 

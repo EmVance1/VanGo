@@ -1,7 +1,7 @@
 mod incremental;
 mod queue;
 mod msvc;
-mod posix;
+mod gnu;
 mod prep;
 mod agnostic;
 
@@ -41,37 +41,6 @@ pub struct BuildInfo {
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
 
-}
-
-impl BuildInfo {
-    fn compile_info<'a, 'b>(&'a self, pch: &'b PreCompHead) -> CompileInfo<'a, 'b> {
-        CompileInfo {
-            toolchain: self.toolchain,
-            profile:  &self.profile,
-            projkind:  self.projkind,
-            lang:      self.lang,
-            crtstatic: self.crtstatic,
-            outdir:   &self.outdir,
-            defines:  &self.defines,
-            incdirs:  &self.incdirs,
-            pch,
-            comp_args: &self.comp_args,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct CompileInfo<'a, 'b> {
-    toolchain: ToolChain,
-    profile: &'a Profile,
-    projkind: ProjKind,
-    lang: Lang,
-    crtstatic: bool,
-    outdir: &'a Path,
-    defines: &'a [String],
-    incdirs: &'a [PathBuf],
-    pch: &'b PreCompHead<'b>,
-    comp_args: &'a [String],
 }
 
 
@@ -114,13 +83,15 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
             log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
             log_info_ln!("precompiling header: '{}'", inpch.display());
             let var = PreCompHead::Create(pch);
-            let mut cmd = if info.toolchain.is_msvc() {
-                msvc::compile_cmd(&incpp, &outfile, info.compile_info(&var), echo, verbose)
+            let mut comp = if info.toolchain.is_msvc() {
+                msvc::compile(&incpp, &outfile, &info, &var, echo, verbose)
             } else {
-                posix::compile_cmd(&inpch, &outfile, info.compile_info(&var), echo, verbose)
+                gnu::compile(&inpch, &outfile, &info, &var, echo, verbose)
             };
-            let proc = cmd.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?;
-            let output = proc.wait_with_output().unwrap();
+            let output = comp.spawn()
+                .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?
+                .wait_with_output()
+                .unwrap();
             if !on_compile_finish(&inpch, output) {
                 return Err(Error::CompilerFail(info.outfile));
             }
@@ -149,14 +120,12 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
             for (src, obj) in elems {
                 log_info_ln!("compiling: {}", src.to_string_lossy());
-                let finished = if info.toolchain.is_msvc() {
-                    queue.push((src, msvc::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish)
+                let mut comp = if info.toolchain.is_msvc() {
+                    msvc::compile(src, &obj, &info, &pch_use, echo, verbose)
                 } else {
-                    queue.push((src, posix::compile_cmd(src, &obj, info.compile_info(&pch_use), echo, verbose).spawn()
-                        .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish)
+                    gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
                 };
-                if finished.is_err() {
+                if queue.push((src, comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish).is_err() {
                     failure = true;
                 }
             }
@@ -173,16 +142,16 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
     if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         match info.projkind {
-            ProjKind::App       => msvc::link_exe(all_objs, info, echo, verbose),
+            ProjKind::App           => msvc::link_exe(all_objs, info, echo, verbose),
             ProjKind::SharedLib{..} => msvc::link_shared_lib(all_objs, info, echo, verbose),
-            ProjKind::StaticLib => msvc::link_static_lib(all_objs, info, echo, verbose),
+            ProjKind::StaticLib     => msvc::link_static_lib(all_objs, info, echo, verbose),
         }
     } else {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
         match info.projkind {
-            ProjKind::App       => posix::link_exe(all_objs, info, echo, verbose),
-            ProjKind::SharedLib{..} => posix::link_shared_lib(all_objs, info, echo, verbose),
-            ProjKind::StaticLib => posix::link_static_lib(all_objs, info, echo, verbose),
+            ProjKind::App           => gnu::link_exe(all_objs, info, echo, verbose),
+            ProjKind::SharedLib{..} => gnu::link_shared_lib(all_objs, info, echo, verbose),
+            ProjKind::StaticLib     => gnu::link_static_lib(all_objs, info, echo, verbose),
         }
     }
 }

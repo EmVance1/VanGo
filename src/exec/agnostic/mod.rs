@@ -4,7 +4,7 @@ mod repr;
 use std::{collections::HashMap, ffi::OsString, path::Path};
 use crate::config::ProjKind;
 
-use super::{CompileInfo, PreCompHead};
+use super::{PreCompHead};
 
 
 enum Setting {
@@ -30,7 +30,7 @@ enum Setting {
 
 /*
 
-pub fn compile_cmd(src: &Path, obj: &Path, info: CompileInfo, echo: bool, verbose: bool) -> std::process::Command {
+pub fn compile_cmd(src: &Path, obj: &Path, info: &BuildInfo, echo: bool, verbose: bool) -> std::process::Command {
     let tc = repr::Toolchain::default();
 
     let mut cmd = tc.compile(info.lang);

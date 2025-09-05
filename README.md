@@ -48,11 +48,13 @@ VanGo is opinionated for simplicity and makes some base assumptions and decision
 - You have a valid `Vango.toml` in the project root.
 - All of your source files are in the `src` directory, and all output files are generated in `bin/{profile}/`.
 - Your output binary is named the same as your project.
-- All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
+- For a given project, you can make a platform specific build definition by naming the file 'win.vango.toml', 'lnx.vango.toml', or 'mac.vango.toml'.
+- A correct `Vango.toml` may begin with one of 2 sections - `[build]` and `[library]`.
 
-For a given project, you can make a platform specific build definition by naming the file 'win.vango.toml', 'lnx.vango.toml', or 'mac.vango.toml'.
-
-A correct `Vango.toml` may begin with one of 2 sections - `[build]` and `[library]`.
+### Toolchains
+Vango is not itself a compilation toolchain, simply a compilation automator. For everything to work, you need at least one compiler installed on your system and visible in your `PATH` variable. Currently supported toolchains are MSVC (windows only), GCC (linux, mingw windows, macos), Clang/LLVM (universal, both GNU and MSVC ecosystems).
+All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. Clang on windows will default to its MSVC variant. This can be overridden by using `-t=clang-gnu`.
+To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
 
 ### Build Configuration
 All manifests that begin with `[build]` are expected to have 3 base declarations at the root:

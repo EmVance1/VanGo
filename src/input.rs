@@ -18,17 +18,15 @@ pub struct BuildSwitches {
     pub profile: Profile,
     pub toolchain: ToolChain,
     pub crtstatic: bool,
+    pub install: bool,
     pub echo: bool,
     pub verbose: bool,
     pub is_test: bool,
 }
 
 
-
 pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
-    if args.is_empty() {
-        return Ok(Action::Help{ action: None })
-    }
+    if args.is_empty() { return Ok(Action::Help{ action: None }) }
 
     match args.remove(0).as_str() {
         "new" => {
@@ -52,15 +50,16 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             }
         }
         "build" | "b" => {
-            let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
-            let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
+            let debug     = args.remove_if(|s| *s == "--debug"   || *s == "-d").is_some();
+            let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
+            let install   = args.remove_if(|s| *s == "--install").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
-            let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
-            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
+            let echo      = args.remove_if(|s| *s == "--echo").is_some();
+            let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
+            let profile   = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: false } })
+                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: false } })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -73,28 +72,30 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
             } else {
                 vec![]
             };
-            let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
-            let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
+            let debug     = args.remove_if(|s| *s == "--debug"   || *s == "-d").is_some();
+            let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
+            let install   = args.remove_if(|s| *s == "--install").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
-            let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
+            let echo      = args.remove_if(|s| *s == "--echo").is_some();
+            let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: false }, args: user_args })
+                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: false }, args: user_args })
             } else {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
         }
         "test" | "t" => {
-            let debug = args.remove_if(|s| *s == "-d" || *s == "--debug").is_some();
-            let release = args.remove_if(|s| *s == "-r" || *s == "--release").is_some();
+            let debug     = args.remove_if(|s| *s == "--debug"   || *s == "-d").is_some();
+            let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
+            let install   = args.remove_if(|s| *s == "--install").is_some();
             let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
-            let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args.remove_if(|s| *s == "-v" || *s == "--verbose").is_some();
-            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("-t=") || s.starts_with("--toolchain=")))?;
+            let echo      = args.remove_if(|s| *s == "--echo").is_some();
+            let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
-            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, crtstatic, echo, verbose, is_test: true }, args })
+            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: true }, args })
         }
         "clean" | "c" => {
             if args.is_empty() {
@@ -155,10 +156,22 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
             } else {
                 Err(Error::MsvcUnavailable)
             }
-        } else if tc == "gnu" {
-            Ok(ToolChain::Gnu)
+        } else if tc == "gcc" {
+            Ok(ToolChain::Gcc)
         } else if tc == "clang" {
-            Ok(ToolChain::Clang)
+            if cfg!(target_os = "windows") {
+                Ok(ToolChain::ClangMsvc)
+            } else {
+                Ok(ToolChain::ClangGnu)
+            }
+        } else if tc == "clang-gnu" {
+            Ok(ToolChain::ClangGnu)
+        } else if tc == "clang-msvc" {
+            if cfg!(target_os = "windows") {
+                Ok(ToolChain::ClangMsvc)
+            } else {
+                Err(Error::MsvcUnavailable)
+            }
         } else if tc == "zig" {
             Ok(ToolChain::Zig)
         } else {
@@ -242,9 +255,9 @@ mod tests {
 
     #[test]
     pub fn parse_action_build_3() {
-        let result = parse_input(vec![ "build".to_string(), "-t=gnu".to_string(), "--release".to_string() ]);
+        let result = parse_input(vec![ "build".to_string(), "-t=gcc".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
-            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Gnu, ..Default::default() }
+            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Gcc, ..Default::default() }
         });
     }
 
@@ -252,7 +265,7 @@ mod tests {
     pub fn parse_action_build_4() {
         let result = parse_input(vec![ "build".to_string(), "-t=clang".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
-            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Clang, ..Default::default() }
+            switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::ClangGnu, ..Default::default() }
         });
     }
 

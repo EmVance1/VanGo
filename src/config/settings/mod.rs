@@ -16,6 +16,19 @@ pub enum ProjKind {
     StaticLib,
 }
 
+impl ProjKind {
+    pub fn is_lib(&self) -> bool {
+        matches!(self, ProjKind::StaticLib|ProjKind::SharedLib{..})
+    }
+    pub fn has_lib(&self) -> bool {
+        match self {
+            ProjKind::SharedLib{ implib } => !cfg!(target_os = "windows") || *implib,
+            ProjKind::StaticLib => true,
+            _ => false,
+        }
+    }
+}
+
 impl FromStr for ProjKind {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -32,8 +45,9 @@ impl FromStr for ProjKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolChain {
     Msvc,
-    Gnu,
-    Clang,
+    Gcc,
+    ClangGnu,
+    ClangMsvc,
     Zig,
 }
 
@@ -43,8 +57,9 @@ impl Default for ToolChain {
         match std::env::var("VANGO_DEFAULT_TOOLCHAIN") {
             Ok(var) => match var.as_str() {
                 "msvc"  => return ToolChain::Msvc,
-                "gnu"   => return ToolChain::Gnu,
-                "clang" => return ToolChain::Clang,
+                "gcc"   => return ToolChain::Gcc,
+                "clang-gnu"  => return ToolChain::ClangGnu,
+                "clang-msvc" => return ToolChain::ClangMsvc,
                 "zig"   => return ToolChain::Zig,
                 _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             }
@@ -61,27 +76,24 @@ impl ToolChain {
         if cfg!(target_os = "windows") {
             ToolChain::Msvc
         } else if cfg!(target_os = "linux") {
-            ToolChain::Gnu
+            ToolChain::Gcc
         } else {
-            ToolChain::Clang
+            ToolChain::ClangGnu
         }
     }
 
     pub fn is_msvc(&self) -> bool {
-        matches!(self, Self::Msvc)
+        matches!(self, Self::Msvc|Self::ClangMsvc)
     }
     pub fn is_gnu(&self) -> bool {
-        matches!(self, Self::Gnu)
+        matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig)
     }
     pub fn is_clang(&self) -> bool {
-        matches!(self, Self::Clang|Self::Zig)
+        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
     }
 
-    pub fn is_posix(&self) -> bool {
-        matches!(self, Self::Gnu|Self::Clang|Self::Zig)
-    }
     pub fn is_llvm(&self) -> bool {
-        matches!(self, Self::Clang|Self::Zig)
+        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
     }
 
     pub fn shared_lib_prefix(&self) -> &'static str {
@@ -93,7 +105,7 @@ impl ToolChain {
     }
     pub fn static_lib_prefix(&self) -> &'static str {
         match self {
-            Self::Msvc => "",
+            Self::Msvc|Self::ClangMsvc => "",
             _ => "lib",
         }
     }
@@ -106,7 +118,7 @@ impl ToolChain {
     }
     pub fn app_ext(&self) -> &'static str {
         match self {
-            Self::Msvc => "exe",
+            Self::Msvc|Self::ClangMsvc => "exe",
             _ => "",
         }
     }
@@ -121,57 +133,65 @@ impl ToolChain {
     }
     pub fn static_lib_ext(&self) -> &'static str {
         match self {
-            Self::Msvc => "lib",
+            Self::Msvc|Self::ClangMsvc => "lib",
             _ => "a",
         }
     }
 
-    pub fn compiler(&self, cpp: bool) -> &'static str {
+    pub fn compiler(&self, cpp: bool) -> std::process::Command {
         match self {
-            Self::Msvc  => "cl",
-            Self::Gnu   => if cpp { "g++" }     else { "gcc" }
-            Self::Clang => if cpp { "clang++" } else { "clang" }
-            Self::Zig   => "zig"
+            Self::Msvc  => std::process::Command::new("cl.exe"),
+            Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
+            Self::ClangGnu  => {
+                let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
+                if cfg!(target_os = "windows") { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                cmd
+            }
+            Self::ClangMsvc => std::process::Command::new("clang-cl"),
+            Self::Zig   => {
+                let mut cmd = std::process::Command::new("zig");
+                cmd.arg(if cpp { "c++" } else { "cc" });
+                cmd
+            }
         }
     }
-    pub fn compiler_as_arg(&self, cpp: bool) -> Option<&'static str> {
+    pub fn linker(&self, cpp: bool) -> std::process::Command {
         match self {
-            Self::Msvc|Self::Gnu|Self::Clang => None,
-            Self::Zig   => Some(if cpp { "c++" } else { "cc" })
+            Self::Msvc  => std::process::Command::new("LINK.exe"),
+            Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
+            Self::ClangGnu  => {
+                let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
+                if cfg!(target_os = "windows") { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                cmd
+            }
+            Self::ClangMsvc => std::process::Command::new("lld-link"),
+            Self::Zig   => {
+                let mut cmd = std::process::Command::new("zig");
+                cmd.arg(if cpp { "c++" } else { "cc" });
+                cmd
+            }
         }
     }
-    pub fn linker(&self, cpp: bool) -> &'static str {
+    pub fn archiver(&self) -> std::process::Command {
         match self {
-            Self::Msvc => "LINK",
-            Self::Gnu|Self::Clang|Self::Zig => self.compiler(cpp),
-        }
-    }
-    pub fn linker_as_arg(&self, cpp: bool) -> Option<&'static str> {
-        match self {
-            Self::Msvc|Self::Gnu|Self::Clang => None,
-            Self::Zig => self.compiler_as_arg(cpp),
-        }
-    }
-    pub fn archiver(&self) -> &'static str {
-        match self {
-            Self::Msvc  => "LIB",
-            Self::Gnu   => "ar",
-            Self::Clang => "llvm-ar",
-            Self::Zig   => "zig",
-        }
-    }
-    pub fn archiver_as_arg(&self) -> Option<&'static str> {
-        match self {
-            Self::Msvc|Self::Gnu|Self::Clang => None,
-            Self::Zig => Some("ar"),
+            Self::Msvc  => std::process::Command::new("LIB.exe"),
+            Self::Gcc   => std::process::Command::new("ar"),
+            Self::ClangGnu  => std::process::Command::new("llvm-ar"),
+            Self::ClangMsvc => std::process::Command::new("llvm-lib"),
+            Self::Zig   => {
+                let mut cmd = std::process::Command::new("zig");
+                cmd.arg("ar");
+                cmd
+            }
         }
     }
 
     pub fn as_arg(&self) -> &'static str {
         match self {
             Self::Msvc  => "-t=msvc",
-            Self::Gnu   => "-t=gnu",
-            Self::Clang => "-t=clang",
+            Self::Gcc   => "-t=gcc",
+            Self::ClangGnu  => "-t=clang-gnu",
+            Self::ClangMsvc => "-t=clang-msvc",
             Self::Zig   => "-t=zig",
         }
     }
@@ -185,8 +205,9 @@ impl Display for ToolChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Msvc  => write!(f, "MSVC"),
-            Self::Gnu   => write!(f, "GCC"),
-            Self::Clang => write!(f, "Clang"),
+            Self::Gcc   => write!(f, "GCC"),
+            Self::ClangGnu  => write!(f, "Clang (GNU)"),
+            Self::ClangMsvc => write!(f, "Clang (MSVC)"),
             Self::Zig   => write!(f, "Zig/Clang"),
         }
     }

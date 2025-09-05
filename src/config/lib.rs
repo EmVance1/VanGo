@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
 use crate::error::Error;
-use super::{build::BuildFile, Profile, ProjKind, Lang};
+use super::{build::BuildFile, Profile, Lang};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,10 +66,10 @@ impl TryFrom<BuildFile> for LibFile {
 
     fn try_from(value: BuildFile) -> Result<Self, Self::Error> {
         let package = value.build.package;
-        if !matches!(value.build.kind, ProjKind::StaticLib|ProjKind::SharedLib{..}) {
+        if !value.build.kind.is_lib() {
             return Err(Error::InvalidDependency(package));
         }
-        let haslib = matches!(value.build.kind, ProjKind::StaticLib|ProjKind::SharedLib{implib: true});
+        let haslib = value.build.kind.has_lib();
         let profile: HashMap<_, _> = value.profile.into_iter().map(|(k, p)| {
             let prof = LibProfile{
                 include: p.include_pub,

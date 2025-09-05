@@ -116,7 +116,7 @@ pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
                 Ok(Action::Help{ action: None })
             } else {
                 let action = args.remove(0);
-                if matches!(action.as_str(), "new"|"init"|"clean"|"build"|"run"|"test"|"clangd") && args.is_empty() {
+                if matches!(action.as_str(), "new"|"init"|"clean"|"build"|"run"|"test"|"clangd"|"toolchains") && args.is_empty() {
                     Ok(Action::Help{ action: Some(action) })
                 } else {
                     Err(Error::BadAction(action))

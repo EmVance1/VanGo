@@ -98,13 +98,33 @@ pub enum Dependency {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WarnLevel { #[default] None, Basic, High }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Runtime { #[default] DynamicDebug, DynamicRelease, StaticDebug, StaticRelease }
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BuildProfile {
     pub src: PathBuf,
     pub include: Vec<PathBuf>,
     pub include_pub: PathBuf,
     pub pch: Option<PathBuf>,
     pub defines: Vec<String>,
+
+    pub opt_level:     u32,
+    pub opt_size:      bool,
+    pub opt_speed:     bool,
+    pub opt_linktime:  bool,
+    pub iso_compliant: bool,
+    pub warn_level:    WarnLevel,
+    pub warn_as_error: bool,
+    pub debug_info:    bool,
+    pub runtime:       Runtime,
+    pub aslr:          bool,
+
     pub compiler_options: Vec<String>,
     pub linker_options: Vec<String>,
 }
@@ -125,6 +145,18 @@ impl BuildProfile {
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
             defines,
+
+            opt_level:     defaults.build_settings.opt_level.unwrap_or(0),
+            opt_size:      defaults.build_settings.opt_size.unwrap_or(false),
+            opt_speed:     defaults.build_settings.opt_speed.unwrap_or(false),
+            opt_linktime:  defaults.build_settings.opt_linktime.unwrap_or(false),
+            iso_compliant: defaults.build_settings.iso_compliant.unwrap_or(false),
+            warn_level:    defaults.build_settings.warn_level.unwrap_or(WarnLevel::Basic),
+            warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
+            debug_info:    defaults.build_settings.debug_info.unwrap_or(true),
+            runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
+            aslr:          defaults.build_settings.aslr.unwrap_or(true),
+
             compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_string()).collect(),
             linker_options: defaults.linker_options.iter().flatten().map(|o| o.to_string()).collect(),
         }
@@ -145,6 +177,18 @@ impl BuildProfile {
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
             defines,
+
+            opt_level:     defaults.build_settings.opt_level.unwrap_or(3),
+            opt_size:      defaults.build_settings.opt_size.unwrap_or(false),
+            opt_speed:     defaults.build_settings.opt_speed.unwrap_or(false),
+            opt_linktime:  defaults.build_settings.opt_linktime.unwrap_or(true),
+            iso_compliant: defaults.build_settings.iso_compliant.unwrap_or(false),
+            warn_level:    defaults.build_settings.warn_level.unwrap_or(WarnLevel::Basic),
+            warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
+            debug_info:    defaults.build_settings.debug_info.unwrap_or(false),
+            runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
+            aslr:          defaults.build_settings.aslr.unwrap_or(true),
+
             compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_owned()).collect(),
             linker_options:   defaults.linker_options.iter().flatten().map(|o| o.to_owned()).collect(),
         }
@@ -155,13 +199,25 @@ impl BuildProfile {
         self.include.extend(other.include.unwrap_or_default());
         if let Some(inc) = other.include_pub { self.include_pub = inc; }
         self.defines.extend(other.defines.unwrap_or_default());
+
+        other.build_settings.opt_level.inspect(    |s| self.opt_level = *s);
+        other.build_settings.opt_size.inspect(     |s| self.opt_size = *s);
+        other.build_settings.opt_speed.inspect(    |s| self.opt_speed = *s);
+        other.build_settings.opt_linktime.inspect( |s| self.opt_linktime = *s);
+        other.build_settings.iso_compliant.inspect(|s| self.iso_compliant = *s);
+        other.build_settings.warn_level.inspect(   |s| self.warn_level = *s);
+        other.build_settings.warn_as_error.inspect(|s| self.warn_as_error = *s);
+        other.build_settings.debug_info.inspect(   |s| self.debug_info = *s);
+        other.build_settings.runtime.inspect(      |s| self.runtime = *s);
+        other.build_settings.aslr.inspect(         |s| self.aslr = *s);
+
         self.compiler_options.extend(other.compiler_options.unwrap_or_default());
         self.linker_options.extend(other.linker_options.unwrap_or_default());
         self
     }
 }
 
-
+/*
 impl Default for BuildProfile {
     fn default() -> Self {
         Self{
@@ -174,6 +230,11 @@ impl Default for BuildProfile {
             linker_options: Vec::new(),
         }
     }
+}
+*/
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BuildSettings {
 }
 
 
@@ -211,7 +272,26 @@ struct SerdeBuildProfile {
     include_pub: Option<PathBuf>,
     pch: Option<PathBuf>,
     defines: Option<Vec<String>>,
+
+    #[serde(flatten)]
+    build_settings: SerdeBuildSettings,
+
     compiler_options: Option<Vec<String>>,
     linker_options: Option<Vec<String>>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct SerdeBuildSettings {
+    opt_level:     Option<u32>,
+    opt_size:      Option<bool>,
+    opt_speed:     Option<bool>,
+    opt_linktime:  Option<bool>,
+    iso_compliant: Option<bool>,
+    warn_level:    Option<WarnLevel>,
+    warn_as_error: Option<bool>,
+    debug_info:    Option<bool>,
+    runtime:       Option<Runtime>,
+    aslr:          Option<bool>,
 }
 

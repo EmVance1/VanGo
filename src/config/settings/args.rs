@@ -5,7 +5,7 @@ pub struct Args(pub ToolChain);
 
 #[allow(unused, non_snake_case)]
 impl Args {
-    pub fn no_link(&self) -> &'static str {
+    pub fn comp_only(&self) -> &'static str {
         if self.0.is_msvc() { "/c" } else { "-c" }
     }
     pub fn comp_output(&self, file: &str) -> String {
@@ -17,8 +17,12 @@ impl Args {
     pub fn eh_default_cpp(&self) -> Option<&'static str> {
         if self.0.is_msvc() { Some("/EHsc") } else { None }
     }
-    pub fn dbg_symbols(&self) -> &'static str {
-        if self.0.is_msvc() { "/Zi" } else { "-g" }
+    pub fn debug_symbols(&self) -> Vec<String> {
+        if self.0.is_msvc() {
+            vec![ "/Zi".to_string(), "/Fd:bin\\debug\\obj\\".to_string(), "/FS".to_string() ]
+        } else {
+            vec![ "-g".to_string() ]
+        }
     }
 
     pub fn std(&self, lang: Lang) -> String {
@@ -41,23 +45,26 @@ impl Args {
         }
     }
 
-    pub fn O0(&self) -> &'static str {
-        if self.0.is_msvc() { "/Od" } else { "-O0" }
+    pub fn O0(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/Od" ] } else { vec![ "-O0" ] }
     }
-    pub fn O1(&self) -> &'static str {
-        if self.0.is_msvc() { "/O1" } else { "-O1" }
+    pub fn O1(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/O1" ] } else { vec![ "-O1" ] }
     }
-    pub fn O2(&self) -> &'static str {
-        if self.0.is_msvc() { "/O2" } else { "-O2" }
+    pub fn O2(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/O2" ] } else { vec![ "-O2" ] }
     }
-    pub fn O3(&self) -> &'static str {
-        if self.0.is_msvc() { "/O2" } else { "-O3" }
+    pub fn O3(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/O2", "/Oi" ] } else { vec![ "-O3" ] }
     }
-    pub fn Os(&self) -> &'static str {
-        if self.0.is_msvc() { "/Os" } else { "-Os" }
+    pub fn Os(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/Os" ] } else { vec![ "-Os" ] }
     }
-    pub fn Ot(&self) -> &'static str {
-        if self.0.is_msvc() { "/Ot" } else { "-Ofast" }
+    pub fn Ot(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/Ot" ] } else { vec![ "-Ofast" ] }
+    }
+    pub fn Olinktime(&self) -> Vec<&'static str> {
+        if self.0.is_msvc() { vec![ "/GL" ] } else { vec![ "-flto" ]  }
     }
 
     pub fn I(&self) -> &'static str {
@@ -78,21 +85,6 @@ impl Args {
     }
     pub fn crt_dynamic(&self, profile: &Profile) -> Option<&'static str> {
         if self.0.is_msvc() { if profile.is_release() { Some("/MD") } else { Some("/MDd") } } else { None }
-    }
-
-    pub fn opt_profile_none(&self) -> Vec<String> {
-        if self.0.is_msvc() {
-            vec![ self.O0().to_string(), self.dbg_symbols().to_string(), "/Fd:bin\\debug\\obj\\".to_string(), "/FS".to_string() ]
-        } else {
-            vec![ self.O0().to_string(), self.dbg_symbols().to_string() ]
-        }
-    }
-    pub fn opt_profile_high(&self) -> Vec<String> {
-        if self.0.is_msvc() {
-            vec![ self.O2().to_string(), "/Oi".to_string(), "/GL".to_string() ]
-        } else {
-            vec![ self.O2().to_string(), "-flto".to_string() ]
-        }
     }
 }
 

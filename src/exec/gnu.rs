@@ -19,11 +19,13 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.args(args.eh_default_cpp());
     }
     cmd.arg(args.std(info.lang));
-    cmd.arg(args.no_link());
+    cmd.arg(args.comp_only());
     if info.profile.is_release() {
-        cmd.args(args.opt_profile_high());
+        cmd.args(args.O3());
+        cmd.args(args.Olinktime());
     } else {
-        cmd.args(args.opt_profile_none());
+        cmd.args(args.debug_symbols());
+        cmd.args(args.O0());
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("{}{}", args.I(), inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("{}{}", args.D(), def)));

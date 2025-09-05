@@ -155,6 +155,39 @@ pub fn help(action: Option<String>) {
                 println!();
                 print_build_details();
             }
+            "toolchains" => {
+                println!("Toolchains currently installed on this system:");
+                println!();
+                if std::process::Command::new("gcc").output().is_ok() {
+                    if cfg!(target_os = "windows") {
+                        println!("    gcc        - GCC, Gnu Compiler Collection for MinGW");
+                    } else {
+                        println!("    gcc        - GCC, Gnu Compiler Collection");
+                    }
+                } else {
+                        println!("    gcc        - unavailable");
+                }
+                if std::process::Command::new("clang").output().is_ok() {
+                    if cfg!(target_os = "windows") {
+                        println!("    clang-gnu  - Clang Compiler with LLVM Backend");
+                        println!("    clang-msvc - Clang/LLVM Compatible with MSVC Toolchain");
+                    } else {
+                        println!("    clang      - Clang Compiler with LLVM Backend");
+                    }
+                } else {
+                        println!("    clang      - unavailable");
+                }
+                if std::process::Command::new("cl.exe").output().is_ok() {
+                    println!("    msvc       - MSVC, Microsoft Visual C/C++ Compiler for Windows ");
+                } else {
+                    println!("    msvc       - unavailable");
+                }
+                if std::process::Command::new("zig").output().is_ok() {
+                    println!("    zig        - Zig Wrapper for Clang/LLVM Compiler");
+                } else {
+                    println!("    zig        - unavailable");
+                }
+            }
             _ => (),
         }
     } else {
@@ -165,7 +198,7 @@ pub fn help(action: Option<String>) {
         println!("Commands:");
         println!("    new         Create a new empty project");
         println!("    init        Create a new empty project in an existing location");
-        println!("    help        Display detailed information about a command");
+        println!("    help        Display help about a command (list toolchains with 'help toolchains')");
         println!("    clean, c    Remove all build files of the current project");
         println!("    build, b    Build the current project");
         println!("    run,   r    Build the current project and run it");

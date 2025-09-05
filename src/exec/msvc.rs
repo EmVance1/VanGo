@@ -12,16 +12,18 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.args(args.eh_default_cpp());
     }
     cmd.arg(args.std(info.lang));
-    cmd.arg(args.no_link());
+    cmd.arg(args.comp_only());
     if info.crtstatic {
         cmd.arg(args.crt_static(&info.profile));
     } else {
         cmd.args(args.crt_dynamic(&info.profile));
     }
     if info.profile.is_release() {
-        cmd.args(args.opt_profile_high());
+        cmd.args(args.O3());
+        cmd.args(args.Olinktime());
     } else {
-        cmd.args(args.opt_profile_none());
+        cmd.args(args.debug_symbols());
+        cmd.args(args.O0());
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("{}{}", args.I(), inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("{}{}", args.D(), def)));
@@ -143,7 +145,7 @@ pub(super) fn link_static_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, v
         eprintln!();
         Err(Error::ArchiverFail(info.outfile))
     } else {
-        log_info_ln!("successfully built project {}", info.outfile.display());
+        log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
     }
 }

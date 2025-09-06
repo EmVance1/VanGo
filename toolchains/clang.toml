@@ -1,5 +1,20 @@
 [toolchain]
 name = "Clang"
+
+# MSVC ========================================
+compiler-c =   [ "clang-cl.exe" ]
+compiler-cpp = [ "clang-cl.exe" ]
+linker-c =     [ "lld-link.exe" ]
+linker-cpp =   [ "lld-link.exe" ]
+archiver-c =   [ "llvm-lib.exe" ]
+archiver-cpp = [ "llvm-lib.exe" ]
+exe-fmt     = "{name}.exe"
+obj-fmt     = "{name}.obj"
+archive-fmt = "{name}.lib"
+
+# All other options are the same as in 'msvc.toml'
+
+# GNU =========================================
 compiler-c =   [ "clang" ]
 compiler-cpp = [ "clang++" ]
 linker-c =     [ "clang" ]

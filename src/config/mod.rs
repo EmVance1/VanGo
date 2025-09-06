@@ -1,11 +1,10 @@
-#![allow(dead_code)]
 mod build;
 mod lib;
-mod settings;
+mod elems;
 
 pub use build::*;
 pub use lib::*;
-pub use settings::*;
+pub use elems::*;
 use crate::error::Error;
 
 
@@ -15,6 +14,7 @@ pub enum VangoFile {
     Lib(LibFile),
 }
 
+#[allow(unused)]
 impl VangoFile {
     pub fn from_str(value: &str) -> Result<VangoFile, Error> {
         let table: toml::Table = toml::from_str(value)?;

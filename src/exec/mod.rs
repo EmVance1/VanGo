@@ -4,12 +4,11 @@ mod msvc;
 mod gnu;
 mod prep;
 mod output;
-// mod agnostic;
 
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;
 use crate::{
-    config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, exec::output::*, log_info_ln
+    config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, log_info_ln
 };
 
 
@@ -54,8 +53,8 @@ enum PreCompHead<'a> {
 
 fn on_compile_finish(tc: ToolChain, output: std::process::Output) -> bool {
     match tc {
-        ToolChain::Msvc => on_msvc_compile_finish(output),
-        _  => on_gnu_compile_finish(output),
+        ToolChain::Msvc => output::msvc_compiler(output),
+        _  => output::gnu_compiler(output),
     }
 }
 
@@ -142,16 +141,14 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
     if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         match info.projkind {
-            ProjKind::App           => msvc::link_exe(all_objs, info, echo, verbose),
-            ProjKind::SharedLib{..} => msvc::link_shared_lib(all_objs, info, echo, verbose),
-            ProjKind::StaticLib     => msvc::link_static_lib(all_objs, info, echo, verbose),
+            ProjKind::App|ProjKind::SharedLib{..} => msvc::link(all_objs, info, echo, verbose),
+            ProjKind::StaticLib => msvc::archive(all_objs, info, echo, verbose),
         }
     } else {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
         match info.projkind {
-            ProjKind::App           => gnu::link_exe(all_objs, info, echo, verbose),
-            ProjKind::SharedLib{..} => gnu::link_shared_lib(all_objs, info, echo, verbose),
-            ProjKind::StaticLib     => gnu::link_static_lib(all_objs, info, echo, verbose),
+            ProjKind::App|ProjKind::SharedLib{..} => gnu::link(all_objs, info, echo, verbose),
+            ProjKind::StaticLib => gnu::archive(all_objs, info, echo, verbose),
         }
     }
 }

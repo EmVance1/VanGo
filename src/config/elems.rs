@@ -1,5 +1,3 @@
-mod args;
-
 use std::{
     str::FromStr,
     fmt::Display,
@@ -194,10 +192,6 @@ impl ToolChain {
             Self::ClangMsvc => "-t=clang-msvc",
             Self::Zig   => "-t=zig",
         }
-    }
-
-    pub fn args(&self) -> args::Args {
-        args::Args(*self)
     }
 }
 

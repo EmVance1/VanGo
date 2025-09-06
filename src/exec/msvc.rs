@@ -1,18 +1,23 @@
 use std::{ffi::OsString, io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
-use crate::{config::{Runtime, WarnLevel}, exec::output::on_msvc_link_finish, log_info_ln, Error};
+use crate::{config::{ProjKind, WarnLevel, Runtime}, Error, exec::output, log_info_ln};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
-    let args = info.toolchain.args();
 
     cmd.args(&info.comp_args);
-    if info.lang.is_cpp() {
-        cmd.args(args.eh_default_cpp());
+    if info.lang.is_latest() {
+        cmd.arg(format!("/std:{}", info.lang));
+    } else if info.lang.is_cpp() {
+        cmd.arg("/std:c++latest");
+    } else {
+        cmd.arg("/std:clatest");
     }
-    cmd.arg(args.std(info.lang));
-    cmd.arg(args.comp_only());
+    if info.lang.is_cpp() {
+        cmd.arg("/EHsc");
+    }
+    cmd.arg("/c");
     match info.settings.runtime {
         Runtime::DynamicDebug   => { cmd.arg("/MDd"); }
         Runtime::DynamicRelease => { cmd.arg("/MD"); }
@@ -20,23 +25,23 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         Runtime::StaticRelease  => { cmd.arg("/MT"); }
     }
     match info.settings.opt_level {
-        0 => { cmd.args(args.O0()); }
-        1 => { cmd.args(args.O1()); }
-        2 => { cmd.args(args.O2()); }
-        3 => { cmd.args(args.O3()); }
+        0 => { cmd.arg("/O0"); }
+        1 => { cmd.arg("/01"); }
+        2 => { cmd.arg("/01"); }
+        3 => { cmd.args([ "/O2", "/Oi" ]); }
         _ => (),
     }
     if info.settings.opt_size {
-        cmd.args(args.Os());
+        cmd.arg("/Os");
     }
-    if info.settings.opt_size {
-        cmd.args(args.Ot());
+    if info.settings.opt_speed {
+        cmd.arg("/Ot");
     }
     if info.settings.opt_linktime {
-        cmd.args(args.Olinktime());
+        cmd.arg("/GL");
     }
     if info.settings.debug_info {
-        cmd.args(args.debug_symbols());
+        cmd.args([ "/Zi", "/Fd:bin\\debug\\obj\\", "/FS" ]);
     }
     cmd.arg("/diagnostics:caret");
     match info.settings.warn_level {
@@ -51,7 +56,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("/permissive-");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
-    cmd.args(info.defines.iter().map(|def| format!("/D{}", def)));
+    cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
     match pch {
         PreCompHead::Create(h) => {
             let mut ycarg = OsString::from("/Yc");
@@ -73,7 +78,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
 
     cmd.arg(src);
-    cmd.arg(args.comp_output(&obj.to_string_lossy()));
+    cmd.arg(format!("/Fo:{}", obj.display()));
 
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
@@ -81,11 +86,16 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd
 }
 
-pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<bool, Error> {
+pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp());
-    let args = info.toolchain.args();
 
     cmd.args(info.link_args);
+    if let ProjKind::SharedLib{ implib } = info.projkind {
+        cmd.arg("/DLL");
+        if implib {
+            cmd.arg(format!("/IMPLIB:{}", info.implib.unwrap().display()));
+        }
+    }
     cmd.arg("/MACHINE:X64");
     if info.settings.aslr {
         cmd.arg("/DYNAMICBASE");
@@ -98,14 +108,13 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose
         cmd.arg("/OPT:REF");
     }
     cmd.args(objs);
-    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
+    cmd.args(info.libdirs .iter().map(|l| format!("/LIBPATH:{}", l.display())));
+    cmd.args(info.archives);
     cmd.args(DEFAULT_LIBS);
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
+    cmd.arg(format!("/OUT:{}", info.outfile.display()));
 
     if echo { print_command(&cmd); }
-    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !on_msvc_link_finish(output) {
+    if !output::msvc_linker(cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
         Err(Error::LinkerFail(info.outfile))
     } else {
         log_info_ln!("successfully built project {}\n", info.outfile.display());
@@ -113,49 +122,12 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose
     }
 }
 
-pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<bool, Error> {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp());
-    let args = info.toolchain.args();
-
-    cmd.args(info.link_args);
-    cmd.arg("/DLL");
-    cmd.arg("/MACHINE:X64");
-    if info.settings.aslr {
-        cmd.arg("/DYNAMICBASE");
-    }
-    if info.settings.debug_info {
-        cmd.arg("/DEBUG");
-    }
-    if info.settings.opt_linktime {
-        cmd.arg("/LTCG");
-        cmd.arg("/OPT:REF");
-    }
-    cmd.args(objs);
-    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
-    // cmd.args(DEFAULT_LIBS);
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
-    if let Some(lib) = info.implib {
-        cmd.arg(format!("/IMPLIB:{}", lib.display()));
-    }
-
-    if echo { print_command(&cmd); }
-    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !on_msvc_link_finish(output) {
-        Err(Error::LinkerFail(info.outfile))
-    } else {
-        log_info_ln!("successfully built project {}\n", info.outfile.display());
-        Ok(true)
-    }
-}
-
-pub(super) fn link_static_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.archiver();
-    let args = info.toolchain.args();
 
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
     cmd.args(info.link_args);
     cmd.arg("/MACHINE:X64");
+    cmd.arg(format!("/OUT:{}", info.outfile.display()));
     cmd.args(objs);
 
     if echo { print_command(&cmd); }

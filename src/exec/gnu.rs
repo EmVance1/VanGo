@@ -1,43 +1,39 @@
 use std::{ffi::OsString, io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
-use crate::{config::{ProjKind, WarnLevel}, exec::output::on_gnu_link_finish, log_info_ln, Error};
+use crate::{config::{ProjKind, WarnLevel}, Error, exec::output, log_info_ln};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);
-    let args = info.toolchain.args();
 
     cmd.args(&info.comp_args);
-    if !cfg!(target_os = "windows") {
+    cmd.arg(format!("-std={}", info.lang));
+    if !cfg!(target_os = "windows") && info.settings.aslr {
         match info.projkind {
             ProjKind::App           => { cmd.arg("-fpie"); },
             ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
             ProjKind::StaticLib     => { cmd.arg("-fpie"); },
         }
     }
-    if info.lang.is_cpp() {
-        cmd.args(args.eh_default_cpp());
-    }
-    cmd.arg(args.std(info.lang));
-    cmd.arg(args.comp_only());
+    cmd.arg("-c");
     match info.settings.opt_level {
-        0 => { cmd.args(args.O0()); }
-        1 => { cmd.args(args.O1()); }
-        2 => { cmd.args(args.O2()); }
-        3 => { cmd.args(args.O3()); }
+        0 => { cmd.arg("-O0"); }
+        1 => { cmd.arg("-O1"); }
+        2 => { cmd.arg("-O2"); }
+        3 => { cmd.arg("-O3"); }
         _ => (),
     }
     if info.settings.opt_size {
-        cmd.args(args.Os());
+        cmd.arg("-Os");
     }
-    if info.settings.opt_size {
-        cmd.args(args.Ot());
+    if info.settings.opt_speed {
+        cmd.arg("-Ofast");
     }
     if info.settings.opt_linktime {
-        cmd.args(args.Olinktime());
+        cmd.arg("-flto");
     }
     if info.settings.debug_info {
-        cmd.args(args.debug_symbols());
+        cmd.arg("-g");
     }
     match info.settings.warn_level {
         WarnLevel::None  => { cmd.arg("-w"); }
@@ -52,18 +48,15 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("-pedantic-errors");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
-    cmd.args(info.defines.iter().map(|def| format!("-D{}", def)));
-    match pch {
-        PreCompHead::Use(_) => {
-            let mut fparg = OsString::from("-I");
-            fparg.push(info.outdir.join("pch"));
-            cmd.arg(fparg);
-        }
-        _ => (),
+    cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
+    if let PreCompHead::Use(_) = pch {
+        let mut fparg = OsString::from("-I");
+        fparg.push(info.outdir.join("pch"));
+        cmd.arg(fparg);
     }
 
     cmd.arg(src);
-    cmd.arg(args.comp_output(&obj.to_string_lossy()));
+    cmd.arg(format!("-o{}", obj.display()));
 
     cmd.stderr(std::process::Stdio::piped());
     if verbose {
@@ -76,15 +69,24 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd
 }
 
-pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);
-    let args = info.toolchain.args();
 
     cmd.args(info.link_args);
+    if let ProjKind::SharedLib{ implib } = info.projkind {
+        if cfg!(target_os = "macos") {
+            cmd.arg("-dynamiclib");
+        } else {
+            cmd.arg("-shared");
+        }
+        if implib {
+            cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display()));
+        }
+    }
     if info.settings.aslr {
         if cfg!(target_os = "windows") {
             cmd.arg("-Wl,--dynamicbase");
-        } else {
+        } else if let ProjKind::App = info.projkind {
             cmd.arg("-pie");
         }
     }
@@ -99,14 +101,13 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     }
 
     cmd.args(objs);
-    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
+    cmd.args(info.libdirs .iter().map(|l| format!("-L{}", l.display())));
+    cmd.args(info.archives.iter().map(|l| format!("-l{}", l.display())));
+    cmd.arg(format!("-o{}", info.outfile.display()));
 
     if echo { print_command(&cmd); }
     if verbose { cmd.arg("--verbose"); }
-    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !on_gnu_link_finish(output) {
+    if !output::gnu_linker(cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
         Err(Error::LinkerFail(info.outfile))
     } else {
         log_info_ln!("successfully built project {}\n", info.outfile.display());
@@ -114,58 +115,8 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
     }
 }
 
-pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);
-    let args = info.toolchain.args();
-
-    cmd.args(info.link_args);
-    if cfg!(target_os = "macos") {
-        cmd.arg("-dynamiclib");
-    } else {
-        cmd.arg("-shared");
-    }
-    if cfg!(target_os = "windows") {
-        if let Some(lib) = info.implib {
-            if info.settings.aslr {
-                cmd.arg(format!("-Wl,--dynamicbase,--out-implib,{}", lib.display()));
-            } else {
-                cmd.arg(format!("-Wl,--out-implib,{}", lib.display()));
-            }
-        } else if info.settings.aslr {
-            cmd.arg("-Wl,--dynamicbase");
-        }
-    } else if info.settings.aslr {
-        cmd.arg("-fPIC");
-    }
-    if info.crtstatic {
-        if info.lang.is_cpp() || info.cpprt {
-            cmd.arg("-static-libstdc++");
-        }
-        cmd.arg("-static-libgcc");
-    }
-    if info.settings.opt_linktime {
-        cmd.arg("-flto");
-    }
-
-    cmd.args(objs);
-    cmd.args(info.libdirs.iter().map(|l| format!("{}{}", args.L(), l.display())));
-    cmd.args(info.archives.iter().map(|l| format!("{}{}", args.l(), l.display())));
-    cmd.arg(args.link_output(&info.outfile.to_string_lossy()));
-
-    if echo { print_command(&cmd); }
-    if verbose { cmd.arg("--verbose"); }
-    let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !on_gnu_link_finish(output) {
-        Err(Error::LinkerFail(info.outfile))
-    } else {
-        log_info_ln!("successfully built project {}\n", info.outfile.display());
-        Ok(true)
-    }
-}
-
-pub(super) fn link_static_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.archiver();
-    // let args = info.toolchain.args();
 
     if verbose {
         cmd.arg("rcsv");

@@ -3,7 +3,7 @@ use super::*;
 use crate::{log_error_ln, log_warn_ln};
 
 
-pub fn on_msvc_compile_finish(output: std::process::Output) -> bool {
+pub fn msvc_compiler(output: std::process::Output) -> bool {
     for line in output.stderr.lines().skip(3) {
         let line = line.unwrap();
         log_error_ln!("{}", line);
@@ -21,7 +21,7 @@ pub fn on_msvc_compile_finish(output: std::process::Output) -> bool {
     output.status.success()
 }
 
-pub fn on_gnu_compile_finish(output: std::process::Output) -> bool {
+pub fn gnu_compiler(output: std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.contains("In function") {
@@ -39,7 +39,7 @@ pub fn on_gnu_compile_finish(output: std::process::Output) -> bool {
 }
 
 
-pub fn on_msvc_link_finish(output: std::process::Output) -> bool {
+pub fn msvc_linker(output: std::process::Output) -> bool {
     for line in output.stdout.lines().skip(3) {
         let line = line.unwrap();
         if line.starts_with("LINK : error LNK") || line.starts_with("LINK : fatal error LNK") {
@@ -53,7 +53,7 @@ pub fn on_msvc_link_finish(output: std::process::Output) -> bool {
     output.status.success()
 }
 
-pub fn on_gnu_link_finish(output: std::process::Output) -> bool {
+pub fn gnu_linker(output: std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if !line.starts_with("collect2.exe") {

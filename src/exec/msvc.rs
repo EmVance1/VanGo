@@ -28,8 +28,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     match info.settings.opt_level {
         0 => { cmd.arg("/Od"); }
-        1 => { cmd.arg("/01"); }
-        2 => { cmd.arg("/0x"); }
+        1 => { cmd.arg("/0x"); }
+        2 => { cmd.arg("/01"); }
         3 => { cmd.args([ "/O2", "/Oi" ]); }
         _ => (),
     }

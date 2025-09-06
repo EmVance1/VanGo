@@ -38,9 +38,9 @@ pub enum Error {
     MissingLinker(String),
     #[error("failed to compile project '{0}'")]
     CompilerFail(PathBuf),
-    #[error("failed to link library '{0}'")]
+    #[error("failed to archive project '{0}'")]
     ArchiverFail(PathBuf),
-    #[error("failed to link application '{0}'")]
+    #[error("failed to link project '{0}'")]
     LinkerFail(PathBuf),
     #[error("project does not contain 'test' directory")]
     MissingTests,

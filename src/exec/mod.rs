@@ -3,14 +3,13 @@ mod queue;
 mod msvc;
 mod gnu;
 mod prep;
-mod agnostic;
+mod output;
+// mod agnostic;
 
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;
 use crate::{
-    error::Error,
-    config::{ProjKind, ToolChain, Profile, Lang},
-    log_error_ln, log_info_ln,
+    config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, exec::output::*, log_info_ln
 };
 
 
@@ -18,10 +17,10 @@ use crate::{
 pub struct BuildInfo {
     pub projkind: ProjKind,
     pub toolchain: ToolChain,
-    pub profile: Profile,
     pub lang: Lang,
     pub crtstatic: bool,
     pub cpprt: bool,
+    pub settings: BuildSettings,
 
     pub defines:  Vec<String>,
 
@@ -53,14 +52,10 @@ enum PreCompHead<'a> {
 }
 
 
-fn on_compile_finish(src: &Path, output: std::process::Output) -> bool {
-    if !output.status.success() {
-        log_error_ln!("failed to compile '{}'", src.display());
-        let _ = std::io::stderr().write_all(&output.stderr);
-        let _ = std::io::stderr().write_all(&output.stdout);
-        false
-    } else {
-        true
+fn on_compile_finish(tc: ToolChain, output: std::process::Output) -> bool {
+    match tc {
+        ToolChain::Msvc => on_msvc_compile_finish(output),
+        _  => on_gnu_compile_finish(output),
     }
 }
 
@@ -92,7 +87,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?
                 .wait_with_output()
                 .unwrap();
-            if !on_compile_finish(&inpch, output) {
+            if !on_compile_finish(info.toolchain, output) {
                 return Err(Error::CompilerFail(info.outfile));
             }
         }
@@ -125,13 +120,18 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 } else {
                     gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
                 };
-                if queue.push((src, comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?), on_compile_finish).is_err() {
-                    failure = true;
+                if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
+                    if !on_compile_finish(info.toolchain, output) {
+                        failure = true;
+                    }
                 }
             }
 
-            if queue.flush_all(on_compile_finish).is_err() {
-                failure = true;
+            while !queue.is_empty() {
+                let output = queue.flush_one();
+                if !on_compile_finish(info.toolchain, output) {
+                    failure = true;
+                }
             }
 
             if failure { return Err(Error::CompilerFail(info.outfile)); }

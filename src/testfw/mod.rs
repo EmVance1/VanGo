@@ -45,10 +45,10 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     let info = BuildInfo {
         projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,
-        profile:   switches.profile.clone(),
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
-        cpprt: build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
+        cpprt:     build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
+        settings:  profile.settings,
 
         defines: partial.defines,
 

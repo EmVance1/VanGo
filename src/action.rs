@@ -58,10 +58,10 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     let info = BuildInfo{
         projkind:  build.build.kind,
         toolchain: switches.toolchain,
-        profile:   switches.profile,
         lang:      build.build.lang,
         crtstatic: switches.crtstatic,
         cpprt:     build.build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
+        settings:  profile.settings,
 
         defines:  deps.defines,
 
@@ -76,7 +76,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
         archives: deps.archives,
         relink:   deps.relink,
         outfile:  outfile.clone(),
-        implib:   implib,
+        implib,
 
         comp_args: profile.compiler_options,
         link_args: profile.linker_options,
@@ -165,7 +165,7 @@ pub fn help(action: Option<String>) {
                         println!("    gcc        - GCC, Gnu Compiler Collection");
                     }
                 } else {
-                        println!("    gcc        - unavailable");
+                    println!("    gcc        - unavailable");
                 }
                 if std::process::Command::new("clang").output().is_ok() {
                     if cfg!(target_os = "windows") {
@@ -175,7 +175,7 @@ pub fn help(action: Option<String>) {
                         println!("    clang      - Clang Compiler with LLVM Backend");
                     }
                 } else {
-                        println!("    clang      - unavailable");
+                    println!("    clang      - unavailable");
                 }
                 if std::process::Command::new("cl.exe").output().is_ok() {
                     println!("    msvc       - MSVC, Microsoft Visual C/C++ Compiler for Windows ");

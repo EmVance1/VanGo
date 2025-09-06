@@ -93,12 +93,12 @@ include = [ "dbg_headers" ]
         profile.insert("debug".into(), BuildProfile{
             include: vec![ "src".into(), "src".into(), "headers".into(), "dbg_headers".into() ], // TODO: duplicates
             defines: vec![ "VANGO_DEBUG".into() ],
-            ..Default::default()
+            ..BuildProfile::debug(&Default::default())
         });
         profile.insert("release".into(), BuildProfile{
             include: vec![ "src".into(), "src".into(), "headers".into() ], // TODO: duplicates
             defines: vec![ "VANGO_RELEASE".into() ],
-            ..Default::default()
+            ..BuildProfile::debug(&Default::default())
         });
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Build(BuildFile{

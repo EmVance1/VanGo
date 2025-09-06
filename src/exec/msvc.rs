@@ -1,9 +1,9 @@
 use std::{ffi::OsString, io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
-use crate::{Error, log_info_ln};
+use crate::{config::{Runtime, WarnLevel}, exec::output::on_msvc_link_finish, log_info_ln, Error};
 
 
-pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
+pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
     let args = info.toolchain.args();
 
@@ -13,20 +13,45 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     cmd.arg(args.std(info.lang));
     cmd.arg(args.comp_only());
-    if info.crtstatic {
-        cmd.arg(args.crt_static(&info.profile));
-    } else {
-        cmd.args(args.crt_dynamic(&info.profile));
+    match info.settings.runtime {
+        Runtime::DynamicDebug   => { cmd.arg("/MDd"); }
+        Runtime::DynamicRelease => { cmd.arg("/MD"); }
+        Runtime::StaticDebug    => { cmd.arg("/MTd"); }
+        Runtime::StaticRelease  => { cmd.arg("/MT"); }
     }
-    if info.profile.is_release() {
-        cmd.args(args.O3());
+    match info.settings.opt_level {
+        0 => { cmd.args(args.O0()); }
+        1 => { cmd.args(args.O1()); }
+        2 => { cmd.args(args.O2()); }
+        3 => { cmd.args(args.O3()); }
+        _ => (),
+    }
+    if info.settings.opt_size {
+        cmd.args(args.Os());
+    }
+    if info.settings.opt_size {
+        cmd.args(args.Ot());
+    }
+    if info.settings.opt_linktime {
         cmd.args(args.Olinktime());
-    } else {
-        cmd.args(args.debug_symbols());
-        cmd.args(args.O0());
     }
-    cmd.args(info.incdirs.iter().map(|inc| format!("{}{}", args.I(), inc.display())));
-    cmd.args(info.defines.iter().map(|def| format!("{}{}", args.D(), def)));
+    if info.settings.debug_info {
+        cmd.args(args.debug_symbols());
+    }
+    cmd.arg("/diagnostics:caret");
+    match info.settings.warn_level {
+        WarnLevel::None  => { cmd.arg("/w"); }
+        WarnLevel::Basic => { cmd.arg("/W1"); }
+        WarnLevel::High  => { cmd.arg("/W4"); }
+    }
+    if info.settings.warn_as_error {
+        cmd.arg("/WX");
+    }
+    if info.settings.iso_compliant {
+        cmd.arg("/permissive-");
+    }
+    cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
+    cmd.args(info.defines.iter().map(|def| format!("/D{}", def)));
     match pch {
         PreCompHead::Create(h) => {
             let mut ycarg = OsString::from("/Yc");
@@ -51,25 +76,24 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd.arg(args.comp_output(&obj.to_string_lossy()));
 
     cmd.stdout(std::process::Stdio::piped());
-    if verbose {
-        cmd.stderr(std::process::Stdio::piped());
-    } else {
-        cmd.stderr(std::process::Stdio::null());
-    };
+    cmd.stderr(std::process::Stdio::piped());
     if echo { print_command(&cmd); }
     cmd
 }
 
-pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp());
     let args = info.toolchain.args();
 
     cmd.args(info.link_args);
     cmd.arg("/MACHINE:X64");
-    cmd.arg("/DYNAMICBASE");
-    if info.profile.is_debug() {
+    if info.settings.aslr {
+        cmd.arg("/DYNAMICBASE");
+    }
+    if info.settings.debug_info {
         cmd.arg("/DEBUG");
-    } else if info.profile.is_release() {
+    }
+    if info.settings.opt_linktime {
         cmd.arg("/LTCG");
         cmd.arg("/OPT:REF");
     }
@@ -81,28 +105,28 @@ pub(super) fn link_exe(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose:
 
     if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !output.status.success() {
-        if verbose { let _ = std::io::stderr().write_all(&output.stderr); }
-        let _ = std::io::stderr().write_all(&output.stdout);
-        eprintln!();
+    if !on_msvc_link_finish(output) {
         Err(Error::LinkerFail(info.outfile))
     } else {
-        log_info_ln!("successfully built project {}", info.outfile.display());
+        log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
     }
 }
 
-pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<bool, Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp());
     let args = info.toolchain.args();
 
     cmd.args(info.link_args);
     cmd.arg("/DLL");
     cmd.arg("/MACHINE:X64");
-    cmd.arg("/DYNAMICBASE");
-    if info.profile.is_debug() {
+    if info.settings.aslr {
+        cmd.arg("/DYNAMICBASE");
+    }
+    if info.settings.debug_info {
         cmd.arg("/DEBUG");
-    } else if info.profile.is_release() {
+    }
+    if info.settings.opt_linktime {
         cmd.arg("/LTCG");
         cmd.arg("/OPT:REF");
     }
@@ -117,13 +141,10 @@ pub(super) fn link_shared_lib(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, v
 
     if echo { print_command(&cmd); }
     let output = cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?;
-    if !output.status.success() {
-        if verbose { let _ = std::io::stderr().write_all(&output.stderr); }
-        let _ = std::io::stderr().write_all(&output.stdout);
-        eprintln!();
+    if !on_msvc_link_finish(output) {
         Err(Error::LinkerFail(info.outfile))
     } else {
-        log_info_ln!("successfully built project {}", info.outfile.display());
+        log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
     }
 }

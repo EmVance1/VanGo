@@ -26,7 +26,7 @@ define =   [ "/D{define}" ]
 
 opt-0 =     [ "/Od" ]
 opt-1 =     [ "/O1" ]
-opt-2 =     [ "/O1" ]
+opt-2 =     [ "/Ox" ]
 opt-3 =     [ "/O2", "Oi" ]
 opt-size =  [ "/Os" ]
 opt-speed = [ "/Ot" ]

@@ -117,7 +117,7 @@ As it stands, there are plans for a very basic package manager, more a simple re
 
 - `inherits`: this field is exclusive to custom profile definitions, as they require a base of settings to build upon.
 
-All toolchain specific implementations of the options listed above, aswell as profile defaults can be viewed in toolchains/*.toml.
+Important note: all toolchain specific implementations of the options listed above may come with caveats not listed here. Arguments from different compilers will never be a perfect match. If you expect to be switching between toolchains often, a list of all implementations, aswell as profile defaults can be viewed in `toolchains/`, for further reading into platform specific quirks.
 
 ### Static Library Configuration
 Manifests that begin with `[library]` are specialized for static library linking and are expected to have 3 base declarations at the root:

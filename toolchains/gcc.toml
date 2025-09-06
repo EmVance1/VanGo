@@ -41,7 +41,7 @@ runtime-dynamic-debug =   []
 runtime-dynamic-release = []
 
 aslr-app = [ "-fpie" ]
-aslr-lib = [ "-fpic" ]
+aslr-lib = [ "-fPIC" ]
 
 iso-compliant = [ "-pedantic-errors" ]
 

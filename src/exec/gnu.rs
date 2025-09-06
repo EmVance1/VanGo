@@ -39,7 +39,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         WarnLevel::None  => { cmd.arg("-w"); }
         WarnLevel::Basic => { cmd.arg("-Wall"); }
         WarnLevel::High  => { cmd.args([ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
-                                     "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough=5" ]); }
+                                     "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough" ]); }
     }
     if info.settings.warn_as_error {
         cmd.arg("-Werror");

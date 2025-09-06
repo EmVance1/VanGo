@@ -42,11 +42,11 @@ pub fn gnu_compiler(output: std::process::Output) -> bool {
 pub fn msvc_linker(output: std::process::Output) -> bool {
     for line in output.stdout.lines().skip(3) {
         let line = line.unwrap();
-        if line.starts_with("LINK : error LNK") || line.starts_with("LINK : fatal error LNK") {
+        if line.contains(" : error LNK") || line.contains(" : fatal error LNK") {
             log_error_ln!("{line}");
-        } else if line.starts_with("LINK : warning LNK") {
+        } else if line.contains(" : warning LNK") {
             log_warn_ln!("{line}");
-        } else {
+        } else if !line.contains("enerating code") {
             println!("{line}");
         }
     }

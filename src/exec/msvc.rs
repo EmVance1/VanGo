@@ -8,11 +8,13 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.args(&info.comp_args);
     if info.lang.is_latest() {
-        cmd.arg(format!("/std:{}", info.lang));
-    } else if info.lang.is_cpp() {
-        cmd.arg("/std:c++latest");
+        if info.lang.is_cpp() {
+            cmd.arg("/std:c++latest");
+        } else {
+            cmd.arg("/std:clatest");
+        }
     } else {
-        cmd.arg("/std:clatest");
+        cmd.arg(format!("/std:{}", info.lang));
     }
     if info.lang.is_cpp() {
         cmd.arg("/EHsc");
@@ -25,7 +27,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         Runtime::StaticRelease  => { cmd.arg("/MT"); }
     }
     match info.settings.opt_level {
-        0 => { cmd.arg("/O0"); }
+        0 => { cmd.arg("/Od"); }
         1 => { cmd.arg("/01"); }
         2 => { cmd.arg("/01"); }
         3 => { cmd.args([ "/O2", "/Oi" ]); }

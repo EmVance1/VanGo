@@ -259,22 +259,40 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
 }
 
 
-pub fn generate(build: BuildFile) -> Result<(), Error> {
+pub fn generate(mut build: BuildFile) -> Result<(), Error> {
     log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.build.package);
-    let mut flags = format!(
-"-Wall
--Wextra
--Wshadow
--Wconversion
--Wfloat-equal
--Wno-unused-const-variable
--Wno-sign-conversion
--std={}
-{}-DVANGO_DEBUG\n",
-        build.build.lang, if build.build.lang.is_cpp() { "-xc++\n" } else { "" });
+    let mut flags = format!("-std={}\n{}", build.build.lang, if build.build.lang.is_cpp() { "-xc++\n" } else { "" });
 
-    let mut incdirs = Vec::new();
+    let profile = build.take(&Profile::Debug)?;
+    match profile.settings.warn_level {
+        WarnLevel::None => {
+            flags.push_str("-w\n");
+            if profile.settings.iso_compliant {
+                flags.push_str("-Wpedantic\n");
+            }
+        }
+        WarnLevel::Basic => {
+            flags.push_str("-Wall\n");
+            if profile.settings.iso_compliant {
+                flags.push_str("-Wpedantic\n");
+            }
+        }
+        WarnLevel::High => {
+            flags.push_str("-Wall\n");
+            flags.push_str("-Wextra\n");
+            flags.push_str("-Wpedantic\n");
+            flags.push_str("-Wconversion\n");
+            flags.push_str("-Wsign-conversion\n");
+            flags.push_str("-Wshadow\n");
+            flags.push_str("-Wformat=2\n");
+            flags.push_str("-Wnull-dereference\n");
+            flags.push_str("-Wdouble-promotion\n");
+            flags.push_str("-Wimplicit-fallthrough\n");
+        }
+    }
+
     let mut defines = Vec::new();
+    let mut incdirs = Vec::new();
 
     for lib in build.dependencies {
         let path = match lib {
@@ -310,13 +328,13 @@ pub fn generate(build: BuildFile) -> Result<(), Error> {
                 VangoFile::Build(build) => {
                     let mut libinfo = LibFile::try_from(build).unwrap();
                     let profile = libinfo.take(&Profile::Debug)?;
-                    incdirs.push(path.join(profile.include));
                     defines.extend(profile.defines);
+                    incdirs.push(path.join(profile.include));
                 }
                 VangoFile::Lib(mut lib) => {
                     let profile = lib.take(&Profile::Debug)?;
-                    incdirs.push(path.join(profile.include));
                     defines.extend(profile.defines);
+                    incdirs.push(path.join(profile.include));
                 }
             }
         } else {
@@ -324,11 +342,23 @@ pub fn generate(build: BuildFile) -> Result<(), Error> {
         }
     }
 
+    if cfg!(target_os = "windows") {
+        defines.push("UNICODE".to_string());
+        defines.push("_UNICODE".to_string());
+    }
+    for dep in defines {
+        flags.push_str(&format!("-D{}\n", dep));
+    }
     for inc in incdirs {
         flags.push_str(&format!("-I{}\n", inc.display()));
     }
-    flags.push_str(&format!("-I{}\n", build.profile.get("debug").unwrap().src.display()));
-
+    for inc in profile.include {
+        flags.push_str(&format!("-I{}\n", inc.display()));
+    }
+    // flags.push_str(&format!("-I{}\n", profile.src.display()));
+    // if profile.include_pub != profile.src {
+    //     flags.push_str(&format!("-I{}\n", profile.include_pub.display()));
+    // }
 
     std::fs::write("compile_flags.txt", flags)?;
     Ok(())

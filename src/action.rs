@@ -345,6 +345,9 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
     if cfg!(target_os = "windows") {
         defines.push("UNICODE".to_string());
         defines.push("_UNICODE".to_string());
+        if let ProjKind::SharedLib{..} = build.build.kind {
+            defines.push("VANGO_EXPORT_SHARED".to_string());
+        }
     }
     for dep in defines {
         flags.push_str(&format!("-D{}\n", dep));
@@ -355,10 +358,6 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
     for inc in profile.include {
         flags.push_str(&format!("-I{}\n", inc.display()));
     }
-    // flags.push_str(&format!("-I{}\n", profile.src.display()));
-    // if profile.include_pub != profile.src {
-    //     flags.push_str(&format!("-I{}\n", profile.include_pub.display()));
-    // }
 
     std::fs::write("compile_flags.txt", flags)?;
     Ok(())

@@ -84,7 +84,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.vango.toml"))? {
+        if let Some(build) = if cfg!(windows) && std::fs::exists(path.join("win.vango.toml"))? {
             std::fs::read_to_string(path.join("win.vango.toml")).ok()
         } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.vango.toml"))? {
             std::fs::read_to_string(path.join("lnx.vango.toml")).ok()
@@ -95,7 +95,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
         } {
             match VangoFile::from_str(&build)? {
                 VangoFile::Build(build) => {
-                    log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.build.package));
+                    log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
                     let save = std::env::current_dir().unwrap();
                     std::env::set_current_dir(&path).unwrap();
                     let (_rebuilt, _) = crate::action::build(build.clone(), switches.clone())?;

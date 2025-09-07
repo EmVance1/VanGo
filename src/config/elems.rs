@@ -20,7 +20,7 @@ impl ProjKind {
     }
     pub fn has_lib(&self) -> bool {
         match self {
-            ProjKind::SharedLib{ implib } => !cfg!(target_os = "windows") || *implib,
+            ProjKind::SharedLib{ implib } => !cfg!(windows) || *implib,
             ProjKind::StaticLib => true,
             _ => false,
         }
@@ -71,7 +71,7 @@ impl Default for ToolChain {
 #[allow(unused)]
 impl ToolChain {
     pub fn system_default() -> Self {
-        if cfg!(target_os = "windows") {
+        if cfg!(windows) {
             ToolChain::Msvc
         } else if cfg!(target_os = "linux") {
             ToolChain::Gcc
@@ -95,7 +95,7 @@ impl ToolChain {
     }
 
     pub fn shared_lib_prefix(&self) -> &'static str {
-        if cfg!(target_os = "windows") {
+        if cfg!(windows) {
             ""
         } else {
             "lib"
@@ -121,7 +121,7 @@ impl ToolChain {
         }
     }
     pub fn shared_lib_ext(&self) -> &'static str {
-        if cfg!(target_os = "windows") {
+        if cfg!(windows) {
             "dll"
         } else if cfg!(target_os = "macos") {
             "dylib"
@@ -142,7 +142,7 @@ impl ToolChain {
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
             Self::ClangGnu  => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(target_os = "windows") { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                if cfg!(windows) { cmd.arg("--target=x86_64-pc-windows-gnu"); }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("clang-cl"),
@@ -159,7 +159,7 @@ impl ToolChain {
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
             Self::ClangGnu  => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(target_os = "windows") { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                if cfg!(windows) { cmd.arg("--target=x86_64-pc-windows-gnu"); }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("lld-link"),
@@ -260,12 +260,6 @@ pub enum Lang {
 impl Lang {
     pub fn is_cpp(&self) -> bool {
         matches!(self, Self::Cpp(_))
-    }
-    pub fn is_latest(&self) -> bool {
-        match *self {
-            Self::Cpp(n) => n == 123,
-            Self::C(n)   => n == 123,
-        }
     }
 
     pub fn src_ext(&self) -> &'static str {

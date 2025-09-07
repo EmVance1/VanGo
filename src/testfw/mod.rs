@@ -28,7 +28,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         .to_owned();
 
     let profile = build.take(&switches.profile)?;
-    let mut partial = inherited(&build, &profile, &switches, build.build.lang);
+    let mut partial = inherited(&build, &profile, &switches, build.lang);
     partial.defines.push("VANGO_TEST".to_string());
     partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
     let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), "h")?;
@@ -37,17 +37,17 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     headers.push(inc.join("testframework/vangotest/casserts.h"));
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let relink = [
-        outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package)).with_extension(switches.toolchain.static_lib_ext())
+        outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name)).with_extension(switches.toolchain.static_lib_ext())
     ].into_iter().collect();
 
-    let sources = fetch::source_files(&PathBuf::from("test"), build.build.lang.src_ext()).unwrap();
-    let outfile = outdir.join(format!("test_{}.exe", build.build.package));
+    let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
+    let outfile = outdir.join(format!("test_{}.exe", build.name));
     let info = BuildInfo {
         projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,
-        lang:      build.build.lang,
+        lang:      build.lang,
         crtstatic: switches.crtstatic,
-        cpprt:     build.build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
+        cpprt:     build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
         settings:  profile.settings,
 
         defines: partial.defines,
@@ -60,7 +60,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         pch: None,
         sources,
         headers,
-        archives: [ PathBuf::from(&build.build.package).with_extension("lib") ].into_iter().collect(),
+        archives: [ PathBuf::from(&build.name).with_extension("lib") ].into_iter().collect(),
         relink,
         outfile: outfile.clone(),
         implib: None,
@@ -71,7 +71,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     exec::run_build(info, switches.echo, false)?;
     log_info_ln!(
         "running tests for project {:=<57}",
-        format!("\"{}\" ", build.build.package)
+        format!("\"{}\" ", build.name)
     );
     Command::new(PathBuf::from(".").join(outfile))
         .args(args)

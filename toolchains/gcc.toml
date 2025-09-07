@@ -32,6 +32,12 @@ opt-size =  [ "-Os" ]
 opt-speed = [ "-Ofast" ]
 opt-linktime = [ "-flto" ]
 
+warn-none =     [ "-w" ]
+warn-basic =    [ "-Wall" ]
+warn-high =     [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
+                 "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough" ]
+warn-as-error = [ "-Werror" ]
+
 pch-create =  []
 pch-include = [ "-I{outdir}/pch" ]
 
@@ -40,16 +46,12 @@ runtime-static-release =  []
 runtime-dynamic-debug =   []
 runtime-dynamic-release = []
 
+iso-compliant = [ "-pedantic-errors" ]
+
 aslr-app = [ "-fpie" ]
 aslr-lib = [ "-fPIC" ]
 
-iso-compliant = [ "-pedantic-errors" ]
-
-warn-none =     [ "-w" ]
-warn-basic =    [ "-Wall" ]
-warn-high =     [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
-                 "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough" ]
-warn-as-error = [ "-Werror" ]
+no-rtti = [ "-fno-rtti" ]
 
 
 # =============================================================================================

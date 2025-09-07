@@ -35,7 +35,7 @@ fn main() -> ExitCode {
         action::init(*library, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
 
     } else {
-        let bfile = if cfg!(target_os = "windows") && std::fs::exists("win.vango.toml").unwrap() {
+        let bfile = if cfg!(windows) && std::fs::exists("win.vango.toml").unwrap() {
             std::fs::read_to_string("win.vango.toml").unwrap()
         } else if cfg!(target_os = "linux") && std::fs::exists("lnx.vango.toml").unwrap() {
             std::fs::read_to_string("lnx.vango.toml").unwrap()

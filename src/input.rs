@@ -151,7 +151,7 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
             tc.strip_prefix("--toolchain=").unwrap().to_ascii_lowercase()
         };
         if tc == "msvc" {
-            if cfg!(target_os = "windows") {
+            if cfg!(windows) {
                 Ok(ToolChain::Msvc)
             } else {
                 Err(Error::MsvcUnavailable)
@@ -159,7 +159,7 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
         } else if tc == "gcc" {
             Ok(ToolChain::Gcc)
         } else if tc == "clang" {
-            if cfg!(target_os = "windows") {
+            if cfg!(windows) {
                 Ok(ToolChain::ClangMsvc)
             } else {
                 Ok(ToolChain::ClangGnu)
@@ -167,7 +167,7 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
         } else if tc == "clang-gnu" {
             Ok(ToolChain::ClangGnu)
         } else if tc == "clang-msvc" {
-            if cfg!(target_os = "windows") {
+            if cfg!(windows) {
                 Ok(ToolChain::ClangMsvc)
             } else {
                 Err(Error::MsvcUnavailable)

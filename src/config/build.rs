@@ -6,72 +6,69 @@ use super::{Lang, Profile};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildFile {
-    pub build: Build,
-    pub dependencies: Vec<Dependency>,
-    pub profile: HashMap<String, BuildProfile>,
-}
-
-impl BuildFile {
-    pub fn from_table(value: toml::Table) -> Result<Self, Error> {
-        let mut file: SerdeBuildFile = value.try_into()?;
-        let mut profile: HashMap<String, BuildProfile> = HashMap::new();
-
-        if let Some(d) = file.profile.remove("debug") {
-            profile.insert("debug".to_string(), BuildProfile::debug(&file.build.defaults).merge(d));
-        } else {
-            profile.insert("debug".to_string(), BuildProfile::debug(&file.build.defaults));
-        }
-        if let Some(r) = file.profile.remove("release") {
-            profile.insert("release".to_string(), BuildProfile::release(&file.build.defaults).merge(r));
-        } else {
-            profile.insert("release".to_string(), BuildProfile::release(&file.build.defaults));
-        }
-        for (k, p) in file.profile {
-            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
-            if inherits == "debug" {
-                profile.insert(k, BuildProfile::debug(&file.build.defaults).merge(p));
-            } else if inherits == "release" {
-                profile.insert(k, BuildProfile::release(&file.build.defaults).merge(p));
-            }
-        }
-        let lang = Lang::from_str(&file.build.lang)?;
-        let mut kind = file.build.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default();
-        if let ProjKind::SharedLib{ implib } = &mut kind {
-            *implib = file.build.implib.unwrap_or(true);
-        }
-
-        Ok(BuildFile{
-            build: Build{
-                package:    file.build.package,
-                version:    file.build.version,
-                lang,
-                kind,
-                interface:  file.build.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
-                runtime:    file.build.runtime,
-            },
-            dependencies:   file.build.dependencies,
-            profile,
-        })
-    }
-
-    pub fn take(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
-        match profile {
-            Profile::Debug => self.profile.remove("debug"),
-            Profile::Release => self.profile.remove("release"),
-            Profile::Custom(s) => self.profile.remove(s),
-        }.ok_or(Error::ProfileUnavailable(self.build.package.clone(), profile.to_string()))
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Build {
-    pub package: String,
+    pub name: String,
     pub version: String,
     pub lang: Lang,
     pub kind: ProjKind,
     pub interface: Lang,
     pub runtime: Option<String>,
+    pub dependencies: Vec<Dependency>,
+    pub profiles: HashMap<String, BuildProfile>,
+}
+
+impl BuildFile {
+    pub fn from_table(value: toml::Table) -> Result<Self, Error> {
+        let mut file: SerdeBuildFile = value.try_into()?;
+        let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
+        let mut dependencies: Vec<Dependency> = Vec::new();
+
+        if let Some(d) = file.profile.remove("debug") {
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).merge(d));
+        } else {
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults));
+        }
+        if let Some(r) = file.profile.remove("release") {
+            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults).merge(r));
+        } else {
+            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults));
+        }
+        for (k, p) in file.profile {
+            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
+            if inherits == "debug" {
+                profiles.insert(k, BuildProfile::debug(&file.package.defaults).merge(p));
+            } else if inherits == "release" {
+                profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p));
+            }
+        }
+        let lang = Lang::from_str(&file.package.lang)?;
+        let mut kind = file.package.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default();
+        if let ProjKind::SharedLib{ implib } = &mut kind {
+            *implib = file.package.implib.unwrap_or(true);
+        }
+
+        for (_, v) in file.dependencies {
+            dependencies.push(v.try_into()?);
+        }
+
+        Ok(BuildFile{
+            name:      file.package.name,
+            version:   file.package.version,
+            lang,
+            kind,
+            interface: file.package.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
+            runtime:   file.package.runtime,
+            dependencies,
+            profiles,
+        })
+    }
+
+    pub fn take(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
+        match profile {
+            Profile::Debug => self.profiles.remove("debug"),
+            Profile::Release => self.profiles.remove("release"),
+            Profile::Custom(s) => self.profiles.remove(s),
+        }.ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
+    }
 }
 
 
@@ -146,6 +143,7 @@ impl BuildProfile {
                 debug_info:    defaults.build_settings.debug_info.unwrap_or(true),
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
+                rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_string()).collect(),
@@ -179,6 +177,7 @@ impl BuildProfile {
                 debug_info:    defaults.build_settings.debug_info.unwrap_or(false),
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
+                rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_owned()).collect(),
@@ -201,6 +200,7 @@ impl BuildProfile {
         other.build_settings.debug_info.inspect(   |s| self.settings.debug_info = *s);
         other.build_settings.runtime.inspect(      |s| self.settings.runtime = *s);
         other.build_settings.aslr.inspect(         |s| self.settings.aslr = *s);
+        other.build_settings.rtti.inspect(         |s| self.settings.rtti = *s);
 
         self.compiler_options.extend(other.compiler_options.unwrap_or_default());
         self.linker_options.extend(other.linker_options.unwrap_or_default());
@@ -221,27 +221,28 @@ pub struct BuildSettings {
     pub debug_info:    bool,
     pub runtime:       Runtime,
     pub aslr:          bool,
+    pub rtti:          bool,
 
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 struct SerdeBuildFile {
-    build: SerdeBuild,
+    package: SerdeBuild,
+    dependencies: toml::Table,
     #[serde(default)]
     profile: HashMap<String, SerdeBuildProfile>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 struct SerdeBuild {
-    package: String,
+    name: String,
     version: String,
     lang: String,
     kind: Option<String>,
     implib: Option<bool>,
     interface: Option<String>,
     runtime: Option<String>,
-    dependencies: Vec<Dependency>,
 
     #[serde(flatten)]
     defaults: SerdeBuildProfile,
@@ -279,5 +280,6 @@ struct SerdeBuildSettings {
     debug_info:    Option<bool>,
     runtime:       Option<Runtime>,
     aslr:          Option<bool>,
+    rtti:          Option<bool>,
 }
 

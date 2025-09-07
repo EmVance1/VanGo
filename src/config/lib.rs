@@ -6,55 +6,55 @@ use super::{build::BuildFile, Profile, Lang};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibFile {
-    pub library: Library,
-    pub profile: HashMap<String, LibProfile>,
+    pub name:     String,
+    pub version:  String,
+    pub lang:     Lang,
+    pub profiles: HashMap<String, LibProfile>,
 }
 
 impl LibFile {
     pub fn from_table(value: toml::Table) -> Result<LibFile, Error> {
         let mut file: SerdeLibFile = value.try_into()?;
-        let mut profile: HashMap<String, LibProfile> = HashMap::new();
+        let mut profiles: HashMap<String, LibProfile> = HashMap::new();
 
         if let Some(d) = file.profile.remove("debug") {
-            profile.insert("debug".to_string(), LibProfile::debug(&file.library.defaults).merge(d));
+            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults).merge(d));
         } else {
-            profile.insert("debug".to_string(), LibProfile::debug(&file.library.defaults));
+            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults));
         }
         if let Some(r) = file.profile.remove("release") {
-            profile.insert("release".to_string(), LibProfile::release(&file.library.defaults).merge(r));
+            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults).merge(r));
         } else {
-            profile.insert("release".to_string(), LibProfile::release(&file.library.defaults));
+            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults));
         }
         for (k, p) in file.profile {
             let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
             if inherits == "debug" {
-                profile.insert(k, LibProfile::debug(&file.library.defaults).merge(p));
+                profiles.insert(k, LibProfile::debug(&file.staticlib.defaults).merge(p));
             } else if inherits == "release" {
-                profile.insert(k, LibProfile::release(&file.library.defaults).merge(p));
+                profiles.insert(k, LibProfile::release(&file.staticlib.defaults).merge(p));
             }
         }
 
         Ok(LibFile{
-            library: Library{
-                package: file.library.package,
-                version: file.library.version,
-                lang: Lang::from_str(&file.library.lang)?,
-            },
-            profile,
+            name:    file.staticlib.name,
+            version: file.staticlib.version,
+            lang:    Lang::from_str(&file.staticlib.lang)?,
+            profiles,
         })
     }
 
     pub fn take(&mut self, profile: &Profile) -> Result<LibProfile, Error> {
         match profile {
-            Profile::Debug => self.profile.remove("debug"),
-            Profile::Release => self.profile.remove("release"),
-            Profile::Custom(s) => self.profile.remove(s),
-        }.ok_or(Error::ProfileUnavailable(self.library.package.clone(), profile.to_string()))
+            Profile::Debug => self.profiles.remove("debug"),
+            Profile::Release => self.profiles.remove("release"),
+            Profile::Custom(s) => self.profiles.remove(s),
+        }.ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn validate(self, max_lang: Lang) -> Result<Self, Error> {
-        if self.library.lang > max_lang {
-            Err(Error::IncompatibleCppStd(self.library.package))
+        if self.lang > max_lang {
+            Err(Error::IncompatibleCppStd(self.name))
         } else {
             Ok(self)
         }
@@ -65,39 +65,29 @@ impl TryFrom<BuildFile> for LibFile {
     type Error = Error;
 
     fn try_from(value: BuildFile) -> Result<Self, Self::Error> {
-        let package = value.build.package;
-        if !value.build.kind.is_lib() {
-            return Err(Error::InvalidDependency(package));
+        let name = value.name;
+        if !value.kind.is_lib() {
+            return Err(Error::InvalidDependency(name));
         }
-        let haslib = value.build.kind.has_lib();
-        let profile: HashMap<_, _> = value.profile.into_iter().map(|(k, p)| {
+        let haslib = value.kind.has_lib();
+        let profiles: HashMap<_, _> = value.profiles.into_iter().map(|(k, p)| {
             let prof = LibProfile{
                 include: p.include_pub,
                 libdir: format!("bin/{k}").into(),
-                binaries: if haslib { vec![ package.clone().into() ] } else { Vec::new() },
+                binaries: if haslib { vec![ name.clone().into() ] } else { Vec::new() },
                 defines: p.defines,
             };
             (k, prof)
         }).collect();
 
         Ok(Self{
-            library: Library{
-                package,
-                version: value.build.version,
-                lang:    value.build.interface,
-            },
-            profile,
+            name,
+            version: value.version,
+            lang:    value.interface,
+            profiles,
         })
     }
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Library {
-    pub package: String,
-    pub version: String,
-    pub lang: Lang,
-}
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibProfile {
@@ -146,14 +136,14 @@ impl LibProfile {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct SerdeLibFile {
-    library: SerdeLibrary,
+    staticlib: SerdeLibrary,
     #[serde(default)]
     profile: HashMap<String, SerdeLibProfile>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct SerdeLibrary {
-    package: String,
+    name:    String,
     version: String,
     lang:    String,
 

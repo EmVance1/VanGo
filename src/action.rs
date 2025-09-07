@@ -10,24 +10,24 @@ use crate::{
 pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
-    if build.build.lang.is_cpp() {
+    if build.lang.is_cpp() {
         headers.extend(fetch::source_files(&profile.include_pub, "hpp").unwrap());
     }
     for incdir in profile.include.iter().chain(Some(&profile.src)) {
         headers.extend(fetch::source_files(incdir, "h").unwrap());
-        if build.build.lang.is_cpp() {
+        if build.lang.is_cpp() {
             headers.extend(fetch::source_files(incdir, "hpp").unwrap());
         }
     }
-    let sources = fetch::source_files(&profile.src, build.build.lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
 
-    let mut deps = fetch::libraries(build.dependencies, &switches, build.build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
-    if cfg!(target_os = "windows") {
+    if cfg!(windows) {
         deps.defines.push("UNICODE".to_string());
         deps.defines.push("_UNICODE".to_string());
-        if let ProjKind::SharedLib{..} = build.build.kind {
+        if let ProjKind::SharedLib{..} = build.kind {
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
@@ -35,32 +35,32 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
 
     let rebuilt_dep = deps.rebuilt;
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let (outfile, implib) = match build.build.kind {
+    let (outfile, implib) = match build.kind {
         ProjKind::App => {
-            (outdir.join(build.build.package).with_extension(switches.toolchain.app_ext()), None)
+            (outdir.join(build.name).with_extension(switches.toolchain.app_ext()), None)
         }
         ProjKind::SharedLib{implib: false} => {
-            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package))
+            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.name))
              .with_extension(switches.toolchain.shared_lib_ext()), None)
         }
         ProjKind::SharedLib{implib: true} => {
-            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.build.package))
+            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.name))
              .with_extension(switches.toolchain.shared_lib_ext()),
-             Some(outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package))
+             Some(outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
              .with_extension(switches.toolchain.static_lib_ext())))
         }
         ProjKind::StaticLib => {
-            (outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.build.package))
+            (outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
              .with_extension(switches.toolchain.static_lib_ext()), None)
         }
     };
 
     let info = BuildInfo{
-        projkind:  build.build.kind,
+        projkind:  build.kind,
         toolchain: switches.toolchain,
-        lang:      build.build.lang,
+        lang:      build.lang,
         crtstatic: switches.crtstatic,
-        cpprt:     build.build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
+        cpprt:     build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
 
         defines:  deps.defines,
@@ -159,7 +159,7 @@ pub fn help(action: Option<String>) {
                 println!("Toolchains currently installed on this system:");
                 println!();
                 if std::process::Command::new("gcc").output().is_ok() {
-                    if cfg!(target_os = "windows") {
+                    if cfg!(windows) {
                         println!("    gcc        - GCC, Gnu Compiler Collection for MinGW");
                     } else {
                         println!("    gcc        - GCC, Gnu Compiler Collection");
@@ -168,7 +168,7 @@ pub fn help(action: Option<String>) {
                     println!("    gcc        - unavailable");
                 }
                 if std::process::Command::new("clang").output().is_ok() {
-                    if cfg!(target_os = "windows") {
+                    if cfg!(windows) {
                         println!("    clang-gnu  - Clang Compiler with LLVM Backend");
                         println!("    clang-msvc - Clang/LLVM Compatible with MSVC Toolchain");
                     } else {
@@ -252,7 +252,7 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
 
 
 pub fn clean(build: BuildFile) -> Result<(), Error> {
-    log_info_ln!("cleaning build files for \"{}\"", build.build.package);
+    log_info_ln!("cleaning build files for \"{}\"", build.name);
     let _ = std::fs::remove_dir_all("bin/debug/");
     let _ = std::fs::remove_dir_all("bin/release/");
     Ok(())
@@ -260,8 +260,8 @@ pub fn clean(build: BuildFile) -> Result<(), Error> {
 
 
 pub fn generate(mut build: BuildFile) -> Result<(), Error> {
-    log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.build.package);
-    let mut flags = format!("-std={}\n{}", build.build.lang, if build.build.lang.is_cpp() { "-xc++\n" } else { "" });
+    log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.name);
+    let mut flags = format!("-std={}\n{}", build.lang, if build.lang.is_cpp() { "-xc++\n" } else { "" });
 
     let profile = build.take(&Profile::Debug)?;
     match profile.settings.warn_level {
@@ -315,7 +315,7 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
             return Err(Error::DirectoryNotFound(path))
         }
 
-        if let Some(build) = if cfg!(target_os = "windows") && std::fs::exists(path.join("win.vango.toml"))? {
+        if let Some(build) = if cfg!(windows) && std::fs::exists(path.join("win.vango.toml"))? {
             std::fs::read_to_string(path.join("win.vango.toml")).ok()
         } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.vango.toml"))? {
             std::fs::read_to_string(path.join("lnx.vango.toml")).ok()
@@ -326,7 +326,7 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
         } {
             match VangoFile::from_str(&build)? {
                 VangoFile::Build(build) => {
-                    let mut libinfo = LibFile::try_from(build).unwrap();
+                    let mut libinfo = LibFile::try_from(build)?;
                     let profile = libinfo.take(&Profile::Debug)?;
                     defines.extend(profile.defines);
                     incdirs.push(path.join(profile.include));
@@ -342,10 +342,10 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
         }
     }
 
-    if cfg!(target_os = "windows") {
+    if cfg!(windows) {
         defines.push("UNICODE".to_string());
         defines.push("_UNICODE".to_string());
-        if let ProjKind::SharedLib{..} = build.build.kind {
+        if let ProjKind::SharedLib{..} = build.kind {
             defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }

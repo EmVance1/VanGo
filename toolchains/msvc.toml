@@ -32,6 +32,11 @@ opt-size =  [ "/Os" ]
 opt-speed = [ "/Ot" ]
 opt-linktime = [ "/GL" ]
 
+warn-none =     [ "/w" ]
+warn-basic =    [ "/W1" ]
+warn-high =     [ "/W4" ]
+warn-as-error = [ "/WX" ]
+
 pch-create =  [ "/Yc{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
 pch-include = [ "/Yu{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
 
@@ -40,15 +45,12 @@ runtime-static-release =  [ "/MT" ]
 runtime-dynamic-debug =   [ "/MDd" ]
 runtime-dynamic-release = [ "/MD" ]
 
+iso-compliant = [ "/permissive-" ]
+
 aslr-app = []
 aslr-lib = []
 
-iso-compliant = [ "/permissive-" ]
-
-warn-none =     [ "/w" ]
-warn-basic =    [ "/W1" ]
-warn-high =     [ "/W4" ]
-warn-as-error = [ "/WX" ]
+no-rtti = [ "/GR-" ]
 
 
 # =============================================================================================

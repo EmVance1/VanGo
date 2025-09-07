@@ -20,6 +20,8 @@ pub enum Error {
     MissingBuildScript(PathBuf),
     #[error("toml error: {0}")]
     TomlParse(#[from] toml::de::Error),
+    #[error("build script did not contain valid package header ([package] | [staticlib])")]
+    InvalidPkgHeader,
     #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
     #[error("library '{0}' C/C++ standard incompatible with current project")]

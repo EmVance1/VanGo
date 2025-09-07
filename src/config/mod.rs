@@ -18,12 +18,12 @@ pub enum VangoFile {
 impl VangoFile {
     pub fn from_str(value: &str) -> Result<VangoFile, Error> {
         let table: toml::Table = toml::from_str(value)?;
-        if table.contains_key("build") {
+        if table.contains_key("package") {
             Ok(VangoFile::Build(BuildFile::from_table(table)?))
-        } else if table.contains_key("library") {
+        } else if table.contains_key("staticlib") {
             Ok(VangoFile::Lib(LibFile::from_table(table)?))
         } else {
-            Err(Error::Unknown)
+            Err(Error::InvalidPkgHeader)
         }
     }
 
@@ -89,29 +89,27 @@ include = [ "dbg_headers" ]
             git: "https://github.com/LuaJIT/LuaJIT.git".into(), tag: None, recipe: Some("recipes/LuaJIT.bat".into()), features: vec![]
         });
 
-        let mut profile: HashMap<String, BuildProfile> = HashMap::new();
-        profile.insert("debug".into(), BuildProfile{
+        let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
+        profiles.insert("debug".into(), BuildProfile{
             include: vec![ "src".into(), "src".into(), "headers".into(), "dbg_headers".into() ], // TODO: duplicates
             defines: vec![ "VANGO_DEBUG".into() ],
             ..BuildProfile::debug(&Default::default())
         });
-        profile.insert("release".into(), BuildProfile{
+        profiles.insert("release".into(), BuildProfile{
             include: vec![ "src".into(), "src".into(), "headers".into() ], // TODO: duplicates
             defines: vec![ "VANGO_RELEASE".into() ],
             ..BuildProfile::debug(&Default::default())
         });
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Build(BuildFile{
-            build: Build{
-                package: "Shimmy".to_string(),
-                version: "0.1.0".to_string(),
-                lang: Lang::Cpp(120),
-                kind: ProjKind::App,
-                interface: Lang::Cpp(120),
-                runtime: None,
-            },
+            name: "Shimmy".to_string(),
+            version: "0.1.0".to_string(),
+            lang: Lang::Cpp(120),
+            kind: ProjKind::App,
+            interface: Lang::Cpp(120),
+            runtime: None,
             dependencies,
-            profile,
+            profiles,
         }));
     }
 
@@ -135,8 +133,8 @@ libdir = "bin/release"
 binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s", "sfml-system-s" ]
 "#;
 
-        let mut profile: HashMap<String, LibProfile> = HashMap::new();
-        profile.insert("debug".into(),
+        let mut profiles: HashMap<String, LibProfile> = HashMap::new();
+        profiles.insert("debug".into(),
             LibProfile{
                 include:  "include".into(),
                 libdir:   "bin/debug".into(),
@@ -144,7 +142,7 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
                 defines:  vec![ "VANGO_DEBUG".into(), "SFML_STATIC".into() ],
             }
         );
-        profile.insert("release".into(),
+        profiles.insert("release".into(),
             LibProfile{
                 include:  "include".into(),
                 libdir:   "bin/release".into(),
@@ -154,12 +152,10 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
         );
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Lib(LibFile{
-            library: Library{
-                package: "SFML".to_string(),
-                version: "3.0.1".to_string(),
-                lang: Lang::from_str("C++17").unwrap(),
-            },
-            profile,
+            name:    "SFML".to_string(),
+            version: "3.0.1".to_string(),
+            lang:    Lang::from_str("C++17").unwrap(),
+            profiles,
         }));
     }
 }

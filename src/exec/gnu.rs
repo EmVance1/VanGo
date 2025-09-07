@@ -1,14 +1,14 @@
-use std::{ffi::OsString, io::Write, path::{Path, PathBuf}};
+use std::{io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
 use crate::{config::{ProjKind, WarnLevel}, Error, exec::output, log_info_ln};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);
+    let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
     cmd.arg(format!("-std={}", info.lang));
-    if !cfg!(target_os = "windows") && info.settings.aslr {
+    if info.settings.aslr && !cfg!(windows) {
         match info.projkind {
             ProjKind::App           => { cmd.arg("-fpie"); },
             ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
@@ -47,24 +47,22 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("-pedantic-errors");
     }
+    if !info.settings.rtti {
+        cmd.arg("-fnortti");
+    }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
     if let PreCompHead::Use(_) = pch {
-        let mut fparg = OsString::from("-I");
-        fparg.push(info.outdir.join("pch"));
-        cmd.arg(fparg);
+        cmd.arg(format!("-I{}/pch", info.outdir.display()));
     }
+    // -H
 
     cmd.arg(src);
     cmd.arg(format!("-o{}", obj.display()));
 
+    if verbose { cmd.arg("--verbose"); }
+    cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::piped());
-    if verbose {
-        cmd.arg("--verbose");
-        cmd.stdout(std::process::Stdio::piped());
-    } else {
-        cmd.stdout(std::process::Stdio::null());
-    };
     if echo { print_command(&cmd); }
     cmd
 }
@@ -84,7 +82,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
         }
     }
     if info.settings.aslr {
-        if cfg!(target_os = "windows") {
+        if cfg!(windows) {
             cmd.arg("-Wl,--dynamicbase");
         } else if let ProjKind::App = info.projkind {
             cmd.arg("-pie");
@@ -104,9 +102,9 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     cmd.args(info.libdirs .iter().map(|l| format!("-L{}", l.display())));
     cmd.args(info.archives.iter().map(|l| format!("-l{}", l.display())));
     cmd.arg(format!("-o{}", info.outfile.display()));
+    if verbose { cmd.arg("--verbose"); }
 
     if echo { print_command(&cmd); }
-    if verbose { cmd.arg("--verbose"); }
     if !output::gnu_linker(cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
         Err(Error::LinkerFail(info.outfile))
     } else {

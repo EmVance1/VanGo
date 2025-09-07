@@ -1,25 +1,46 @@
-use std::{ffi::OsString, io::Write, path::{Path, PathBuf}};
+use std::{io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
-use crate::{config::{ProjKind, WarnLevel, Runtime}, Error, exec::output, log_info_ln};
+use crate::{config::{Lang, ProjKind, Runtime, WarnLevel}, exec::output, log_info_ln, log_warn_ln, Error};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
-    if info.lang.is_latest() {
-        if info.lang.is_cpp() {
+    cmd.arg("/c");
+    cmd.arg("/nologo");
+    match info.lang {
+        Lang::Cpp(n) if n >= 123 => {
+            log_warn_ln!("using MSVC latest working draft (/std:c++latest). May be incomplete");
             cmd.arg("/std:c++latest");
-        } else {
+        }
+        Lang::Cpp(n) if n  < 114 => {
+            log_warn_ln!("using MSVC C++14. Older standards not supported");
+            cmd.arg("/std:c++14");
+        }
+        Lang::C(n) if n >= 120 => {
+            log_warn_ln!("using MSVC latest working draft (/std:clatest). May be incomplete");
             cmd.arg("/std:clatest");
         }
+        Lang::C(n) if n == 99 => {
+            log_warn_ln!("using MSVC C89 with extensions. May be incomplete");
+            cmd.arg("/Ze");
+        }
+        Lang::C(n) if n == 89 => {
+            cmd.arg("/Za");
+        }
+        Lang::Cpp(_)|Lang::C(_) => {
+            cmd.arg(format!("/std:{}", info.lang));
+        }
+    }
+    if info.lang.is_cpp() {
+        cmd.arg("/Zc:__cplusplus");
     } else {
-        cmd.arg(format!("/std:{}", info.lang));
+        cmd.arg("/TC");
     }
     if info.lang.is_cpp() {
         cmd.arg("/EHsc");
     }
-    cmd.arg("/c");
     match info.settings.runtime {
         Runtime::DynamicDebug   => { cmd.arg("/MDd"); }
         Runtime::DynamicRelease => { cmd.arg("/MD"); }
@@ -43,7 +64,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("/GL");
     }
     if info.settings.debug_info {
-        cmd.args([ "/Zi", "/Fd:bin\\debug\\obj\\", "/FS" ]);
+        cmd.args([ "/Zi", "/Zf", "/Fd:bin\\debug\\obj\\", "/FS", "/sdl" ]);
     }
     cmd.arg("/diagnostics:caret");
     match info.settings.warn_level {
@@ -57,27 +78,24 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("/permissive-");
     }
+    if !info.settings.rtti {
+        cmd.arg("/GR-");
+    }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
     match pch {
         PreCompHead::Create(h) => {
-            let mut ycarg = OsString::from("/Yc");
-            ycarg.push(h);
-            let mut fparg = OsString::from("/Fp:");
-            fparg.push(info.outdir.join("pch").join(h).with_extension("h.pch"));
-            cmd.arg(ycarg);
-            cmd.arg(fparg);
+            cmd.arg(format!("/Yc{}", h.display()));
+            cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
         PreCompHead::Use(h) => {
-            let mut yuarg = OsString::from("/Yu");
-            yuarg.push(h);
-            cmd.arg(yuarg);
-            let mut fparg = OsString::from("/Fp:");
-            fparg.push(info.outdir.join("pch").join(h).with_extension("h.pch"));
-            cmd.arg(fparg);
+            cmd.arg(format!("/Yu{}", h.display()));
+            cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
         _ => ()
     }
+    // /showIncludes
+    // /WL
 
     cmd.arg(src);
     cmd.arg(format!("/Fo:{}", obj.display()));
@@ -99,6 +117,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
         }
     }
     cmd.arg("/MACHINE:X64");
+    cmd.arg("/NOLOGO");
     if info.settings.aslr {
         cmd.arg("/DYNAMICBASE");
     }
@@ -109,11 +128,17 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
         cmd.arg("/LTCG");
         cmd.arg("/OPT:REF");
     }
+    if info.settings.warn_as_error {
+        cmd.arg("/WX");
+    }
     cmd.args(objs);
     cmd.args(info.libdirs .iter().map(|l| format!("/LIBPATH:{}", l.display())));
     cmd.args(info.archives);
     cmd.args(DEFAULT_LIBS);
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
+
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
 
     if echo { print_command(&cmd); }
     if !output::msvc_linker(cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
@@ -129,6 +154,13 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: 
 
     cmd.args(info.link_args);
     cmd.arg("/MACHINE:X64");
+    cmd.arg("/NOLOGO");
+    if info.settings.opt_linktime {
+        cmd.arg("/LTCG");
+    }
+    if info.settings.warn_as_error {
+        cmd.arg("/WX");
+    }
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
     cmd.args(objs);
 

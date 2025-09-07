@@ -10,10 +10,10 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 - Subcommands for creating, building, running, testing, and cleaning C/C++ projects
 - File change detection and incremental rebuilds
 - Source, static, and header-only  dependency automation
-- Configure static libraries with a library-type toml file
+- Configure static libraries with a staticlib-type toml file
 ```toml
-[library]
-package = "SFML"
+[staticlib]
+name = "SFML"
 version = "3.0.1"
 lang = "C++17"
 include = "include"
@@ -38,7 +38,7 @@ include = [ "src", "../some/other/headers" ]
 ## How To:
 Some examples of invocations are as follows, but for a more complete list see the help action.
 
-- `vango new     [--lib] [--c] <name>`
+- `vango new     [--lib] [--c] [--clangd] <name>`
 - `vango b[uild] [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>]`
 - `vango r[un]   [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>] [-- args*]`
 - `vango c[lean]`
@@ -49,18 +49,18 @@ VanGo is opinionated for simplicity and makes some base assumptions and decision
 - All of your source files are in the `src` directory, and all output files are generated in `bin/{profile}/`.
 - Your output binary is named the same as your project.
 - For a given project, you can make a platform specific build definition by naming the file 'win.vango.toml', 'lnx.vango.toml', or 'mac.vango.toml'.
-- A correct `Vango.toml` may begin with one of 2 sections - `[build]` and `[library]`.
+- A correct `Vango.toml` may begin with one of 2 sections - `[package]` and `[staticlib]`.
 
 ### Toolchains
 Vango is not itself a compilation toolchain, simply a compilation automator. For everything to work, you need at least one compiler installed on your system and visible in your `PATH` variable. Currently supported toolchains are MSVC (windows only), GCC (linux, mingw windows, macos), Clang/LLVM (universal, both GNU and MSVC ecosystems).
 All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. Clang on windows will default to its MSVC variant. This can be overridden by using `-t=clang-gnu`.
-To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the four valid values.
+To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the 5 valid values.
 
 ### Build Configuration
-All manifests that begin with `[build]` are expected to have 3 base declarations at the root:
+All manifests that begin with `[package]` are expected to have 3 base declarations at the root:
 ```toml
-[build]
-package = "foobar"
+[package]
+name = "foobar"
 version = "x.y.z"
 lang = "C++XX"
 # optional
@@ -68,7 +68,7 @@ kind = "app|staticlib|sharedlib"
 implib = true
 interface = [ "CXX" ]
 ```
-- `package` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
+- `name` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
 
 - `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for future use cases.
 
@@ -92,7 +92,7 @@ Support for git dependencies is currently very basic. The repo is cached in '~/.
 
 As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build recipes, but this is a ways away for now.
 
-- **profile**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[build]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.
+- **profile**: to customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[package]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.
 
 - `defines`: additional preprocessor definitions. By default, this array will contain `VANGO_DEBUG` or `VANGO_RELEASE` definitions, aswell as `VANGO_TEST` for test builds, and `VANGO_EXPORT_SHARED` for dll builds.
 
@@ -121,16 +121,16 @@ As it stands, there are plans for a very basic package manager, more a simple re
 Important note: all toolchain specific implementations of the options listed above may come with caveats not listed here. Arguments from different compilers will never be a perfect match. If you expect to be switching between toolchains often, a list of all implementations, aswell as profile defaults can be viewed in `toolchains/`, for further reading into platform specific quirks.
 
 ### Static Library Configuration
-Manifests that begin with `[library]` are specialized for static library linking and are expected to have 3 base declarations at the root:
+Manifests that begin with `[staticlib]` are specialized for static library linking and are expected to have 3 base declarations at the root:
 ```toml
-[library]
-package = "foobar"
+[staticlib]
+name = "foobar"
 version = "x.y.z"
 lang = "C++XX"
 ```
 `lang` in this case declares compatibility. Dependency resolution will error on any library that requires a newer C++ standard than the project linking it. In the case of mixing C and C++, the builder assumes all C to be C++ compatible for ease of use, but the user must ensure that this is in fact the case (i.e. that header files use 'clean' C).
 
-In addition, libraries may have `profile.*` sections. Like their `[build]` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
+In addition, libraries may have `profile.*` sections. Like their `[package]` counterparts, all profile options (except `inherits`) may be specified globally as a default. Libraries support the following profile options:
 
 - `include`: a string that declares where the library header files are.
 
@@ -192,9 +192,6 @@ In future, I hope to implement this bundling myself via the package manager (whi
 ## Planned Features
 ### Feature Flags
 Conditional compilation based on requested features
-
-### Platform Agnostic TOML Manifest
-Fully platform agnostic compiler and linker options for improved cross-platform and cross-compilation functionality
 
 ### Smart Sem-Ver
 Improved integration with Git tags to enable versioned dependencies, lockfiles

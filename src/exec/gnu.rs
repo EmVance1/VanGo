@@ -52,9 +52,17 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
-    if let PreCompHead::Use(_) = pch {
-        cmd.arg(format!("-I{}/pch", info.outdir.display()));
+    match pch {
+        PreCompHead::Create(_) => {
+            cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
+        }
+        PreCompHead::Use(_) => {
+            cmd.arg(format!("-I{}/pch", info.outdir.display()));
+        }
+        _ => ()
     }
+    // /showIncludes
+
     // -H
 
     cmd.arg(src);

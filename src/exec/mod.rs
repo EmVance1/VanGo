@@ -67,9 +67,9 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext()));
         let outfile = if info.toolchain.is_msvc() {
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.to_string_lossy()));
-            info.outdir.join("obj").join(pch).with_extension("obj")
+            info.outdir.join("obj").join(pch).with_extension("h.obj")
         } else {
-            info.outdir.join("pch").join(pch).with_extension("gch")
+            info.outdir.join("pch").join(pch).with_extension("h.gch")
         };
 
         if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
@@ -101,13 +101,12 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
             return Ok(false);
         }
         BuildLevel::LinkOnly => {
-            let _ = std::fs::remove_file(&info.outfile);
+            // ALL GOOD BOSS
         }
         BuildLevel::CompileAndLink(elems) => {
             if !built_pch {
                 log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
             }
-            let _ = std::fs::remove_file(&info.outfile);
 
             let mut queue = queue::ProcQueue::new();
             let mut failure = false;

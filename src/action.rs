@@ -296,19 +296,18 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
 
     for lib in build.dependencies {
         let path = match lib {
-            #[allow(unused)]
-            Dependency::Local { path, features } => {
+            Dependency::Local { path, .. } => {
                 path
             }
             #[allow(unused)]
-            Dependency::Git { git, tag, recipe, features } => {
+            Dependency::Git { git, tag, .. } => {
                 continue;
             }
-            #[allow(unused)]
-            Dependency::Headers { headers, features } => {
+            Dependency::Headers { headers, .. } => {
                 incdirs.push(headers);
                 continue;
             }
+            _ => continue,
         };
 
         if !std::fs::exists(&path).unwrap() {

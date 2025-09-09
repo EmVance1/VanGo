@@ -92,6 +92,7 @@ pub enum Dependency {
         #[serde(default)]
         features: Vec<String>,
     },
+    System{ system: PathBuf, target: Option<String> },
 }
 
 

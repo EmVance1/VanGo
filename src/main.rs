@@ -2,6 +2,7 @@ mod error;
 mod exec;
 mod fetch;
 mod input;
+// mod input2;
 mod config;
 mod testfw;
 #[macro_use]
@@ -24,8 +25,7 @@ macro_rules! exit_failure {
 
 
 fn main() -> ExitCode {
-    let args: Vec<_> = std::env::args().skip(1).collect();
-    let cmd = input::parse_input(args).unwrap_or_else(|e| exit_failure!("{}", e));
+    let cmd = input::collect_args().unwrap_or_else(|e| exit_failure!("{}", e));
 
     if let input::Action::Help{ action } = &cmd {
         action::help(action.clone());

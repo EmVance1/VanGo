@@ -5,6 +5,7 @@ use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, config::{Build
 struct TestInfo {
     defines: Vec<String>,
     incdirs: Vec<PathBuf>,
+    archives: Vec<PathBuf>,
 }
 
 
@@ -16,6 +17,7 @@ fn inherited(build: &BuildFile, profile: &BuildProfile, switches: &BuildSwitches
     TestInfo {
         defines,
         incdirs: deps.incdirs,
+        archives: deps.archives,
     }
 }
 
@@ -39,6 +41,11 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
     let relink = [
         outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name)).with_extension(switches.toolchain.static_lib_ext())
     ].into_iter().collect();
+    if switches.toolchain.is_msvc() {
+        partial.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"))
+    } else {
+        partial.archives.insert(0, PathBuf::from(&build.name))
+    };
 
     let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
     let outfile = outdir.join(format!("test_{}.exe", build.name));
@@ -60,7 +67,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         pch: None,
         sources,
         headers,
-        archives: [ PathBuf::from(&build.name).with_extension("lib") ].into_iter().collect(),
+        archives: partial.archives,
         relink,
         outfile: outfile.clone(),
         implib: None,

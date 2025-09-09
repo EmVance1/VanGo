@@ -143,12 +143,14 @@ In addition, libraries may have `profile.*` sections. Like their `[package]` cou
 - `inherits`: this field is exclusive to custom profile definitions, as they require a base of settings to build upon.
 
 ### Automated Testing
-Testing is made easy by assuming all tests are in a `test` directory in the project root. A test project is a C/C++ project of arbitrary complexity, and may look like the following:
+Vango supports automated testing for library projects. To benefit from this, its best to modularize your core functionality into a library, which is then driven by a separate binary project (this is generally considered good practice in any framework). Test projects are arbitrarily complex C/C++ projects, the source code for which you place in the `test` directory in the project root.
+
+In order to write tests, the header 'vangotest/asserts2.h' - 'vangotest/casserts2.h' for C - must be included. These are automatically visible for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test. In one file and one file only, the include statement must be preceded by the `VANGO_TEST_ROOT` definition. This enables automatic discovery of your tests, meaning you dont need to call or even forward declare your tests anywhere. A dummy test project might look like this:
 ```cpp
 #define VANGO_TEST_ROOT
-#include <vango/asserts.h>
+#include <vango/asserts2.h>
 
-test(basic_math) {
+vango_test(basic_math) {
     int a = 2;
     a += 3;
     a *= 2;
@@ -156,26 +158,22 @@ test(basic_math) {
     vg_assert_eq(a, 10);
 }
 ```
-Currently, testing is only possible for library projects, which is why it is often beneficial to modularize your core functionality into a library, which is then driven by a separate binary project (this is generally considered good practice in any framework). In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+As you can see, a test is essentially a pure void function. Tests can be run all at once, or on a case by case basis by specifying the test names on the command line.
 
-To forward declare a test, use the `decl_test(test_name)` macro.
-In one file and one file only, the include statement must be preceded by the `VANGO_TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
-In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests like so:
+**Important note**: the '*2.h' family of assert headers is currently experimental on MSVC (including clang-msvc), due to some awkard pointer hacks it performs to make automatic discovery work. If MSVC users prefer, the old, less experimental headers are still available ('asserts.h', 'casserts.h'). These behave identically for C++, altough forward declaration and inclusion into the test root is necessary via the `vango_test_decl(test_name)` macro. In C however, some automation features are unavailable, and in addition to the code seen above, you must register your tests in the root like so:
 ```cpp
 #define VANGO_TEST_ROOT
 #include <vango/casserts.h>
 
-test(basic_math) {
+vango_test(basic_math) {
     int a = 10;
     vg_assert_eq(a, 10);
 }
 
-test_main(
-    test_register(basic_math);
+vango_test_main(
+    vango_test_reg(basic_math);
 )
 ```
-Given these prerequisites, tests can be run on a case by case basis by specifying their names on the command line (see `vango help test`), or all at once by not specifying anything.
-
 
 ### Cross-Compilation
 If you're familiar with the Clang toolchain, you already know that these tools support cross-compilation out of the box via its LLVM backend. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the toml `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.

@@ -25,9 +25,18 @@ pub struct BuildSwitches {
 }
 
 
-pub fn parse_input(mut args: Vec<String>) -> Result<Action, Error> {
+pub fn collect_args() -> Result<Action, Error> {
+    let mut args: Vec<_> = std::env::args().collect();
+    if let Some(first) = args.get(0) {
+        if std::path::PathBuf::from(first) == std::env::current_exe()? {
+            args.remove(0);
+        }
+    }
     if args.is_empty() { return Ok(Action::Help{ action: None }) }
+    parse_args(args)
+}
 
+fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
     match args.remove(0).as_str() {
         "new" => {
             let library = args.remove_if(|s| *s == "--lib").is_some();
@@ -212,7 +221,7 @@ mod tests {
     pub fn parse_action_new_1() {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), name.clone() ];
-        let result = parse_input(action);
+        let result = parse_args(action);
         assert_eq!(result.unwrap(), Action::New{ name, library: false, is_c: false, clangd: false });
     }
 
@@ -220,7 +229,7 @@ mod tests {
     pub fn parse_action_new_2() {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), name.clone(), "--lib".to_string() ];
-        let result = parse_input(action);
+        let result = parse_args(action);
         assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false, clangd: false });
     }
 
@@ -228,7 +237,7 @@ mod tests {
     pub fn parse_action_new_3() {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), "--lib".to_string(), name.clone() ];
-        let result = parse_input(action);
+        let result = parse_args(action);
         assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: false, clangd: false });
     }
 
@@ -236,26 +245,26 @@ mod tests {
     pub fn parse_action_new_4() {
         let name = "foo".to_string();
         let action = vec![ "new".to_string(), "--lib".to_string(), name.clone(), "--c".to_string() ];
-        let result = parse_input(action);
+        let result = parse_args(action);
         assert_eq!(result.unwrap(), Action::New{ name, library: true, is_c: true, clangd: false });
     }
 
 
     #[test]
     pub fn parse_action_build_1() {
-        let result = parse_input(vec![ "build".to_string() ]);
+        let result = parse_args(vec![ "build".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ profile: Profile::Debug, ..Default::default() } });
     }
 
     #[test]
     pub fn parse_action_build_2() {
-        let result = parse_input(vec![ "build".to_string(), "-r".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "-r".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{ switches: BuildSwitches{ profile: Profile::Release, ..Default::default() } });
     }
 
     #[test]
     pub fn parse_action_build_3() {
-        let result = parse_input(vec![ "build".to_string(), "-t=gcc".to_string(), "--release".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "-t=gcc".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
             switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::Gcc, ..Default::default() }
         });
@@ -263,7 +272,7 @@ mod tests {
 
     #[test]
     pub fn parse_action_build_4() {
-        let result = parse_input(vec![ "build".to_string(), "-t=clang".to_string(), "--release".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "-t=clang".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
             switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::ClangGnu, ..Default::default() }
         });
@@ -272,44 +281,44 @@ mod tests {
 
     #[test]
     pub fn parse_action_run_1() {
-        let result = parse_input(vec![ "run".to_string(), "--".to_string() ]);
+        let result = parse_args(vec![ "run".to_string(), "--".to_string() ]);
         assert_eq!(result.unwrap(), Action::Run{ switches: BuildSwitches::default(), args: vec![] });
     }
 
     #[test]
     pub fn parse_action_run_2() {
-        let result = parse_input(vec![ "run".to_string(), "-r".to_string(), "--".to_string() ]);
+        let result = parse_args(vec![ "run".to_string(), "-r".to_string(), "--".to_string() ]);
         assert_eq!(result.unwrap(), Action::Run{ switches: BuildSwitches{ profile: Profile::Release, ..Default::default() }, args: vec![] });
     }
 
     #[test]
     pub fn parse_action_run_3() {
-        let result = parse_input(vec![ "run".to_string(), "--".to_string(), "-r".to_string() ]);
+        let result = parse_args(vec![ "run".to_string(), "--".to_string(), "-r".to_string() ]);
         assert_eq!(result.unwrap(), Action::Run{ switches: BuildSwitches::default(), args: vec![ "-r".to_string() ] });
     }
 
 
     #[test]
     pub fn parse_action_error_1() {
-        let result = parse_input(vec![ "abc".to_string(), "--release".to_string() ]);
+        let result = parse_args(vec![ "abc".to_string(), "--release".to_string() ]);
         assert!(result.is_err());
     }
 
     #[test]
     pub fn parse_action_error_2() {
-        let result = parse_input(vec![ "build".to_string(), "dummy".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "dummy".to_string() ]);
         assert!(result.is_err());
     }
 
     #[test]
     pub fn parse_action_error_3() {
-        let result = parse_input(vec![ "build".to_string(), "--release".to_string(), "dummy".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "--release".to_string(), "dummy".to_string() ]);
         assert!(result.is_err());
     }
 
     #[test]
     pub fn parse_action_error_4() {
-        let result = parse_input(vec![ "build".to_string(), "-d".to_string(), "-r".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "-d".to_string(), "-r".to_string() ]);
         assert!(result.is_err());
     }
 }

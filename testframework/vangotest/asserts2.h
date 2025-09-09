@@ -51,9 +51,9 @@ struct TestFunc {
     VANGO_TEST_THROW(); } } while (0)
 
 #define vg_assert_throws(a, e) do { try { a; \
-        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              VANGO_TEST_THROW(VANGO_FAIL_THROWS); \
+        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it did not";              VANGO_TEST_THROW(); \
     } catch (const e&) {} catch (...) { \
-        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; VANGO_TEST_THROW(VANGO_FAIL_THROWS); \
+        VANGO_TEST_OUTPUT << "assertion fail: expected '" #a "' to throw '" #e "' but it threw something else"; VANGO_TEST_THROW(); \
     } } while (0)
 
 

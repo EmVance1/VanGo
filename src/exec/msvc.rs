@@ -1,6 +1,6 @@
 use std::{io::Write, path::{Path, PathBuf}};
 use super::{BuildInfo, PreCompHead};
-use crate::{config::{Lang, ProjKind, Runtime, WarnLevel}, exec::output, log_info_ln, log_warn_ln, Error};
+use crate::{config::{Lang, ProjKind, Runtime, WarnLevel}, exec::output, Error, log_info_ln};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
@@ -11,20 +11,16 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd.arg("/nologo");
     match info.lang {
         Lang::Cpp(n) if n >= 123 => {
-            log_warn_ln!("using MSVC latest working draft (/std:c++latest). May be incomplete");
             cmd.arg("/std:c++latest");
         }
         Lang::Cpp(n) if n  < 114 => {
-            log_warn_ln!("using MSVC C++14. Older standards not supported");
             cmd.arg("/std:c++14");
         }
         Lang::C(n) if n >= 120 => {
-            log_warn_ln!("using MSVC latest working draft (/std:clatest). May be incomplete");
             cmd.arg("/std:clatest");
         }
         Lang::C(n) if n == 99 => {
-            log_warn_ln!("using MSVC C89 with extensions. May be incomplete");
-            cmd.arg("/Ze");
+            // extensions on by default
         }
         Lang::C(n) if n == 89 => {
             cmd.arg("/Za");

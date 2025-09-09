@@ -3,29 +3,30 @@
 #include <stdlib.h>
 
 
+enum VangoTestFailType {
+    VANGO_FAIL_TRUE,
+    VANGO_FAIL_EQ,
+    VANGO_FAIL_NE,
+    VANGO_FAIL_NULL,
+    VANGO_FAIL_NON_NULL,
+};
+
 struct VangoTestResult {
-    size_t failtype;
+    enum VangoTestFailType failtype;
     size_t failline;
     char* msg;
 };
 
 
-#define VANGO_FAIL_TRUE     1
-#define VANGO_FAIL_EQ       2
-#define VANGO_FAIL_NE       3
-#define VANGO_FAIL_NULL     4
-#define VANGO_FAIL_NON_NULL 5
-
-
-#define assert(a)          do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_TRUE,     _vango_test_result->failline=__LINE__; \
+#define vg_assert(a)          do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_TRUE,     _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expression expected to be 'true' was 'false'"; return; } } while (0)
-#define assert_eq(a, b)    do { if ((a) != (b)) { _vango_test_result->failtype=VANGO_FAIL_EQ,       _vango_test_result->failline=__LINE__; \
+#define vg_assert_eq(a, b)    do { if ((a) != (b)) { _vango_test_result->failtype=VANGO_FAIL_EQ,       _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expressions expected to be equal were not equal"; return; } } while (0)
-#define assert_ne(a, b)    do { if ((a) == (b)) { _vango_test_result->failtype=VANGO_FAIL_NE,       _vango_test_result->failline=__LINE__; \
+#define vg_assert_ne(a, b)    do { if ((a) == (b)) { _vango_test_result->failtype=VANGO_FAIL_NE,       _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expressions expected not to be equal were equal"; return; } } while (0)
-#define assert_null(a)     do { if ((a))        { _vango_test_result->failtype=VANGO_FAIL_NULL,     _vango_test_result->failline=__LINE__; \
+#define vg_assert_null(a)     do { if ((a))        { _vango_test_result->failtype=VANGO_FAIL_NULL,     _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expected 'NULL', received other address"; return; } } while (0)
-#define assert_non_null(a) do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_NON_NULL; _vango_test_result->failline=__LINE__; \
+#define vg_assert_non_null(a) do { if (!(a))       { _vango_test_result->failtype=VANGO_FAIL_NON_NULL; _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; } } while (0)
 
 

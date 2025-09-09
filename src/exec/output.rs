@@ -6,7 +6,11 @@ use crate::{log_error_ln, log_warn_ln};
 pub fn msvc_compiler(output: std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
-        log_error_ln!("{}", line);
+        if line.contains(" warning D") {
+            log_warn_ln!("{line}");
+        } else {
+            log_error_ln!("{line}");
+        }
     }
     for line in output.stdout.lines().skip(1) {
         let line = line.unwrap();

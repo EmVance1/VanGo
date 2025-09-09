@@ -324,7 +324,7 @@ impl FromStr for Lang {
                 .ok_or(Error::InvalidCppStd(cpp.to_string()))?
                 .parse()
                 .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
-            if !matches!(num, 89 | 99 | 11 | 17 | 20 | 23) {
+            if !matches!(num, 89 | 99 | 11 | 17 | 23) {
                 Err(Error::InvalidCppStd(cpp.to_string()))
             } else if num < 80 {
                 Ok(Lang::C(100 + num))
@@ -357,7 +357,6 @@ mod tests {
         assert_eq!(Lang::from_str("c99").unwrap(), Lang::C(99));
         assert_eq!(Lang::from_str("C11").unwrap(), Lang::C(111));
         assert_eq!(Lang::from_str("C17").unwrap(), Lang::C(117));
-        assert_eq!(Lang::from_str("C20").unwrap(), Lang::C(120));
         assert_eq!(Lang::from_str("C23").unwrap(), Lang::C(123));
     }
 
@@ -367,8 +366,11 @@ mod tests {
         assert!(Lang::from_str("c").is_err());
         assert!(Lang::from_str("c4").is_err());
         assert!(Lang::from_str("c14").is_err());
+        assert!(Lang::from_str("c20").is_err());
         assert!(Lang::from_str("c++").is_err());
         assert!(Lang::from_str("c++24").is_err());
+        assert!(Lang::from_str("c++12").is_err());
+        assert!(Lang::from_str("abcde").is_err());
     }
 
     #[test]

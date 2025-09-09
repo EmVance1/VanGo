@@ -153,10 +153,10 @@ test(basic_math) {
     a += 3;
     a *= 2;
 
-    assert_eq(a, 10);
+    vg_assert_eq(a, 10);
 }
 ```
-In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
+Currently, testing is only possible for library projects, which is why it is often beneficial to modularize your core functionality into a library, which is then driven by a separate binary project (this is generally considered good practice in any framework). In order to write tests, the header 'vangotest/asserts.h' or 'vangotest/casserts.h' must be included. The files are automatically in the include path for test configurations. As the name suggests, these contain basic assert macros that report back the success status of the test, however some things are of note:
 
 To forward declare a test, use the `decl_test(test_name)` macro.
 In one file and one file only, the include statement must be preceded by the `VANGO_TEST_ROOT` definition. This ensures no ODR violations for implementation functions, and additionally in C++ enables some behind the scenes magic to perform automatic test detection and main function generation.
@@ -167,7 +167,7 @@ In C however, some automation features are unavailable, and in addition to the c
 
 test(basic_math) {
     int a = 10;
-    assert_eq(a, 10);
+    vg_assert_eq(a, 10);
 }
 
 test_main(

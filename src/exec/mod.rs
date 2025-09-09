@@ -8,7 +8,7 @@ mod output;
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;
 use crate::{
-    config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, log_info_ln
+    config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, log_info_ln, log_warn_ln
 };
 
 
@@ -58,6 +58,25 @@ fn on_compile_finish(tc: ToolChain, output: std::process::Output) -> bool {
     }
 }
 
+fn msvc_check_iso(lang: Lang) {
+    match lang {
+        Lang::Cpp(n) if n >= 123 => {
+            log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete");
+        }
+        Lang::Cpp(n) if n  < 114 => {
+            log_warn_ln!("MSVC {}: no longer supported - defaulting to C++14", lang.to_string().to_ascii_uppercase());
+        }
+        Lang::C(n) if n >= 123 => {
+            log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete");
+        }
+        Lang::C(n) if n == 99 => {
+            log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete");
+        }
+        _ => ()
+    }
+}
+
+
 pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
     let mut built_pch = false;
@@ -75,6 +94,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
             built_pch = true;
             log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
+            if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
             log_info_ln!("precompiling header: '{}'", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc() {
@@ -97,7 +117,9 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
     match incremental::get_build_level(&info) {
         BuildLevel::UpToDate => {
-            log_info_ln!("build up to date for \"{}\"", info.outfile.display());
+            if !built_pch {
+                log_info_ln!("build up to date for \"{}\"", info.outfile.display());
+            }
             return Ok(false);
         }
         BuildLevel::LinkOnly => {
@@ -106,6 +128,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         BuildLevel::CompileAndLink(elems) => {
             if !built_pch {
                 log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
+                if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
             }
 
             let mut queue = queue::ProcQueue::new();

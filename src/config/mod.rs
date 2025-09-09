@@ -63,20 +63,20 @@ mod tests {
     fn parse_buildfile() {
         let file =
 r#"
-[build]
-package = "Shimmy"
+[package]
+name = "Shimmy"
 version = "0.1.0"
 lang = "C++20"
 include = [ "src", "headers" ]
+
+[profile.debug]
+include = [ "dbg_headers" ]
 
 [dependencies]
 engine  = { path="../engine" }
 NavMesh = { path="../../NavMesh" }
 SFML    = { git="https://github.com/SFML/SFML.git",     recipe="recipes/SFML.bat",  features=[ "graphics" ] }
 LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.bat" }
-
-[profile.debug]
-include = [ "dbg_headers" ]
 "#;
 
         let mut dependencies = Vec::new();
@@ -98,7 +98,7 @@ include = [ "dbg_headers" ]
         profiles.insert("release".into(), BuildProfile{
             include: vec![ "src".into(), "src".into(), "headers".into() ], // TODO: duplicates
             defines: vec![ "VANGO_RELEASE".into() ],
-            ..BuildProfile::debug(&Default::default())
+            ..BuildProfile::release(&Default::default())
         });
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Build(BuildFile{
@@ -117,8 +117,8 @@ include = [ "dbg_headers" ]
     fn parse_libfile() {
         let file =
 r#"
-[library]
-package = "SFML"
+[staticlib]
+name = "SFML"
 version = "3.0.1"
 lang = "C++17"
 include = "include"

@@ -9,7 +9,7 @@ pub enum BuildLevel<'a> {
 }
 
 
-pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
+pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
     let objdir = info.outdir.join("obj");
 
     let pairs: Vec<_> = info

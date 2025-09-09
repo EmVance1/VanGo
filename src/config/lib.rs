@@ -164,6 +164,7 @@ struct SerdeLibProfile {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
+#[allow(unused)]
 pub struct SerdeFeature {
     requires: Vec<String>,
     binaries: Option<Vec<PathBuf>>,

@@ -10,19 +10,19 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd.arg("/c");
     cmd.arg("/nologo");
     match info.lang {
-        Lang::Cpp(n) if n >= 123 => {
+        Lang::Cpp(123) => {
             cmd.arg("/std:c++latest");
         }
-        Lang::Cpp(n) if n  < 114 => {
+        Lang::Cpp(114) => {
             cmd.arg("/std:c++14");
         }
-        Lang::C(n) if n >= 120 => {
+        Lang::C(120) => {
             cmd.arg("/std:clatest");
         }
-        Lang::C(n) if n == 99 => {
+        Lang::C(99) => {
             // extensions on by default
         }
-        Lang::C(n) if n == 89 => {
+        Lang::C(80) => {
             cmd.arg("/Za");
         }
         Lang::Cpp(_)|Lang::C(_) => {

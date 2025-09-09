@@ -72,6 +72,7 @@ pub fn gnu_linker(output: std::process::Output) -> bool {
 }
 
 
+#[allow(unused)]
 pub fn msvc_archiver(output: std::process::Output) -> bool {
     for line in output.stdout.lines() {
         let line = line.unwrap();
@@ -86,6 +87,7 @@ pub fn msvc_archiver(output: std::process::Output) -> bool {
     output.status.success()
 }
 
+#[allow(unused)]
 pub fn gnu_archiver(output: std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();

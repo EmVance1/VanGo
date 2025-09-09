@@ -79,13 +79,12 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                 continue;
             }
             Dependency::System { system, target } => {
-                if let Some(target) = target {
-                    if target == "windows" && !cfg!(windows) ||
-                        target == "unix" && !cfg!(unix) ||
-                        target == "linux" && !cfg!(target_os="linux") ||
-                        target == "macos" && !cfg!(target_os="macos") {
-                        continue;
-                    }
+                if let Some(target) = target &&
+                    (target == "windows" && !cfg!(windows) ||
+                    target == "unix"  && !cfg!(unix) ||
+                    target == "linux" && !cfg!(target_os="linux") ||
+                    target == "macos" && !cfg!(target_os="macos")) {
+                    continue;
                 }
                 if switches.toolchain.is_msvc() {
                     archives.push(system.with_extension("lib"));

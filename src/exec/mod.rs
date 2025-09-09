@@ -60,16 +60,16 @@ fn on_compile_finish(tc: ToolChain, output: std::process::Output) -> bool {
 
 fn msvc_check_iso(lang: Lang) {
     match lang {
-        Lang::Cpp(n) if n >= 123 => {
+        Lang::Cpp(123) => {
             log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete");
         }
-        Lang::Cpp(n) if n  < 114 => {
+        Lang::Cpp(114) => {
             log_warn_ln!("MSVC {}: no longer supported - defaulting to C++14", lang.to_string().to_ascii_uppercase());
         }
-        Lang::C(n) if n >= 123 => {
+        Lang::C(123) => {
             log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete");
         }
-        Lang::C(n) if n == 99 => {
+        Lang::C(99) => {
             log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete");
         }
         _ => ()
@@ -141,10 +141,9 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 } else {
                     gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
                 };
-                if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?) {
-                    if !on_compile_finish(info.toolchain, output) {
-                        failure = true;
-                    }
+                if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
+                    && !on_compile_finish(info.toolchain, output) {
+                    failure = true;
                 }
             }
 

@@ -27,10 +27,8 @@ pub struct BuildSwitches {
 
 pub fn collect_args() -> Result<Action, Error> {
     let mut args: Vec<_> = std::env::args().collect();
-    if let Some(first) = args.get(0) {
-        if std::path::PathBuf::from(first) == std::env::current_exe()? {
-            args.remove(0);
-        }
+    if let Some(first) = args.first() && first.as_str() == std::env::current_exe()?.as_os_str() {
+        args.remove(0);
     }
     if args.is_empty() { return Ok(Action::Help{ action: None }) }
     parse_args(args)
@@ -272,7 +270,7 @@ mod tests {
 
     #[test]
     pub fn parse_action_build_4() {
-        let result = parse_args(vec![ "build".to_string(), "-t=clang".to_string(), "--release".to_string() ]);
+        let result = parse_args(vec![ "build".to_string(), "-t=clang-gnu".to_string(), "--release".to_string() ]);
         assert_eq!(result.unwrap(), Action::Build{
             switches: BuildSwitches{ profile: Profile::Release, toolchain: ToolChain::ClangGnu, ..Default::default() }
         });

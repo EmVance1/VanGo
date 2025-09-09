@@ -48,8 +48,8 @@ pub enum Error {
     MissingTests,
     #[error("binary '{0}' is not runnable on current platform")]
     InvalidExe(PathBuf),
-    #[error("static library '{0}' is not executable")]
-    LibNotExe(PathBuf),
+    #[error("project '{0}' does not build an executable")]
+    LibNotExe(String),
     #[error("executable '{0}' was killed by the host OS (potential segfault)")]
     ExeKilled(PathBuf),
     #[error("OS or IO error: {0}")]

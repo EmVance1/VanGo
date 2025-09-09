@@ -149,8 +149,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
             }
 
             while !queue.is_empty() {
-                let output = queue.flush_one();
-                if !on_compile_finish(info.toolchain, output) {
+                if !on_compile_finish(info.toolchain, queue.flush_one()) {
                     failure = true;
                 }
             }
@@ -177,17 +176,12 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
 
 pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
     log_info_ln!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
-    let ext = outfile.extension().unwrap_or_default().to_string_lossy();
-    if ext == "a" || ext == "lib" {
-        Err(Error::LibNotExe(outfile.to_owned()))
-    } else {
-        Ok(Command::new(PathBuf::from(".").join(outfile))
-            .args(runargs)
-            .current_dir(std::env::current_dir().unwrap())
-            .status()
-            .map_err(|_| Error::InvalidExe(outfile.to_owned()))?
-            .code()
-            .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
-    }
+    Ok(Command::new(PathBuf::from(".").join(outfile))
+        .args(runargs)
+        .current_dir(std::env::current_dir().unwrap())
+        .status()
+        .map_err(|_| Error::InvalidExe(outfile.to_owned()))?
+        .code()
+        .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
 }
 

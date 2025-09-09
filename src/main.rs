@@ -52,9 +52,10 @@ fn main() -> ExitCode {
 
         match cmd {
             input::Action::Build{ switches } => {
-                let (_rebuilt, _outfile) = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                let _ = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Run{ switches, args } => {
+                if build.kind != crate::config::ProjKind::App { exit_failure!("{}", Error::LibNotExe(build.name)); }
                 let (_rebuilt, outfile) = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
                 return exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }

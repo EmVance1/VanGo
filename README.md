@@ -87,6 +87,7 @@ MyLib     = { path="../MyLib" } # source, local, contains build toml-config
 SFML      = { path="../SFML" }  # binary, local, contains static lib toml-config
 SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains build toml-config
 stb_image = { headers="lib/stb_image" } # headers, local, contains no config
+Ws2       = { system="Ws2_32", target="windows" } # system libraries
 ```
 Support for git dependencies is currently very basic. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
 

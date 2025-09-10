@@ -142,7 +142,7 @@ impl ToolChain {
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
             Self::ClangGnu  => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(windows) { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                if cfg!(windows) { cmd.arg("--target=x86_64-w64-mingw32"); }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("clang-cl"),
@@ -159,7 +159,7 @@ impl ToolChain {
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
             Self::ClangGnu  => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(windows) { cmd.arg("--target=x86_64-pc-windows-gnu"); }
+                if cfg!(windows) { cmd.arg("--target=x86_64-w64-mingw32"); }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("lld-link"),

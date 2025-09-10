@@ -143,6 +143,7 @@ impl BuildProfile {
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info:    defaults.build_settings.debug_info.unwrap_or(true),
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
+                pthread:       defaults.build_settings.pthread.unwrap_or(false),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
                 rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
@@ -177,6 +178,7 @@ impl BuildProfile {
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info:    defaults.build_settings.debug_info.unwrap_or(false),
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
+                pthread:       defaults.build_settings.pthread.unwrap_or(false),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
                 rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
@@ -221,6 +223,7 @@ pub struct BuildSettings {
     pub warn_as_error: bool,
     pub debug_info:    bool,
     pub runtime:       Runtime,
+    pub pthread:       bool,
     pub aslr:          bool,
     pub rtti:          bool,
 
@@ -280,6 +283,7 @@ struct SerdeBuildSettings {
     warn_as_error: Option<bool>,
     debug_info:    Option<bool>,
     runtime:       Option<Runtime>,
+    pthread:       Option<bool>,
     aslr:          Option<bool>,
     rtti:          Option<bool>,
 }

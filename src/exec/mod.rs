@@ -157,7 +157,11 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         }
     }
 
-    log_info_ln!("linking:   {: <30}", info.outfile.display());
+
+    match info.projkind {
+        ProjKind::App|ProjKind::SharedLib{..} => log_info_ln!("linking:   {: <30}", info.outfile.display()),
+        ProjKind::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
+    }
     if info.toolchain.is_msvc() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         match info.projkind {

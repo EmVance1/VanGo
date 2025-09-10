@@ -134,11 +134,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: 
     cmd.args(objs);
 
     if echo { print_command(&cmd); }
-    let output = cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?;
-    if !output.status.success() {
-        let _ = std::io::stderr().write_all(&output.stderr);
-        if verbose { let _ = std::io::stderr().write_all(&output.stdout); }
-        eprintln!();
+    if !output::gnu_archiver(cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?) {
         Err(Error::ArchiverFail(info.outfile))
     } else {
         log_info_ln!("successfully built project {}\n", info.outfile.display());

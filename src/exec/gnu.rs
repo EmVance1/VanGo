@@ -57,6 +57,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
         }
         PreCompHead::Use(_) => {
+            if info.toolchain.is_clang() {
+                cmd.arg("-include-pch");
+            }
             cmd.arg(format!("-I{}/pch", info.outdir.display()));
         }
         _ => ()

@@ -47,6 +47,13 @@ opt-size =  [ "-Os" ]
 opt-speed = [ "-Ofast" ]
 opt-linktime = [ "-flto" ]
 
+aslr-app = [ "-fpie" ]
+aslr-lib = [ "-fPIC" ]
+
+rtti = [ "-rtti" ]
+
+pthread = [ "-pthread" ]
+
 warn-none =     [ "-w" ]
 warn-basic =    [ "-Wall" ]
 warn-high =     [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
@@ -63,11 +70,6 @@ runtime-dynamic-release = []
 
 iso-compliant = [ "-pedantic-errors" ]
 
-aslr-app = [ "-fpie" ]
-aslr-lib = [ "-fPIC" ]
-
-no-rtti = [ "-fno-rtti" ]
-
 
 # =============================================================================================
 [linker]
@@ -76,12 +78,12 @@ libdir =  [ "-L{libdir}" ]
 library = [ "-l{library}" ]
 output =  [ "-o{binary}" ]
 
-aslr = [ "-pie" ]
-
 shared-lib = [ "-shared" ]
 import-lib = [ "-Wl,--out-implib,{library}" ]
 
 opt-linktime = [ "-flto" ]
+aslr = [ "-pie" ]
+pthread = [ "-pthread" ]
 
 default-libs = []
 
@@ -90,4 +92,6 @@ default-libs = []
 [archiver]
 object =  [ "{objfile}" ]
 output =  [ "{archive}" ]
+
+opt-linktime = []
 

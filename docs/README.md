@@ -10,7 +10,7 @@ VanGo is opinionated for simplicity and makes some base assumptions and decision
 ### Table of Contents
 - [Toolchains](toolchains.md)
 - [Build Configuration](builds.md)
-- [Static Library Configuration](libraries.md)
+- [Prebuilt Library Configuration](libraries.md)
 - [Automated Testing](testing.md)
 - [Cross-Compilation](crosscomp.md)
 

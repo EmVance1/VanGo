@@ -8,5 +8,5 @@ vango-linux/
 vango-win/
 recipes/
 *.zip
-toolchains/warnings.txt
+docs/toolchains/warnings.txt
 

@@ -32,6 +32,13 @@ opt-size =  [ "/Os" ]
 opt-speed = [ "/Ot" ]
 opt-linktime = [ "/GL" ]
 
+aslr-app = []
+aslr-lib = []
+
+rtti = [ "/GR" ]
+
+pthread = [] # UNAVAILABLE
+
 warn-none =     [ "/w" ]
 warn-basic =    [ "/W1" ]
 warn-high =     [ "/W4" ]
@@ -47,11 +54,6 @@ runtime-dynamic-release = [ "/MD" ]
 
 iso-compliant = [ "/permissive-" ]
 
-aslr-app = []
-aslr-lib = []
-
-no-rtti = [ "/GR-" ]
-
 
 # =============================================================================================
 [linker]
@@ -60,12 +62,12 @@ libdir =  [ "/LIBPATH:{libdir}" ]
 library = [ "{library}" ]
 output =  [ "/OUT:{binary}" ]
 
-opt-linktime = [ "/LTCG", "OPT:REF" ]
-
-aslr = [ "/DYNAMICBASE" ]
-
 shared-lib = [ "/DLL" ]
 import-lib = [ "/IMPLIB:{library}" ]
+
+opt-linktime = [ "/LTCG", "OPT:REF" ]
+aslr = [ "/DYNAMICBASE" ]
+pthread = [] # UNAVAILABLE
 
 default-libs = [
     "kernel32",
@@ -87,4 +89,6 @@ default-libs = [
 [archiver]
 object =  [ "{objfile}" ]
 output =  [ "/OUT:{archive}" ]
+
+opt-linktime = [ "/LTCG", "OPT:REF" ]
 

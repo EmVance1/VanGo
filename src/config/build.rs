@@ -23,21 +23,21 @@ impl BuildFile {
         let mut dependencies: Vec<Dependency> = Vec::new();
 
         if let Some(d) = file.profile.remove("debug") {
-            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).merge(d));
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).merge(d).finish());
         } else {
-            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults));
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).finish());
         }
         if let Some(r) = file.profile.remove("release") {
-            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults).merge(r));
+            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults).merge(r).finish());
         } else {
-            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults));
+            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults).finish());
         }
         for (k, p) in file.profile {
             let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
             if inherits == "debug" {
-                profiles.insert(k, BuildProfile::debug(&file.package.defaults).merge(p));
+                profiles.insert(k, BuildProfile::debug(&file.package.defaults).merge(p).finish());
             } else if inherits == "release" {
-                profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p));
+                profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p).finish());
             }
         }
         let lang = Lang::from_str(&file.package.lang)?;
@@ -114,11 +114,11 @@ pub enum Runtime { DynamicDebug, DynamicRelease, StaticDebug, StaticRelease }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildProfile {
-    pub src: PathBuf,
+    pub defines: Vec<String>,
     pub include: Vec<PathBuf>,
     pub include_pub: PathBuf,
     pub pch: Option<PathBuf>,
-    pub defines: Vec<String>,
+
     pub settings: BuildSettings,
 
     pub compiler_options: Vec<String>,
@@ -127,20 +127,16 @@ pub struct BuildProfile {
 
 impl BuildProfile {
     pub(super) fn debug(defaults: &SerdeBuildProfile) -> Self {
-        let mut include = vec![ PathBuf::from("src") ];
-        if let Some(inc) = &defaults.include {
-            include.extend(inc.iter().map(PathBuf::to_owned));
-        }
         let mut defines = vec![ "VANGO_DEBUG".to_string() ];
         if let Some(def) = &defaults.defines {
             defines.extend(def.iter().map(String::to_owned));
         }
         Self{
-            src: defaults.src.clone().unwrap_or("src".into()),
-            include,
+            defines,
+            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
-            defines,
+
             settings: BuildSettings {
                 opt_level:     defaults.build_settings.opt_level.unwrap_or(0),
                 opt_size:      defaults.build_settings.opt_size.unwrap_or(false),
@@ -162,20 +158,16 @@ impl BuildProfile {
     }
 
     pub(super) fn release(defaults: &SerdeBuildProfile) -> Self {
-        let mut include = vec![ PathBuf::from("src") ];
-        if let Some(inc) = &defaults.include {
-            include.extend(inc.iter().map(PathBuf::to_owned));
-        }
         let mut defines = vec![ "VANGO_RELEASE".to_string() ];
         if let Some(def) = &defaults.defines {
             defines.extend(def.iter().map(String::to_owned));
         }
         Self{
-            src: defaults.src.clone().unwrap_or("src".into()),
-            include,
+            defines,
+            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
-            defines,
+
             settings: BuildSettings {
                 opt_level:     defaults.build_settings.opt_level.unwrap_or(3),
                 opt_size:      defaults.build_settings.opt_size.unwrap_or(false),
@@ -197,10 +189,11 @@ impl BuildProfile {
     }
 
     fn merge(mut self, other: SerdeBuildProfile) -> Self {
-        if let Some(src) = other.src { self.src = src; }
+        self.defines.extend(other.defines.unwrap_or_default());
         self.include.extend(other.include.unwrap_or_default());
         if let Some(inc) = other.include_pub { self.include_pub = inc; }
-        self.defines.extend(other.defines.unwrap_or_default());
+        if let Some(pch) = other.pch { self.pch = Some(pch); }
+
         other.build_settings.opt_level.inspect(    |s| self.settings.opt_level = *s);
         other.build_settings.opt_size.inspect(     |s| self.settings.opt_size = *s);
         other.build_settings.opt_speed.inspect(    |s| self.settings.opt_speed = *s);
@@ -216,6 +209,11 @@ impl BuildProfile {
 
         self.compiler_options.extend(other.compiler_options.unwrap_or_default());
         self.linker_options.extend(other.linker_options.unwrap_or_default());
+        self
+    }
+
+    fn finish(mut self) -> Self {
+        self.include.push("src".into());
         self
     }
 }
@@ -266,11 +264,11 @@ struct SerdeBuild {
 #[serde(rename_all = "kebab-case")]
 pub(super) struct SerdeBuildProfile {
     inherits: Option<String>,
-    src: Option<PathBuf>,
+
+    defines: Option<Vec<String>>,
     include: Option<Vec<PathBuf>>,
     include_pub: Option<PathBuf>,
     pch: Option<PathBuf>,
-    defines: Option<Vec<String>>,
 
     #[serde(flatten)]
     build_settings: SerdeBuildSettings,

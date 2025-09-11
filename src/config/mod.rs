@@ -67,7 +67,7 @@ r#"
 name = "Shimmy"
 version = "0.1.0"
 lang = "C++20"
-include = [ "src", "headers" ]
+include = [ "headers" ]
 
 [profile.debug]
 include = [ "dbg_headers" ]
@@ -91,12 +91,12 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
         profiles.insert("debug".into(), BuildProfile{
-            include: vec![ "src".into(), "src".into(), "headers".into(), "dbg_headers".into() ], // TODO: duplicates
+            include: vec![ "headers".into(), "dbg_headers".into(), "src".into() ],
             defines: vec![ "VANGO_DEBUG".into() ],
             ..BuildProfile::debug(&Default::default())
         });
         profiles.insert("release".into(), BuildProfile{
-            include: vec![ "src".into(), "src".into(), "headers".into() ], // TODO: duplicates
+            include: vec![ "headers".into(), "src".into()  ],
             defines: vec![ "VANGO_RELEASE".into() ],
             ..BuildProfile::release(&Default::default())
         });

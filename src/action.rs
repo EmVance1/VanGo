@@ -9,17 +9,18 @@ use crate::{
 
 pub fn build(mut build: BuildFile, switches: &BuildSwitches) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
+    let srcdir = PathBuf::from("src");
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     if build.lang.is_cpp() {
         headers.extend(fetch::source_files(&profile.include_pub, "hpp").unwrap());
     }
-    for incdir in profile.include.iter().chain(Some(&profile.src)) {
+    for incdir in &profile.include {
         headers.extend(fetch::source_files(incdir, "h").unwrap());
         if build.lang.is_cpp() {
             headers.extend(fetch::source_files(incdir, "hpp").unwrap());
         }
     }
-    let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
+    let sources = fetch::source_files(&srcdir, build.lang.src_ext()).unwrap();
 
     let mut deps = fetch::libraries(build.dependencies, switches, build.lang)?;
     deps.defines.extend(profile.defines);
@@ -65,7 +66,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches) -> Result<(bool, Pa
 
         defines:  deps.defines,
 
-        srcdir:   profile.src,
+        srcdir,
         incdirs:  deps.incdirs,
         libdirs:  deps.libdirs,
         outdir,

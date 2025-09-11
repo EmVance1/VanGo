@@ -1,12 +1,11 @@
-/target/
 todo.md
 token.txt
-
 build.bat
-Vango.toml
+
 vango-linux/
 vango-win/
 recipes/
+target/
 *.zip
 docs/toolchains/warnings.txt
 

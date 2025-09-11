@@ -7,6 +7,9 @@ license = "GPL-2.0-only"
 description = "Structural C/C++ build system written in Rust, inspired by cargo"
 repository = "https://github.com/EmVance1/VanGo"
 readme = "README.md"
+exclude = [
+    "docs/*",
+]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

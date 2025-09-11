@@ -18,18 +18,25 @@ As you can see, a test is essentially a pure void function. Tests can be run all
 
 ### Important Note
 The '*2.h' family of assert headers is currently experimental on MSVC (including clang-msvc), due to some awkard pointer hacks it performs to make automatic discovery work. If MSVC users prefer, the old, more stable headers are still available ('asserts.h', 'casserts.h'). These behave identically for C++, albeit with some ordering quirks. In C however, some automation features are unavailable, and in addition to the code seen above, you must forward declare and include your tests into the test root, and register them like so:
-```c basic.h
-vango_test_decl(basic_math)`
-```
-```c basic.c
+```c
+// basic.h ====================
+#ifndef BASIC_H
+#define BASIC_H
 #include <vangotest/casserts.h>
+
+vango_test_decl(basic_math)
+
+#endif
+
+// basic.c ====================
+#include "basic.h"
 
 vango_test(basic_math) {
     int a = 10;
     vg_assert_eq(a, 10);
 }
-```
-```c test.c
+
+// test.c =====================
 #define VANGO_TEST_ROOT
 #include <vangotest/casserts.h>
 #include "basic.h"

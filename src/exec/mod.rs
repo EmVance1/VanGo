@@ -38,7 +38,6 @@ pub struct BuildInfo {
 
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
-
 }
 
 

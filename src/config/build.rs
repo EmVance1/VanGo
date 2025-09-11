@@ -210,6 +210,7 @@ impl BuildProfile {
         other.build_settings.warn_as_error.inspect(|s| self.settings.warn_as_error = *s);
         other.build_settings.debug_info.inspect(   |s| self.settings.debug_info = *s);
         other.build_settings.runtime.inspect(      |s| self.settings.runtime = *s);
+        other.build_settings.pthread.inspect(      |s| self.settings.pthread = *s);
         other.build_settings.aslr.inspect(         |s| self.settings.aslr = *s);
         other.build_settings.rtti.inspect(         |s| self.settings.rtti = *s);
 
@@ -234,7 +235,6 @@ pub struct BuildSettings {
     pub pthread:       bool,
     pub aslr:          bool,
     pub rtti:          bool,
-
 }
 
 

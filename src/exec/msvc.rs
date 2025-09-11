@@ -193,40 +193,69 @@ fn print_command(cmd: &std::process::Command) {
 
 #[cfg(test)]
 mod tests {
-    // use std::path::PathBuf;
-    // use crate::config::{ToolChain, Profile, ProjKind, Lang};
-    // use super::*;
+    use std::path::PathBuf;
+    use crate::config::{BuildSettings, Lang, ProjKind, ToolChain};
+    use super::*;
 
-    /*
     #[test]
     pub fn compile_cmd_msvc_dbg() {
         let src = PathBuf::from("src/main.cpp");
         let out = PathBuf::from("bin/debug");
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Debug,
-            toolchain: ToolChain::Msvc,
+        let cmd = super::compile(&src, &obj, &super::BuildInfo {
             projkind: ProjKind::App,
+            toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(120),
             crtstatic: false,
-            outdir: &out,
-            defines: &vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+            cpprt: false,
+            settings: BuildSettings{
+                opt_level: 0,
+                opt_size: false,
+                opt_speed: false,
+                opt_linktime: false,
+                iso_compliant: false,
+                warn_level: WarnLevel::Basic,
+                warn_as_error: false,
+                debug_info: true,
+                runtime: Runtime::DynamicDebug,
+                pthread: false,
+                aslr: true,
+                rtti: true,
+            },
+            defines: vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
+            srcdir:   "src".into(),
+            incdirs:  vec![ "src".into() ],
+            libdirs:  vec![],
+            outdir:   "bin".into(),
+            pch:      None,
+            sources:  vec![],
+            headers:  vec![],
+            archives: vec![],
+            relink:   vec![],
+            outfile:  out,
+            implib:   None,
+
+            comp_args: vec![],
+            link_args: vec![],
+        }, &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "/EHsc",
-                "/std:c++20",
                 "/c",
+                "/nologo",
+                "/std:c++20",
+                "/Zc:__cplusplus",
+                "/EHsc",
                 "/MDd",
                 "/Od",
                 "/Zi",
                 "/Fd:bin\\debug\\obj\\",
                 "/FS",
+                "/sdl",
+                "/Zf",
+                "/diagnostics:caret",
+                "/W1",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -236,6 +265,7 @@ mod tests {
         );
     }
 
+    /*
     #[test]
     pub fn compile_cmd_msvc_dbg2() {
         let src = PathBuf::from("src/main.cpp");

@@ -8,9 +8,9 @@ VanGo is opinionated for simplicity and makes some base assumptions and decision
 - A correct `Vango.toml` may begin with one of 2 sections - `[package]` and `[staticlib]`.
 
 ### Table of Contents
-- [Toolchains](docs/toolchains.md)
-- [Build Configuration](docs/builds.md)
-- [Static Library Configuration](docs/libraries.md)
-- [Automated Testing](docs/testing.md)
-- [Cross-Compilation](docs/crosscomp.md)
+- [Toolchains](toolchains.md)
+- [Build Configuration](builds.md)
+- [Static Library Configuration](libraries.md)
+- [Automated Testing](testing.md)
+- [Cross-Compilation](crosscomp.md)
 

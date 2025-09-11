@@ -4,6 +4,8 @@ A build system designed with rusts cargo philosophy in mind. You can have a mill
 
 The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see the docs chapter on [cross-compilation](docs/crosscomp.md).
 
+For a more in-depth explanation, see the [documentation](docs/README.md).
+
 ## Features Available So Far
 - Subcommands for creating, building, running, testing, and cleaning C/C++ projects. Some usage examples are as follows, but for a more complete list see the help action.
     * `vango new     [--lib] [--c] [--clangd] <name>`

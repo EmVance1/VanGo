@@ -1,9 +1,8 @@
-use std::io::BufRead;
-use super::*;
+use std::io::{BufRead, Write};
 use crate::{log_error_ln, log_warn_ln};
 
 
-pub fn msvc_compiler(output: std::process::Output) -> bool {
+pub fn msvc_compiler(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.contains(" warning D") {
@@ -25,7 +24,7 @@ pub fn msvc_compiler(output: std::process::Output) -> bool {
     output.status.success()
 }
 
-pub fn gnu_compiler(output: std::process::Output) -> bool {
+pub fn gnu_compiler(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.contains("In function") {
@@ -43,7 +42,7 @@ pub fn gnu_compiler(output: std::process::Output) -> bool {
 }
 
 
-pub fn msvc_linker(output: std::process::Output, clang: bool) -> bool {
+pub fn msvc_linker(output: &std::process::Output, clang: bool) -> bool {
     if clang {
         for line in output.stderr.lines() {
             let line = line.unwrap();
@@ -70,7 +69,7 @@ pub fn msvc_linker(output: std::process::Output, clang: bool) -> bool {
     output.status.success()
 }
 
-pub fn gnu_linker(output: std::process::Output) -> bool {
+pub fn gnu_linker(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.starts_with("collect2.exe") || line.contains("linker command failed with exit code 1") {
@@ -86,7 +85,7 @@ pub fn gnu_linker(output: std::process::Output) -> bool {
 }
 
 
-pub fn msvc_archiver(output: std::process::Output, clang: bool) -> bool {
+pub fn msvc_archiver(output: &std::process::Output, clang: bool) -> bool {
     if clang {
         for line in output.stderr.lines() {
             let line = line.unwrap();
@@ -107,7 +106,7 @@ pub fn msvc_archiver(output: std::process::Output, clang: bool) -> bool {
     output.status.success()
 }
 
-pub fn gnu_archiver(output: std::process::Output) -> bool {
+pub fn gnu_archiver(output: &std::process::Output) -> bool {
     for (i, line) in output.stderr.lines().enumerate() {
         let line = line.unwrap();
         if i == 0 {

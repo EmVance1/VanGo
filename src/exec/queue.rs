@@ -78,7 +78,7 @@ impl ProcQueue {
 
     pub fn flush_one(&mut self) -> Output {
         loop {
-            for handle in self.buffer.iter_mut() {
+            for handle in &mut self.buffer {
                 if handle.as_mut().is_some_and(|p| p.try_wait().unwrap().is_some()) {
                     self.count -= 1;
                     return std::mem::take(handle).unwrap().wait_with_output().unwrap()

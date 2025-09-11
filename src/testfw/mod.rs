@@ -21,7 +21,7 @@ fn inherited(build: &BuildFile, profile: &BuildProfile, switches: &BuildSwitches
     }
 }
 
-pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>) -> Result<(), Error> {
+pub fn test_lib(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
     let inc = std::env::current_exe()?
@@ -30,7 +30,7 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         .to_owned();
 
     let profile = build.take(&switches.profile)?;
-    let mut partial = inherited(&build, &profile, &switches, build.lang);
+    let mut partial = inherited(&build, &profile, switches, build.lang);
     partial.defines.push("VANGO_TEST".to_string());
     partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
     let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), "h")?;
@@ -42,10 +42,10 @@ pub fn test_lib(mut build: BuildFile, switches: BuildSwitches, args: Vec<String>
         outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name)).with_extension(switches.toolchain.static_lib_ext())
     ].into_iter().collect();
     if switches.toolchain.is_msvc() {
-        partial.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"))
+        partial.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
     } else {
-        partial.archives.insert(0, PathBuf::from(&build.name))
-    };
+        partial.archives.insert(0, PathBuf::from(&build.name));
+    }
 
     let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
     let outfile = outdir.join(format!("test_{}.exe", build.name));

@@ -52,22 +52,22 @@ fn main() -> ExitCode {
 
         match cmd {
             input::Action::Build{ switches } => {
-                let _ = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                let _ = action::build(build, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Run{ switches, args } => {
                 if build.kind != crate::config::ProjKind::App { exit_failure!("{}", Error::LibNotExe(build.name)); }
-                let (_rebuilt, outfile) = action::build(build, switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, outfile) = action::build(build, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
                 return exec::run_app(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
-                let (_rebuilt, _outfile) = action::build(build.clone(), switches.clone()).unwrap_or_else(|e| exit_failure!("{}", e));
-                testfw::test_lib(build, switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
+                let (_rebuilt, _outfile) = action::build(build.clone(), &switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                testfw::test_lib(build, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Clean => {
-                action::clean(build).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::clean(&build).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Gen{ target: _ } => {
-                action::generate(build).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::generate(&build).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             _ => {}
         }

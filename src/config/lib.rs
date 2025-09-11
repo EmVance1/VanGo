@@ -101,12 +101,12 @@ impl LibProfile {
     fn debug(defaults: &SerdeLibProfile) -> Self {
         let mut defines = vec![ "VANGO_DEBUG".to_string() ];
         if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(|d| d.to_owned()));
+            defines.extend(def.iter().map(String::to_owned));
         }
         Self{
             include:  defaults.include.clone().unwrap_or("include".into()),
             libdir:   defaults.libdir.clone().unwrap_or("bin/debug".into()),
-            binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
+            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
             defines,
         }
     }
@@ -114,12 +114,12 @@ impl LibProfile {
     fn release(defaults: &SerdeLibProfile) -> Self {
         let mut defines = vec![ "VANGO_RELEASE".to_string() ];
         if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(|d| d.to_owned()));
+            defines.extend(def.iter().map(String::to_owned));
         }
         Self{
             include:  defaults.include.clone().unwrap_or("include".into()),
             libdir:   defaults.libdir.clone().unwrap_or("bin/release".into()),
-            binaries: defaults.binaries.iter().flatten().map(|b| b.to_owned()).collect(),
+            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
             defines,
         }
     }

@@ -51,7 +51,7 @@ enum PreCompHead<'a> {
 }
 
 
-fn on_compile_finish(tc: ToolChain, output: std::process::Output) -> bool {
+fn on_compile_finish(tc: ToolChain, output: &std::process::Output) -> bool {
     match tc {
         ToolChain::Msvc => output::msvc_compiler(output),
         _  => output::gnu_compiler(output),
@@ -106,7 +106,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                 .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?
                 .wait_with_output()
                 .unwrap();
-            if !on_compile_finish(info.toolchain, output) {
+            if !on_compile_finish(info.toolchain, &output) {
                 return Err(Error::CompilerFail(info.outfile));
             }
         }
@@ -142,13 +142,13 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
                     gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
                 };
                 if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
-                    && !on_compile_finish(info.toolchain, output) {
+                    && !on_compile_finish(info.toolchain, &output) {
                     failure = true;
                 }
             }
 
             while !queue.is_empty() {
-                if !on_compile_finish(info.toolchain, queue.flush_one()) {
+                if !on_compile_finish(info.toolchain, &queue.flush_one()) {
                     failure = true;
                 }
             }

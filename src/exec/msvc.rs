@@ -87,7 +87,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg(format!("/Yu{}", h.display()));
             cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
-        _ => ()
+        PreCompHead::None => (),
     }
     // /showIncludes
     // /WL
@@ -133,11 +133,11 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
 
     if echo { print_command(&cmd); }
-    if !output::msvc_linker(cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?, info.toolchain.is_clang()) {
-        Err(Error::LinkerFail(info.outfile))
-    } else {
+    if output::msvc_linker(&cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?, info.toolchain.is_clang()) {
         log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
+    } else {
+        Err(Error::LinkerFail(info.outfile))
     }
 }
 
@@ -157,11 +157,11 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
 
     if echo { print_command(&cmd); }
-    if !output::msvc_archiver(cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?, info.toolchain.is_clang()) {
-        Err(Error::ArchiverFail(info.outfile))
-    } else {
+    if output::msvc_archiver(&cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?, info.toolchain.is_clang()) {
         log_info_ln!("successfully built project {}\n", info.outfile.display());
         Ok(true)
+    } else {
+        Err(Error::ArchiverFail(info.outfile))
     }
 }
 

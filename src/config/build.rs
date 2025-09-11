@@ -55,11 +55,19 @@ impl BuildFile {
             version:   file.package.version,
             lang,
             kind,
-            interface: file.package.interface.map(|l| Lang::from_str(&l).unwrap()).unwrap_or(lang),
+            interface: file.package.interface.map_or(lang, |l| Lang::from_str(&l).unwrap()),
             runtime:   file.package.runtime,
             dependencies,
             profiles,
         })
+    }
+
+    pub fn get(&self, profile: &Profile) -> Result<&BuildProfile, Error> {
+        match profile {
+            Profile::Debug => self.profiles.get("debug"),
+            Profile::Release => self.profiles.get("release"),
+            Profile::Custom(s) => self.profiles.get(s),
+        }.ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn take(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
@@ -121,11 +129,11 @@ impl BuildProfile {
     pub(super) fn debug(defaults: &SerdeBuildProfile) -> Self {
         let mut include = vec![ PathBuf::from("src") ];
         if let Some(inc) = &defaults.include {
-            include.extend(inc.iter().map(|s| s.to_owned()));
+            include.extend(inc.iter().map(PathBuf::to_owned));
         }
         let mut defines = vec![ "VANGO_DEBUG".to_string() ];
         if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(|d| d.to_owned()));
+            defines.extend(def.iter().map(String::to_owned));
         }
         Self{
             src: defaults.src.clone().unwrap_or("src".into()),
@@ -148,19 +156,19 @@ impl BuildProfile {
                 rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
 
-            compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_string()).collect(),
-            linker_options: defaults.linker_options.iter().flatten().map(|o| o.to_string()).collect(),
+            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
+            linker_options: defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
         }
     }
 
     pub(super) fn release(defaults: &SerdeBuildProfile) -> Self {
         let mut include = vec![ PathBuf::from("src") ];
         if let Some(inc) = &defaults.include {
-            include.extend(inc.iter().map(|s| s.to_owned()));
+            include.extend(inc.iter().map(PathBuf::to_owned));
         }
         let mut defines = vec![ "VANGO_RELEASE".to_string() ];
         if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(|d| d.to_owned()));
+            defines.extend(def.iter().map(String::to_owned));
         }
         Self{
             src: defaults.src.clone().unwrap_or("src".into()),
@@ -183,8 +191,8 @@ impl BuildProfile {
                 rtti:          defaults.build_settings.rtti.unwrap_or(true),
             },
 
-            compiler_options: defaults.compiler_options.iter().flatten().map(|o| o.to_owned()).collect(),
-            linker_options:   defaults.linker_options.iter().flatten().map(|o| o.to_owned()).collect(),
+            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
+            linker_options:   defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
         }
     }
 

@@ -113,8 +113,8 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                     log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
                     let save = std::env::current_dir().unwrap();
                     std::env::set_current_dir(&path).unwrap();
-                    let (_rebuilt, _) = crate::action::build(build.clone(), switches.clone())?;
-                    if _rebuilt {
+                    let (reb, _) = crate::action::build(build.clone(), switches)?;
+                    if reb {
                         rebuilt = true;
                     } else {
                         println!();

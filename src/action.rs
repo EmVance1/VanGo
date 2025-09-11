@@ -7,7 +7,7 @@ use crate::{
 };
 
 
-pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, PathBuf), Error> {
+pub fn build(mut build: BuildFile, switches: &BuildSwitches) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     if build.lang.is_cpp() {
@@ -21,7 +21,7 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
     }
     let sources = fetch::source_files(&profile.src, build.lang.src_ext()).unwrap();
 
-    let mut deps = fetch::libraries(build.dependencies, &switches, build.lang)?;
+    let mut deps = fetch::libraries(build.dependencies, switches, build.lang)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
     if cfg!(windows) {
@@ -40,12 +40,12 @@ pub fn build(mut build: BuildFile, switches: BuildSwitches) -> Result<(bool, Pat
             (outdir.join(build.name).with_extension(switches.toolchain.app_ext()), None)
         }
         ProjKind::SharedLib{implib: false} => {
-            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.name))
-             .with_extension(switches.toolchain.shared_lib_ext()), None)
+            (outdir.join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
+             .with_extension(ToolChain::shared_lib_ext()), None)
         }
         ProjKind::SharedLib{implib: true} => {
-            (outdir.join(format!("{}{}", switches.toolchain.shared_lib_prefix(), build.name))
-             .with_extension(switches.toolchain.shared_lib_ext()),
+            (outdir.join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
+             .with_extension(ToolChain::shared_lib_ext()),
              Some(outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
              .with_extension(switches.toolchain.static_lib_ext())))
         }
@@ -235,7 +235,7 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(build.unwrap_build())?;
+            generate(&build.unwrap_build())?;
         }
     } else {
         let toml = format!("[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nlang = \"{lang}\"\n\n[dependencies]\n");
@@ -243,7 +243,7 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(build.unwrap_build())?;
+            generate(&build.unwrap_build())?;
         }
     }
     log_info_ln!("successfully created project '{name}'");
@@ -251,19 +251,19 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
 }
 
 
-pub fn clean(build: BuildFile) -> Result<(), Error> {
+pub fn clean(build: &BuildFile) -> Result<(), Error> {
     log_info_ln!("cleaning build files for \"{}\"", build.name);
-    let _ = std::fs::remove_dir_all("bin/debug/");
-    let _ = std::fs::remove_dir_all("bin/release/");
+    std::fs::remove_dir_all("bin/debug/")?;
+    std::fs::remove_dir_all("bin/release/")?;
     Ok(())
 }
 
 
-pub fn generate(mut build: BuildFile) -> Result<(), Error> {
+pub fn generate(build: &BuildFile) -> Result<(), Error> {
     log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.name);
     let mut flags = format!("-std={}\n{}", build.lang, if build.lang.is_cpp() { "-xc++\n" } else { "" });
 
-    let profile = build.take(&Profile::Debug)?;
+    let profile = build.get(&Profile::Debug)?;
     match profile.settings.warn_level {
         WarnLevel::None => {
             flags.push_str("-w\n");
@@ -294,20 +294,20 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
     let mut defines = Vec::new();
     let mut incdirs = Vec::new();
 
-    for lib in build.dependencies {
+    for lib in &build.dependencies {
         let path = match lib {
             Dependency::Local { path, .. } => {
-                path
+                path.clone()
             }
             #[allow(unused)]
             Dependency::Git { git, tag, .. } => {
                 continue;
             }
             Dependency::Headers { headers, .. } => {
-                incdirs.push(headers);
+                incdirs.push(headers.clone());
                 continue;
             }
-            _ => continue,
+            Dependency::System{..} => continue,
         };
 
         if !std::fs::exists(&path).unwrap() {
@@ -349,12 +349,12 @@ pub fn generate(mut build: BuildFile) -> Result<(), Error> {
         }
     }
     for dep in defines {
-        flags.push_str(&format!("-D{}\n", dep));
+        flags.push_str(&format!("-D{dep}\n"));
     }
     for inc in incdirs {
         flags.push_str(&format!("-I{}\n", inc.display()));
     }
-    for inc in profile.include {
+    for inc in &profile.include {
         flags.push_str(&format!("-I{}\n", inc.display()));
     }
 

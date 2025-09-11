@@ -15,14 +15,14 @@ pub enum ProjKind {
 }
 
 impl ProjKind {
-    pub fn is_lib(&self) -> bool {
+    pub fn is_lib(self) -> bool {
         matches!(self, ProjKind::StaticLib|ProjKind::SharedLib{..})
     }
-    pub fn has_lib(&self) -> bool {
+    pub fn has_lib(self) -> bool {
         match self {
-            ProjKind::SharedLib{ implib } => !cfg!(windows) || *implib,
+            ProjKind::SharedLib{ implib } => !cfg!(windows) || implib,
             ProjKind::StaticLib => true,
-            _ => false,
+            ProjKind::App => false,
         }
     }
 }
@@ -68,7 +68,6 @@ impl Default for ToolChain {
     }
 }
 
-#[allow(unused)]
 impl ToolChain {
     pub fn system_default() -> Self {
         if cfg!(windows) {
@@ -80,47 +79,43 @@ impl ToolChain {
         }
     }
 
-    pub fn is_msvc(&self) -> bool {
+    #[allow(unused)]
+    pub fn is_msvc(self) -> bool {
         matches!(self, Self::Msvc|Self::ClangMsvc)
     }
-    pub fn is_gnu(&self) -> bool {
+    #[allow(unused)]
+    pub fn is_gnu(self) -> bool {
         matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig)
     }
-    pub fn is_clang(&self) -> bool {
+    #[allow(unused)]
+    pub fn is_clang(self) -> bool {
+        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
+    }
+    #[allow(unused)]
+    pub fn is_llvm(self) -> bool {
         matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
     }
 
-    pub fn is_llvm(&self) -> bool {
-        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
-    }
-
-    pub fn shared_lib_prefix(&self) -> &'static str {
+    pub fn shared_lib_prefix() -> &'static str {
         if cfg!(windows) {
             ""
         } else {
             "lib"
         }
     }
-    pub fn static_lib_prefix(&self) -> &'static str {
+    pub fn static_lib_prefix(self) -> &'static str {
         match self {
             Self::Msvc|Self::ClangMsvc => "",
             _ => "lib",
         }
     }
-    pub fn ext(&self, kind: ProjKind) -> &'static str {
-        match kind {
-            ProjKind::App => self.app_ext(),
-            ProjKind::SharedLib{..} => self.shared_lib_ext(),
-            ProjKind::StaticLib => self.static_lib_ext(),
-        }
-    }
-    pub fn app_ext(&self) -> &'static str {
+    pub fn app_ext(self) -> &'static str {
         match self {
             Self::Msvc|Self::ClangMsvc => "exe",
             _ => "",
         }
     }
-    pub fn shared_lib_ext(&self) -> &'static str {
+    pub fn shared_lib_ext() -> &'static str {
         if cfg!(windows) {
             "dll"
         } else if cfg!(target_os = "macos") {
@@ -129,14 +124,14 @@ impl ToolChain {
             "so"
         }
     }
-    pub fn static_lib_ext(&self) -> &'static str {
+    pub fn static_lib_ext(self) -> &'static str {
         match self {
             Self::Msvc|Self::ClangMsvc => "lib",
             _ => "a",
         }
     }
 
-    pub fn compiler(&self, cpp: bool) -> std::process::Command {
+    pub fn compiler(self, cpp: bool) -> std::process::Command {
         match self {
             Self::Msvc  => std::process::Command::new("cl.exe"),
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
@@ -153,7 +148,7 @@ impl ToolChain {
             }
         }
     }
-    pub fn linker(&self, cpp: bool) -> std::process::Command {
+    pub fn linker(self, cpp: bool) -> std::process::Command {
         match self {
             Self::Msvc  => std::process::Command::new("LINK.exe"),
             Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
@@ -170,7 +165,7 @@ impl ToolChain {
             }
         }
     }
-    pub fn archiver(&self) -> std::process::Command {
+    pub fn archiver(self) -> std::process::Command {
         match self {
             Self::Msvc  => std::process::Command::new("LIB.exe"),
             Self::Gcc   => std::process::Command::new("ar"),
@@ -181,16 +176,6 @@ impl ToolChain {
                 cmd.arg("ar");
                 cmd
             }
-        }
-    }
-
-    pub fn as_arg(&self) -> &'static str {
-        match self {
-            Self::Msvc  => "-t=msvc",
-            Self::Gcc   => "-t=gcc",
-            Self::ClangGnu  => "-t=clang-gnu",
-            Self::ClangMsvc => "-t=clang-msvc",
-            Self::Zig   => "-t=zig",
         }
     }
 }
@@ -258,19 +243,19 @@ pub enum Lang {
 }
 
 impl Lang {
-    pub fn is_cpp(&self) -> bool {
+    pub fn is_cpp(self) -> bool {
         matches!(self, Self::Cpp(_))
     }
 
-    pub fn src_ext(&self) -> &'static str {
+    pub fn src_ext(self) -> &'static str {
         match self {
             Self::Cpp(..) => "cpp",
             Self::C(..)   => "c",
         }
     }
 
-    pub fn numeric(&self) -> u32 {
-        match *self {
+    pub fn numeric(self) -> u32 {
+        match self {
             Self::Cpp(n)|Self::C(n) => if n >= 100 { n - 100 } else { n },
         }
     }
@@ -288,10 +273,9 @@ impl Display for Lang {
 impl Ord for Lang {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
-            (Lang::Cpp(a), Lang::Cpp(b)) => a.cmp(b),
+            (Lang::Cpp(a), Lang::Cpp(b))| (Lang::C(a), Lang::C(b)) => a.cmp(b),
             (Lang::Cpp(_), Lang::C(_)) => 1.cmp(&0),
             (Lang::C(_), Lang::Cpp(_)) => 0.cmp(&1),
-            (Lang::C(a), Lang::C(b)) => a.cmp(b),
         }
     }
 }

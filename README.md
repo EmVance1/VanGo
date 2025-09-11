@@ -2,7 +2,7 @@
 
 A build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Vango uses project file structure as a component of its project configuration, minimizing the need for a build script. `./src` is the source file directory and added to the include path. `./bin` holds any incremental build files (usually object files). `./test` is for source files that contain tests. All manual configuration is done via the `Vango.toml` manifest file in the project root.
 
-The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see the docs chapter on [cross-compilation](docs/crosscomp.md).
+The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see the docs chapter on [cross-compilation](docs/toolchains.md).
 
 For a more in-depth explanation, see the [documentation](docs/README.md).
 

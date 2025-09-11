@@ -9,6 +9,7 @@ repository = "https://github.com/EmVance1/VanGo"
 readme = "README.md"
 exclude = [
     "docs/*",
+    ".github/*"
 ]
 
 [dependencies]

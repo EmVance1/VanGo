@@ -17,7 +17,7 @@ interface = [ "CXX" ]
 
     **Note**: At time of writing, DLLs must be manually moved to the dependent projects working directory for correct linkage.
 
-- `interface`: at times you may want to implement a library using one standard, but provide interfaces for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` array, which lists all standards your headers are compatible with. Elements of `interface` use the same format as `lang`.
+- `interface`: at times you may want to implement a library using one standard, but provide an interface for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` field, which sets the earliest standard your library is compatible with. `interface` uses the same format as `lang`.
 
 ### Dependencies
 The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
@@ -37,9 +37,9 @@ As it stands, there are plans for a very basic package manager, more a simple re
 To customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[package]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.
 
 - `defines`: additional preprocessor definitions. By default, this array will contain `VANGO_DEBUG` or `VANGO_RELEASE` definitions, aswell as `VANGO_TEST` for test builds, and `VANGO_EXPORT_SHARED` for dll builds.
-- `pch`: if you want to precompile a header, just specify the header file relative to `src/` that you want precompiled as shown above (All source files will be assumed to use it).
-- Source directory and (internal) include directories are assumed to be `./src` and `[ ./src ]` respectively, however they can be overridden or extended through the `src` and `include` options respectively.
-- `include-pub`: if the project you are defining is going to be a library, you may want to add this field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default).
+- `include` is an array of strings to add to your include directories, which by default includes only `[ "src" ]`. This option always extends whatever defaults you have set, as opposed to overwriting them. Most of the time you can leave this field blank and rely on your `[dependencies]` to populate this for you.
+- `include-pub`: if the project you are defining is going to be a library, you may want to add this field. This is a string that tells dependency resolution that this directory should be used as the public interface (as opposed to `src` by default). This is not automatically added to `include`.
+- `pch`: if you want to precompile a header, just specify the header file relative to `src` that you want precompiled as shown above (all source files will be assumed to use it).
 - **settings**: the following are broad toolchain agnostic settings that translate to various compiler and linker options.
     * `opt-level`: level of compiler optimization (`0|1|2|3`)
     * `opt-size`: optimize for smaller binaries (`true|false`)

@@ -11,7 +11,7 @@ public:
     unsigned int failline;
 
 public:
-    AssertionFail(const std::string& _msg, uint32_t _failline)
+    AssertionFail(const std::string& _msg, unsigned int _failline)
         : msg(_msg), failline(_failline)
     {}
 

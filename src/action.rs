@@ -254,8 +254,12 @@ pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
 
 pub fn clean(build: &BuildFile) -> Result<(), Error> {
     log_info_ln!("cleaning build files for \"{}\"", build.name);
-    std::fs::remove_dir_all("bin/debug/")?;
-    std::fs::remove_dir_all("bin/release/")?;
+    match std::fs::remove_dir_all("bin/debug") {
+        Ok(()) => (),
+        Err(e) => if e.kind() != std::io::ErrorKind::NotFound {
+            return Err(Error::FileSystem(e));
+        }
+    }
     Ok(())
 }
 

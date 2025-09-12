@@ -1,12 +1,10 @@
-#ifndef CASSERTS_H
-#define CASSERTS_H
-#include <stdlib.h>
+#ifndef VANGO_CASSERTS_H
+#define VANGO_CASSERTS_H
 
 
 struct VangoTestResult {
-    int failed;
-    size_t failline;
     char* msg;
+    unsigned int failline;
 };
 
 typedef void(*VangoTestFuncImpl)(struct VangoTestResult*);
@@ -17,15 +15,15 @@ struct VangoTestFunc {
 };
 
 
-#define vg_assert(a)          do { if (!(a))       { _vango_test_result->failed=1; _vango_test_result->failline=__LINE__; \
+#define vg_assert(a)          do { if (!(a))       { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expression expected to be 'true' was 'false'"; return; } } while (0)
-#define vg_assert_eq(a, b)    do { if ((a) != (b)) { _vango_test_result->failed=1; _vango_test_result->failline=__LINE__; \
+#define vg_assert_eq(a, b)    do { if ((a) != (b)) { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expressions expected to be equal were not equal"; return; } } while (0)
-#define vg_assert_ne(a, b)    do { if ((a) == (b)) { _vango_test_result->failed=1; _vango_test_result->failline=__LINE__; \
+#define vg_assert_ne(a, b)    do { if ((a) == (b)) { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expressions expected not to be equal were equal"; return; } } while (0)
-#define vg_assert_null(a)     do { if ((a))        { _vango_test_result->failed=1; _vango_test_result->failline=__LINE__; \
+#define vg_assert_null(a)     do { if ((a))        { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expected 'NULL', received other address"; return; } } while (0)
-#define vg_assert_non_null(a) do { if (!(a))       { _vango_test_result->failed=1; _vango_test_result->failline=__LINE__; \
+#define vg_assert_non_null(a) do { if (!(a))       { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; } } while (0)
 
 
@@ -37,7 +35,7 @@ struct VangoTestFunc {
 #elif defined(__clang__) || defined(__GNUC__)
 #define VANGO_SECTION_TESTS __attribute__((used, section("vgtest")))
 #else
-#error Unsupported compiler
+#error compiler does not support automated testing
 #endif
 
 #define vango_test(name) \
@@ -49,7 +47,6 @@ struct VangoTestFunc {
 #ifdef VANGO_TEST_ROOT
 
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 #if defined(_MSC_VER)
@@ -74,12 +71,12 @@ int main(int argc, char** argv) {
             }
         }
         if (_vg_run_this != 0) {
-            struct VangoTestResult _vango_test_result = { .failed=0, .failline=0, .msg=NULL };
+            struct VangoTestResult _vango_test_result = { .msg = NULL, .failline=0 };
             (_vg_f->fn)(&_vango_test_result);
-            if (_vango_test_result.failed == 0) {
+            if (_vango_test_result.msg == NULL) {
                 fprintf(stderr, "\033[32m[VanGo:  info] passed '%s'\033[m\n", _vg_f->id);
             } else {
-                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %llu: \033[m%s\n",
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %u: \033[m%s\n",
                     _vg_f->id, _vango_test_result.failline, _vango_test_result.msg);
             }
         }
@@ -104,12 +101,12 @@ int main(int argc, char** argv) {
             }
         }
         if (_vg_run_this != 0) {
-            struct VangoTestResult _vango_test_result = { .failed=0, .failline=0, .msg=NULL };
+            struct VangoTestResult _vango_test_result = { .msg = NULL, .failline=0 };
             (_vg_f->fn)(&_vango_test_result);
-            if (_vango_test_result.failed == 0) {
+            if (_vango_test_result.msg == NULL) {
                 fprintf(stderr, "\033[32m[VanGo:  info] passed '%s'\033[m\n", _vg_f->id);
             } else {
-                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %llu: \033[m%s\n",
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %u: \033[m%s\n",
                     _vg_f->id, _vango_test_result.failline, _vango_test_result.msg);
             }
         }
@@ -117,7 +114,7 @@ int main(int argc, char** argv) {
 }
 
 #else
-#error Unsupported compiler
+#error compiler does not support automated testing
 #endif
 
 #endif

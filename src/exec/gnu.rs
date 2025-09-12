@@ -275,7 +275,7 @@ mod tests {
         let obj = PathBuf::from("bin/release/obj/main.o");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &BuildInfo::mock_debug(&out, ProjKind::SharedLib{ implib: true }, Lang::Cpp(20), ToolChain::Gcc, None, true),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();

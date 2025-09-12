@@ -192,7 +192,7 @@ fn print_command(cmd: &std::process::Command) {
 
 
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use std::path::PathBuf;
     use crate::config::{Lang, ProjKind, ToolChain};

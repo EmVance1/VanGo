@@ -99,15 +99,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        if let Some(build) = if cfg!(windows) && std::fs::exists(path.join("win.vango.toml"))? {
-            std::fs::read_to_string(path.join("win.vango.toml")).ok()
-        } else if cfg!(target_os = "linux") && std::fs::exists(path.join("lnx.vango.toml"))? {
-            std::fs::read_to_string(path.join("lnx.vango.toml")).ok()
-        } else if cfg!(target_os = "macos") && std::fs::exists(path.join("mac.vango.toml"))? {
-            std::fs::read_to_string(path.join("mac.vango.toml")).ok()
-        } else {
-            std::fs::read_to_string(path.join("vango.toml")).ok()
-        } {
+        if let Some(build) = crate::read_manifest().ok() {
             match VangoFile::from_str(&build)? {
                 VangoFile::Build(build) => {
                     log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));

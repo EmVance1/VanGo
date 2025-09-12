@@ -7,7 +7,7 @@ mod output;
 #[cfg(test)]
 mod mocks;
 
-use std::{io::Write, path::{Path, PathBuf}, process::Command};
+use std::{io::Write, path::{Path, PathBuf}};
 use incremental::BuildLevel;
 use crate::{
     config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, log_info_ln, log_warn_ln
@@ -176,16 +176,5 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
             ProjKind::StaticLib => gnu::archive(all_objs, info, echo, verbose),
         }
     }
-}
-
-pub fn run_app(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
-    log_info_ln!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
-    Ok(Command::new(PathBuf::from(".").join(outfile))
-        .args(runargs)
-        .current_dir(std::env::current_dir().unwrap())
-        .status()
-        .map_err(|_| Error::InvalidExe(outfile.to_owned()))?
-        .code()
-        .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
 }
 

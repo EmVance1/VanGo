@@ -1,8 +1,15 @@
-use std::{io::Write, path::PathBuf, process::Command};
-use crate::{config::BuildFile, exec::{self, BuildInfo}, fetch, input::BuildSwitches, Error, log_info_ln};
+use std::{io::Write, path::PathBuf};
+use crate::{
+    config::BuildFile,
+    input::BuildSwitches,
+    fetch,
+    exec::{self, BuildInfo},
+    Error,
+    log_info_ln
+};
 
 
-pub fn test_lib(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<(), Error> {
+pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<u8, Error> {
     if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
     let include = std::env::current_exe()?
@@ -67,11 +74,12 @@ pub fn test_lib(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String
         "running tests for project {:=<57}",
         format!("\"{}\" ", build.name)
     );
-    Command::new(PathBuf::from(".").join(outfile))
+    Ok(std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
-        .unwrap();
-    Ok(())
+        .unwrap()
+        .code()
+        .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
 }
 

@@ -47,7 +47,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("-pedantic-errors");
     }
     if !info.settings.rtti {
-        cmd.arg("-fnortti");
+        cmd.arg("-fno-rtti");
     }
     if info.settings.pthread {
         cmd.arg("-pthread");
@@ -178,19 +178,13 @@ mod tests {
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "-std=c++20",
-                "-c",
-                "-O0",
-                "-g",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "-std=c++20", "-c", "-O0", "-g", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++20", "-fpie", "-c", "-O0", "-g", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 
     #[test]
@@ -204,20 +198,13 @@ mod tests {
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "--target=x86_64-w64-mingw32",
-                "-std=c++23",
-                "-c",
-                "-O0",
-                "-g",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "--target=x86_64-w64-mingw32", "-std=c++23", "-c", "-O0", "-g", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++23", "-fpie", "-c", "-O0", "-g", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 
     #[test]
@@ -231,19 +218,13 @@ mod tests {
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "-std=c++20",
-                "-c",
-                "-O3",
-                "-flto",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "-std=c++20", "-c", "-O3", "-flto", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++20", "-fpie", "-c", "-O3", "-flto", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 
     #[test]
@@ -257,19 +238,13 @@ mod tests {
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "-std=c++23",
-                "-c",
-                "-O3",
-                "-flto",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "-std=c++23", "-c", "-O3", "-flto", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++23", "-fpie", "-c", "-O3", "-flto", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 
     #[test]
@@ -279,23 +254,17 @@ mod tests {
         let obj = PathBuf::from("bin/release/obj/main.o");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_release(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &BuildInfo::mock_debug(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "-std=c++20",
-                "-c",
-                "-O3",
-                "-flto",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "-std=c++20", "-c", "-O0", "-g", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++20", "-fpie", "-c", "-O0", "-g", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 
 
@@ -306,22 +275,16 @@ mod tests {
         let obj = PathBuf::from("bin/release/obj/main.o");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_release(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &BuildInfo::mock_debug(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
-        assert_eq!(cmd, [
-                "-std=c++20",
-                "-c",
-                "-O3",
-                "-flto",
-                "-Wall",
-                "-Isrc",
-                "-DUNICODE",
-                "-D_UNICODE",
-                src.to_str().unwrap(),
-                &format!("-o{}", obj.display()),
-            ]
-        );
+        if cfg!(windows) {
+            assert_eq!(cmd, [ "-std=c++20", "-c", "-O0", "-g", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        } else {
+            assert_eq!(cmd, [ "-std=c++20", "-fPIC", "-c", "-O0", "-g", "-Wall", "-Isrc",
+                            src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
+        }
     }
 }

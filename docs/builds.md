@@ -12,15 +12,15 @@ interface = [ "CXX" ]
 ```
 - `name` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
 - `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for when versioned packages are implemented.
-- `lang` takes any valid C or C++ standard, case insensitive.
+- `lang` takes any valid C or C++ ISO standard, case insensitive. GNU standards not yet supported. Aside from compiler settings, if the `interface` field is not defined, `lang` also declares library compatibility (see [Library Configuration](libraries.md)).
 - `kind` is for declaring whether your project builds to an executable or a library. The default value here is `"app"`, though it can be written explicitly. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib, etc.). In contrast to other kinds, the behaviour of `sharedlib` varies widely per platform, *regardless of toolchain*. On linux, it creates a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and (by default) a static *import* library for automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a DLL file, for all your `__declspec` needs.
 
     **Note**: At time of writing, DLLs must be manually moved to the dependent projects working directory for correct linkage.
 
-- `interface`: at times you may want to implement a library using one standard, but provide an interface for use in another earlier standard, or even C. To partially bypass the compatibility checker, you can declare the `interface` field, which sets the earliest standard your library is compatible with. `interface` uses the same format as `lang`.
+- `interface`: at times you may want to implement a library using one standard, but provide an interface for use in another earlier standard, or in C. To partially bypass the compatibility checker, you can declare the `interface` field, which sets the earliest standard your library is compatible with. `interface` uses the same format as `lang`.
 
 ### Dependencies
-The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. If no path to the library is specified, VanGo will search in '~/.vango/packages/'. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
+The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
 ```toml
 [dependencies]
 MyLib     = { path="../MyLib" } # source, local, contains build toml-config
@@ -29,9 +29,9 @@ SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote
 stb_image = { headers="lib/stb_image" } # headers, local, contains no config
 Ws2       = { system="Ws2_32", target="windows" } # system libraries
 ```
-Support for git dependencies is currently very basic. The repo is cached in '~/.vango/packages/', and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
+**Note**: if you are building a *static* library, it is important to remember that no dependencies are bundled into the binary you build - they still need to be linked into the final executable. For example, if you are building a wrapper library for the Winsock2 API, the executable consuming it must list said library **and** `Ws2_32.lib` in its dependencies (this is not the case for *shared* libraries, as they are created via the linker). Despite this, static library projects should always declare all dependencies, both for user clarity, and because tests need to inherit them (tests are effectively dependent executables).
 
-As it stands, there are plans for a very basic package manager, more a simple registry of URLs of popular libraries and corresponding build recipes, but this is a ways away for now.
+Support for git dependencies is currently very basic. The repo is cached (and searched for) in `~/.vango/packages/`, and is otherwise treated just like any other dependency (must contain a build script, etc.). For libraries that arent native to Vango, the ability to write automated build recipes (e.g. CMake invocation + toml injection) is coming soon.
 
 ### Profiles
 To customize build profiles or define your own that inherites one of the builtins, you can define the `profile.*` sections. All of the following options (except `inherits`) can be defined globally (under `[package]`) as a default, or under `[profile.debug]`, `[profile.release]`, or any `[profile.mycustomprofile]`.

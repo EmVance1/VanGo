@@ -38,6 +38,9 @@ include = "include"
 
 **Conclusion**: It just works. Even without boilerplate generation via `vango new`, slap a `Vango.toml` next to a `src` directory with a `main.cpp` in it and everything will just work. Was that so hard everybody?
 
+## Caveat on MacOS
+Although I have tried my best to dilligently research MacOS workflows and write correct code to the best of my theoretical knowledge, I am a solo developer with no direct access to an Apple computer. Because of this, I have no way of knowing *for sure* what the real world behaviour of Vango will be on such platforms specifically. Those of you using this on MacOS, do so at your own risk, and know I welcome people to test what I cannot.
+
 ## Future Plans
 - **Feature Flags:** Conditional compilation based on requested features
 - **Smart Sem-Ver:** Improved integration with Git tags to enable versioned dependencies, lockfiles

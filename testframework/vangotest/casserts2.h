@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     char** _vg_begin = (char**)(&_start_vgtest+1);
     char** _vg_end = (char**)&_stop_vgtest;
 
-    for (_vg_begin; _vg_begin < _vg_end; _vg_begin++) {
+    for (; _vg_begin < _vg_end; _vg_begin++) {
         if (*_vg_begin == 0) { continue; }
         struct VangoTestFunc* _vg_f = (struct VangoTestFunc*)_vg_begin;
         int _vg_run_this = argc == 1 ? 1 : 0;

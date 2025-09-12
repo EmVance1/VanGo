@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <sstream>
 #include <exception>
 #include <vector>
@@ -64,6 +63,8 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
 
 
 #ifdef VANGO_TEST_ROOT
+
+#include <iostream>
 
 #define vg_run_test(k, f) try { \
         f(); \

@@ -1,6 +1,4 @@
 #pragma once
-#include <cstdint>
-#include <iostream>
 #include <sstream>
 #include <exception>
 
@@ -10,7 +8,7 @@ namespace vango {
 class AssertionFail : public std::exception {
 public:
     std::string msg;
-    uint32_t failline;
+    unsigned int failline;
 
 public:
     AssertionFail(const std::string& _msg, uint32_t _failline)
@@ -65,7 +63,7 @@ struct TestFunc {
 #elif defined(__clang__) || defined(__GNUC__)
 #define VANGO_SECTION_TESTS __attribute__((used, section("vgtest")))
 #else
-#error Unsupported compiler
+#error compiler does not support automated testing
 #endif
 
 #define vango_test(name) \
@@ -76,9 +74,8 @@ struct TestFunc {
 
 #ifdef VANGO_TEST_ROOT
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #if defined(_MSC_VER)
 
@@ -89,7 +86,7 @@ int main(int argc, char** argv) {
     char** _vg_begin = (char**)(&_start_vgtest+1);
     char** _vg_end = (char**)&_stop_vgtest;
 
-    for (_vg_begin; _vg_begin < _vg_end; _vg_begin++) {
+    for (; _vg_begin < _vg_end; _vg_begin++) {
         if (*_vg_begin == 0) { continue; }
         vango::TestFunc* _vg_f = (vango::TestFunc*)_vg_begin;
         int _vg_run_this = argc == 1 ? 1 : 0;
@@ -104,9 +101,9 @@ int main(int argc, char** argv) {
         if (_vg_run_this != 0) {
             try {
                 (_vg_f->fn)();
-                std::cerr << "\033[32m[VanGo:  info] passed: '" << _vg_f->id << "'\033[m\n";
+                fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s'\033[m\n", _vg_f->id);
             } catch (const ::vango::AssertionFail& e) {
-                std::cerr << "\033[32m[VanGo:  info] \033[31mfailed: '" << _vg_f->id << "' on line " << e.failline << ": \033[m" << e.msg << "\n";
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %u: \033[m%s\n", _vg_f->id, e.failline, e.msg.c_str());
             }
             _vg_begin++;
         }
@@ -132,16 +129,16 @@ int main(int argc, char** argv) {
         if (_vg_run_this != 0) {
             try {
                 (_vg_f->fn)();
-                std::cerr << "\033[32m[VanGo:  info] passed: '" << _vg_f->id << "'\033[m\n";
+                fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s'\033[m\n", _vg_f->id);
             } catch (const ::vango::AssertionFail& e) {
-                std::cerr << "\033[32m[VanGo:  info] \033[31mfailed: '" << _vg_f->id << "' on line " << e.failline << ": \033[m" << e.msg << "\n";
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %u: \033[m%s\n", _vg_f->id, e.failline, e.msg.c_str());
             }
         }
     }
 }
 
 #else
-#error Unsupported compiler
+#error compiler does not support automated testing
 #endif
 
 #endif

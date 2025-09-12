@@ -212,6 +212,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++20",
@@ -247,6 +248,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -281,6 +283,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -313,6 +316,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",

@@ -29,11 +29,11 @@ struct VangoTestResult {
 #include <stdio.h>
 #include <string.h>
 
-#define vango_test_reg(name) _vango_test_register_impl(argc, argv, #name, name)
-#define vango_test_main(tests) int main(int argc, char** argv) { tests }
+#define vango_test_reg(name) _vango_test_register_impl(argc, argv, &_vg_failures, #name, name)
+#define vango_test_main(tests) int main(int argc, char** argv) { int _vg_failures = 0; tests; return _vg_failures; }
 
 
-static void _vango_test_register_impl(int argc, char** argv, const char* name, void(*f)(struct VangoTestResult*)) {
+static void _vango_test_register_impl(int argc, char** argv, int* _vg_failures, const char* name, void(*f)(struct VangoTestResult*)) {
     if (argc == 1) {
         goto run_test;
     } else {
@@ -52,6 +52,7 @@ run_test:
         fprintf(stderr, "\033[32m[VanGo:  info] passed '%s'\033[m\n", name);
     } else {
         fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed '%s' on line %u: \033[m%s\n", name, test_result.failline, test_result.msg);
+        (*_vg_failures)++;
     }
 }
 

@@ -9,10 +9,10 @@ namespace vango {
 class AssertionFail : public std::exception {
 public:
     std::string msg;
-    uint32_t failline;
+    unsigned int failline;
 
 public:
-    AssertionFail(const std::string& _msg, uint32_t _failline)
+    AssertionFail(const std::string& _msg, unsigned int _failline)
         : msg(_msg), failline(_failline)
     {}
 
@@ -64,15 +64,6 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
 
 #ifdef VANGO_TEST_ROOT
 
-#include <iostream>
-
-#define vg_run_test(k, f) try { \
-        f(); \
-        std::cerr << "\033[32m[VanGo:  info] passed: '" << k << "'\033[m\n"; \
-    } catch (const ::vango::AssertionFail& e) { \
-        std::cerr << "\033[32m[VanGo:  info] \033[31mfailed: '" << k << "' on line " << e.failline << ": \033[m" << e.msg << "\n"; \
-    }
-
 namespace vango {
 
 TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign) {
@@ -88,19 +79,35 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign) {
 
 int main(int argc, char** argv) {
     ::vango::TestFuncArray* arr = ::vango::init_testfunc(nullptr, nullptr, true);
+    int _vg_failures = 0;
+
     if (argc == 1) {
         for (size_t i = 0; i < arr->names.size(); i++) {
-            vg_run_test(arr->names[i], arr->funcs[i]);
+            try {
+                (arr->funcs[i])();
+                fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s"'\033[m\n", arr->names[i]);
+            } catch (const ::vango::AssertionFail& e) {
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %d: \033[m%s\n", arr->names[i], e.failline, e.msg.c_str());
+                _vg_failures++;
+            }
         }
     } else {
         for (int j = 1; j < argc; j++) {
             for (size_t i = 0; i < arr->names.size(); i++) {
                 if (strcmp(arr->names[i], argv[j]) == 0) {
-                    run_test(arr->names[i], arr->funcs[i]);
+                    try {
+                        (arr->funcs[i])();
+                        fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s"'\033[m\n", arr->names[i]);
+                    } catch (const ::vango::AssertionFail& e) {
+                        fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %d: \033[m%s\n", arr->names[i], e.failline, e.msg.c_str());
+                        _vg_failures++;
+                    }
                 }
             }
         }
     }
+
+    return _vg_failures;
 }
 
 #endif

@@ -99,50 +99,47 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        if let Some(build) = crate::read_manifest().ok() {
-            match VangoFile::from_str(&build)? {
-                VangoFile::Build(build) => {
-                    log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
-                    let save = std::env::current_dir().unwrap();
-                    std::env::set_current_dir(&path).unwrap();
-                    let (reb, _) = crate::action::build(build.clone(), switches)?;
-                    if reb {
-                        rebuilt = true;
-                    } else {
-                        println!();
-                    }
-                    std::env::set_current_dir(&save).unwrap();
-                    let mut libinfo = LibFile::try_from(build)?.validate(lang)?;
-                    let profile = libinfo.take(&switches.profile)?;
-                    incdirs.push(path.join(profile.include));
-                    libdirs.push(path.join(&profile.libdir));
-                    if switches.toolchain.is_msvc() {
-                        for l in profile.binaries {
-                            relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));
-                            archives.push(l.with_extension("lib"));
-                        }
-                    } else {
-                        for l in profile.binaries {
-                            relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a"));
-                            archives.push(l);
-                        }
-                    }
-                    defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+        let bfile = crate::read_manifest()?;
+        match VangoFile::from_str(&bfile)? {
+            VangoFile::Build(build) => {
+                log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
+                let save = std::env::current_dir().unwrap();
+                std::env::set_current_dir(&path).unwrap();
+                let (reb, _) = crate::action::build(build.clone(), switches)?;
+                if reb {
+                    rebuilt = true;
+                } else {
+                    println!();
                 }
-                VangoFile::Lib(mut lib) => {
-                    let profile = lib.take(&switches.profile)?;
-                    incdirs.push(path.join(profile.include));
-                    libdirs.push(path.join(profile.libdir));
-                    if switches.toolchain.is_msvc() {
-                        archives.extend(profile.binaries.into_iter().map(|l| l.with_extension("lib")));
-                    } else {
-                        archives.extend(profile.binaries);
+                std::env::set_current_dir(&save).unwrap();
+                let mut libinfo = LibFile::try_from(build)?.validate(lang)?;
+                let profile = libinfo.take(&switches.profile)?;
+                incdirs.push(path.join(profile.include));
+                libdirs.push(path.join(&profile.libdir));
+                if switches.toolchain.is_msvc() {
+                    for l in profile.binaries {
+                        relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));
+                        archives.push(l.with_extension("lib"));
                     }
-                    defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+                } else {
+                    for l in profile.binaries {
+                        relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a"));
+                        archives.push(l);
+                    }
                 }
+                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
             }
-        } else {
-            return Err(Error::MissingBuildScript(path))
+            VangoFile::Lib(mut lib) => {
+                let profile = lib.take(&switches.profile)?;
+                incdirs.push(path.join(profile.include));
+                libdirs.push(path.join(profile.libdir));
+                if switches.toolchain.is_msvc() {
+                    archives.extend(profile.binaries.into_iter().map(|l| l.with_extension("lib")));
+                } else {
+                    archives.extend(profile.binaries);
+                }
+                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+            }
         }
     }
 

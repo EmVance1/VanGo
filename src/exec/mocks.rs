@@ -26,7 +26,7 @@ impl BuildInfo {
                 warn_as_error: false,
                 debug_info: true,
                 runtime: Runtime::DynamicDebug,
-                pthread: false,
+                pthreads: false,
                 aslr: true,
                 rtti: true,
             },

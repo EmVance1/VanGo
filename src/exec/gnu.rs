@@ -50,7 +50,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if !info.settings.rtti {
         cmd.arg("-fno-rtti");
     }
-    if info.settings.pthread {
+    if info.settings.pthreads {
         cmd.arg("-pthread");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
@@ -108,7 +108,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.opt_linktime {
         cmd.arg("-flto");
     }
-    if info.settings.pthread {
+    if info.settings.pthreads {
         cmd.arg("-pthread");
     }
 

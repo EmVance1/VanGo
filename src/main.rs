@@ -23,7 +23,7 @@ macro_rules! exit_failure {
 }
 
 
-fn read_manifest() -> Result<String, Error> {
+fn read_manifest(dir: &std::path::Path) -> Result<String, Error> {
     let prefix = if cfg!(windows) {
         "win."
     } else if cfg!(target_os = "linux") {
@@ -32,17 +32,20 @@ fn read_manifest() -> Result<String, Error> {
         "mac."
     } else { "" };
 
-    let os1 = format!("{prefix}Vango.toml");
-    let os2 = format!("{prefix}vango.toml");
+    let os1 = dir.join(format!("{prefix}Vango.toml"));
+    let os2 = dir.join(format!("{prefix}vango.toml"));
+
+    let def1 = dir.join("Vango.toml");
+    let def2 = dir.join("vango.toml");
 
     if std::fs::exists(&os1).unwrap() {
         Ok(std::fs::read_to_string(&os1)?)
     } else if std::fs::exists(&os2).unwrap() {
         Ok(std::fs::read_to_string(&os2)?)
-    } else if std::fs::exists("Vango.toml").unwrap() {
-        Ok(std::fs::read_to_string("Vango.toml")?)
-    } else if std::fs::exists("vango.toml").unwrap() {
-        Ok(std::fs::read_to_string("vango.toml")?)
+    } else if std::fs::exists(&def1).unwrap() {
+        Ok(std::fs::read_to_string(&def1)?)
+    } else if std::fs::exists(&def2).unwrap() {
+        Ok(std::fs::read_to_string(&def2)?)
     } else {
         Err(Error::MissingBuildScript(std::env::current_dir().unwrap().file_name().unwrap().into()))
     }
@@ -60,7 +63,7 @@ fn main() -> ExitCode {
         action::init(*library, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
 
     } else {
-        let bfile = read_manifest().unwrap_or_else(|e| exit_failure!("{}", e));
+        let bfile = read_manifest(&std::path::PathBuf::from(".")).unwrap_or_else(|e| exit_failure!("{}", e));
         let build = config::VangoFile::from_str(&bfile)
             .unwrap_or_else(|e| exit_failure!("{}", e))
             .unwrap_build();

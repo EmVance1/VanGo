@@ -99,7 +99,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        let bfile = crate::read_manifest()?;
+        let bfile = crate::read_manifest(&path)?;
         match VangoFile::from_str(&bfile)? {
             VangoFile::Build(build) => {
                 log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
@@ -152,36 +152,4 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
         rebuilt,
     })
 }
-
-
-/*
-fn split_version(s: &str) -> (&str, Option<&str>) {
-    for (i, c) in s.chars().rev().enumerate() {
-        if c == '/' || c == '\\' {
-            return (s, None);
-        } else if c == ':' {
-            let l = s.len();
-            return (&s[..(l - i - 1)], Some(&s[(l - i)..]));
-        }
-    }
-    (s, None)
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    pub fn test_get_version() {
-        assert_eq!(split_version("SFML"),             ("SFML",       None));
-        assert_eq!(split_version("SFML:static"),      ("SFML",       Some("static")));
-        assert_eq!(split_version("SF.ML:static"),     ("SF.ML",      Some("static")));
-        assert_eq!(split_version("SFML-2.6.1"),       ("SFML-2.6.1", None));
-        assert_eq!(split_version("../Rusty"),         ("../Rusty",   None));
-        assert_eq!(split_version("../Rusty:static"),  ("../Rusty",   Some("static")));
-        assert_eq!(split_version("../Ru.sty:static"), ("../Ru.sty",  Some("static")));
-    }
-}
-*/
 

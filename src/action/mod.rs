@@ -26,6 +26,12 @@ pub fn clean(build: &BuildFile) -> Result<(), Error> {
             return Err(Error::FileSystem(e));
         }
     }
+    match std::fs::remove_dir_all("bin/release") {
+        Ok(()) => (),
+        Err(e) => if e.kind() != std::io::ErrorKind::NotFound {
+            return Err(Error::FileSystem(e));
+        }
+    }
     Ok(())
 }
 

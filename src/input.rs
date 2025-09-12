@@ -27,9 +27,9 @@ pub struct BuildSwitches {
 
 pub fn collect_args() -> Result<Action, Error> {
     let mut args: Vec<_> = std::env::args().collect();
-    if let Some(first) = args.first() && first.as_str() == std::env::current_exe()?.as_os_str() {
+    // if let Some(first) = args.first() && first.as_str() == std::env::current_exe()?.as_os_str() {
         args.remove(0);
-    }
+    // }
     if args.is_empty() { return Ok(Action::Help{ action: None }) }
     parse_args(args)
 }

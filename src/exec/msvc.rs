@@ -7,8 +7,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
-    cmd.arg("/c");
     cmd.arg("/nologo");
+    cmd.arg("/diagnostics:caret");
+    cmd.arg("/c");
     match info.lang {
         Lang::Cpp(123) => {
             cmd.arg("/std:c++latest");
@@ -61,7 +62,6 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.args([ "/Zi", "/Fd:bin\\debug\\obj\\", "/FS", "/sdl" ]);
         if !info.toolchain.is_clang() { cmd.arg("/Zf"); }
     }
-    cmd.arg("/diagnostics:caret");
     match info.settings.warn_level {
         WarnLevel::None  => { cmd.arg("/w"); }
         WarnLevel::Basic => { cmd.arg("/W1"); }
@@ -191,10 +191,11 @@ fn print_command(cmd: &std::process::Command) {
 }
 
 
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use crate::config::{BuildSettings, Lang, ProjKind, ToolChain};
+    use crate::config::{Lang, ProjKind, ToolChain};
     use super::*;
 
     #[test]
@@ -203,47 +204,15 @@ mod tests {
         let out = PathBuf::from("bin/debug");
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
-        let cmd = super::compile(&src, &obj, &super::BuildInfo {
-            projkind: ProjKind::App,
-            toolchain: ToolChain::Msvc,
-            lang: Lang::Cpp(120),
-            crtstatic: false,
-            cpprt: false,
-            settings: BuildSettings{
-                opt_level: 0,
-                opt_size: false,
-                opt_speed: false,
-                opt_linktime: false,
-                iso_compliant: false,
-                warn_level: WarnLevel::Basic,
-                warn_as_error: false,
-                debug_info: true,
-                runtime: Runtime::DynamicDebug,
-                pthread: false,
-                aslr: true,
-                rtti: true,
-            },
-            defines: vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            srcdir:   "src".into(),
-            incdirs:  vec![ "src".into() ],
-            libdirs:  vec![],
-            outdir:   "bin".into(),
-            pch:      None,
-            sources:  vec![],
-            headers:  vec![],
-            archives: vec![],
-            relink:   vec![],
-            outfile:  out,
-            implib:   None,
-
-            comp_args: vec![],
-            link_args: vec![],
-        }, &PreCompHead::None, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Msvc, None, false),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "/c",
                 "/nologo",
+                "/diagnostics:caret",
+                "/c",
                 "/std:c++20",
                 "/Zc:__cplusplus",
                 "/EHsc",
@@ -254,7 +223,6 @@ mod tests {
                 "/FS",
                 "/sdl",
                 "/Zf",
-                "/diagnostics:caret",
                 "/W1",
                 "/Isrc",
                 "/DUNICODE",
@@ -265,36 +233,31 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     pub fn compile_cmd_msvc_dbg2() {
         let src = PathBuf::from("src/main.cpp");
         let out = PathBuf::from("bin/debug");
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Debug,
-            toolchain: ToolChain::Msvc,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(123),
-            crtstatic: false,
-            outdir: &out,
-            defines: &vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(23), ToolChain::ClangMsvc, None, true),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "/EHsc",
-                "/std:c++latest",
+                "/nologo",
+                "/diagnostics:caret",
                 "/c",
-                "/MDd",
+                "/std:c++23",
+                "/Zc:__cplusplus",
+                "/EHsc",
+                "/MTd",
                 "/Od",
                 "/Zi",
                 "/Fd:bin\\debug\\obj\\",
                 "/FS",
+                "/sdl",
+                "/W1",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -307,32 +270,27 @@ mod tests {
     #[test]
     pub fn compile_cmd_msvc_rel1() {
         let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/release");
-        let obj = PathBuf::from("bin/release/obj/main.obj");
+        let out = PathBuf::from("bin/debug");
+        let obj = PathBuf::from("bin/debug/obj/main.obj");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Release,
-            toolchain: ToolChain::Msvc,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(123),
-            crtstatic: false,
-            outdir: &out,
-            defines: &vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Msvc, None, false),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "/EHsc",
-                "/std:c++latest",
+                "/nologo",
+                "/diagnostics:caret",
                 "/c",
+                "/std:c++23",
+                "/Zc:__cplusplus",
+                "/EHsc",
                 "/MD",
                 "/O2",
                 "/Oi",
                 "/GL",
-                "/Isrc/",
+                "/W1",
+                "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
                 src.to_str().unwrap(),
@@ -344,31 +302,26 @@ mod tests {
     #[test]
     pub fn compile_cmd_msvc_rel2() {
         let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/release");
-        let obj = PathBuf::from("bin/release/obj/main.obj");
+        let out = PathBuf::from("bin/debug");
+        let obj = PathBuf::from("bin/debug/obj/main.obj");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Release,
-            toolchain: ToolChain::Msvc,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(123),
-            crtstatic: true,
-            outdir: &out,
-            defines: &vec![ "UNICODE".to_string(), "_UNICODE".to_string() ],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Msvc, None, true),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "/EHsc",
-                "/std:c++latest",
+                "/nologo",
+                "/diagnostics:caret",
                 "/c",
+                "/std:c++23",
+                "/Zc:__cplusplus",
+                "/EHsc",
                 "/MT",
                 "/O2",
                 "/Oi",
                 "/GL",
+                "/W1",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -377,6 +330,5 @@ mod tests {
             ]
         );
     }
-    */
 }
 

@@ -4,6 +4,8 @@ mod msvc;
 mod gnu;
 mod prep;
 mod output;
+#[cfg(test)]
+mod mocks;
 
 use std::{io::Write, path::{Path, PathBuf}, process::Command};
 use incremental::BuildLevel;
@@ -41,7 +43,7 @@ pub struct BuildInfo {
 }
 
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 enum PreCompHead<'a> {
     #[default]
     None,

@@ -8,9 +8,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.args(&info.comp_args);
     cmd.arg(format!("-std={}", info.lang));
-    if info.settings.aslr && !cfg!(windows) {
+    if !cfg!(windows) {
         match info.projkind {
-            ProjKind::App|ProjKind::StaticLib => { cmd.arg("-fpie"); },
+            ProjKind::App|ProjKind::StaticLib => if info.settings.aslr { cmd.arg("-fpie"); },
             ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
         }
     }
@@ -160,31 +160,22 @@ fn print_command(cmd: &std::process::Command) {
 }
 
 
+
 #[cfg(test)]
 mod tests {
-    // use std::path::PathBuf;
-    // use crate::config::{ToolChain, Profile, ProjKind, Lang};
-    // use super::*;
+    use std::path::PathBuf;
+    use crate::config::{ToolChain, ProjKind, Lang};
+    use super::*;
 
-    /*
     #[test]
     pub fn compile_cmd_gcc_dbg1() {
         let src = PathBuf::from("src/main.cpp");
         let out = PathBuf::from("bin/debug");
         let obj = PathBuf::from("bin/debug/obj/main.o");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Debug,
-            toolchain: ToolChain::Gcc,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(120),
-            crtstatic: false,
-            outdir: &out,
-            defines: &vec![],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
@@ -192,7 +183,10 @@ mod tests {
                 "-c",
                 "-O0",
                 "-g",
+                "-Wall",
                 "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
             ]
@@ -205,26 +199,21 @@ mod tests {
         let out = PathBuf::from("bin/debug");
         let obj = PathBuf::from("bin/debug/obj/main.o");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Debug,
-            toolchain: ToolChain::Clang,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(123),
-            crtstatic: false,
-            outdir: &out,
-            defines: &vec![],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(23), ToolChain::ClangGnu, None, true),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
+                "--target=x86_64-w64-mingw32",
                 "-std=c++23",
                 "-c",
                 "-O0",
                 "-g",
+                "-Wall",
                 "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
             ]
@@ -237,26 +226,20 @@ mod tests {
         let out = PathBuf::from("bin/release");
         let obj = PathBuf::from("bin/release/obj/main.o");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Release,
-            toolchain: ToolChain::Gnu,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(120),
-            crtstatic: false,
-            outdir: &out,
-            defines: &vec![],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "-std=c++20",
                 "-c",
-                "-O2",
+                "-O3",
                 "-flto",
+                "-Wall",
                 "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
             ]
@@ -269,30 +252,76 @@ mod tests {
         let out = PathBuf::from("bin/release");
         let obj = PathBuf::from("bin/release/obj/main.o");
 
-        let cmd = super::compile_cmd(&src, &obj, super::CompileInfo {
-            profile: &Profile::Release,
-            toolchain: ToolChain::Gnu,
-            projkind: ProjKind::App,
-            lang: Lang::Cpp(120),
-            crtstatic: true,
-            outdir: &out,
-            defines: &vec![],
-            incdirs: &vec![ "src".into() ],
-            pch: &PreCompHead::None,
-            comp_args: &vec![],
-        }, false, false);
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Gcc, None, true),
+            &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
-                "-std=c++20",
+                "-std=c++23",
                 "-c",
-                "-O2",
+                "-O3",
                 "-flto",
+                "-Wall",
                 "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
                 src.to_str().unwrap(),
                 &format!("-o{}", obj.display()),
             ]
         );
     }
-    */
+
+    #[test]
+    pub fn compile_cmd_gcc_staticlib() {
+        let src = PathBuf::from("src/main.cpp");
+        let out = PathBuf::from("bin/release");
+        let obj = PathBuf::from("bin/release/obj/main.o");
+
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &PreCompHead::None, false, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "-std=c++20",
+                "-c",
+                "-O3",
+                "-flto",
+                "-Wall",
+                "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
+                src.to_str().unwrap(),
+                &format!("-o{}", obj.display()),
+            ]
+        );
+    }
+
+
+    #[test]
+    pub fn compile_cmd_gcc_sharedlib() {
+        let src = PathBuf::from("src/main.cpp");
+        let out = PathBuf::from("bin/release");
+        let obj = PathBuf::from("bin/release/obj/main.o");
+
+        let cmd = super::compile(&src, &obj,
+            &BuildInfo::mock_release(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &PreCompHead::None, false, false);
+
+        let cmd: Vec<_> = cmd.get_args().collect();
+        assert_eq!(cmd, [
+                "-std=c++20",
+                "-c",
+                "-O3",
+                "-flto",
+                "-Wall",
+                "-Isrc",
+                "-DUNICODE",
+                "-D_UNICODE",
+                src.to_str().unwrap(),
+                &format!("-o{}", obj.display()),
+            ]
+        );
+    }
 }

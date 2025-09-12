@@ -120,15 +120,6 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                         println!();
                     }
                     std::env::set_current_dir(&save).unwrap();
-                    let sysdeps: Vec<_> = build.dependencies.iter().filter_map(|d| if let Dependency::System{ system, target } = d {
-                        if let Some(target) = target &&
-                            (target == "windows" && !cfg!(windows) || target == "unix"  && !cfg!(unix) ||
-                            target == "linux" && !cfg!(target_os="linux") || target == "macos" && !cfg!(target_os="macos")) {
-                            None
-                        } else {
-                            Some(system.clone())
-                        }
-                    } else { None }).collect();
                     let mut libinfo = LibFile::try_from(build)?.validate(lang)?;
                     let profile = libinfo.take(&switches.profile)?;
                     incdirs.push(path.join(profile.include));
@@ -138,16 +129,10 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                             relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));
                             archives.push(l.with_extension("lib"));
                         }
-                        for d in sysdeps {
-                            archives.push(d.with_extension("lib"));
-                        }
                     } else {
                         for l in profile.binaries {
                             relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a"));
                             archives.push(l);
-                        }
-                        for d in sysdeps {
-                            archives.push(d);
                         }
                     }
                     defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));

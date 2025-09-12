@@ -1,50 +1,37 @@
 use std::{io::Write, path::PathBuf, process::Command};
-use crate::{exec::{self, BuildInfo}, input::BuildSwitches, fetch, config::{BuildFile, BuildProfile, Lang}, Error, log_info_ln};
+use crate::{config::BuildFile, exec::{self, BuildInfo}, fetch, input::BuildSwitches, Error, log_info_ln};
 
-
-struct TestInfo {
-    defines: Vec<String>,
-    incdirs: Vec<PathBuf>,
-    archives: Vec<PathBuf>,
-}
-
-
-fn inherited(build: &BuildFile, profile: &BuildProfile, switches: &BuildSwitches, lang: Lang) -> TestInfo {
-    let mut deps = fetch::libraries(build.dependencies.clone(), switches, lang).unwrap();
-    let mut defines = profile.defines.clone();
-    defines.extend(deps.defines);
-    deps.incdirs.extend(profile.include.clone());
-    TestInfo {
-        defines,
-        incdirs: deps.incdirs,
-        archives: deps.archives,
-    }
-}
 
 pub fn test_lib(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<(), Error> {
     if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
-    let inc = std::env::current_exe()?
+    let include = std::env::current_exe()?
         .parent()
         .unwrap()
-        .to_owned();
+        .to_owned()
+        .join("testframework");
 
     let profile = build.take(&switches.profile)?;
-    let mut partial = inherited(&build, &profile, switches, build.lang);
-    partial.defines.push("VANGO_TEST".to_string());
-    partial.incdirs.extend([ "test".into(), inc.join("testframework") ]);
     let mut headers = fetch::source_files(&PathBuf::from(&profile.include_pub), "h")?;
     headers.extend(fetch::source_files(&PathBuf::from(&profile.include_pub), "hpp")?);
-    headers.push(inc.join("testframework/vangotest/asserts.h"));
-    headers.push(inc.join("testframework/vangotest/casserts.h"));
+    headers.push(include.join("vangotest/asserts.h"));
+    headers.push(include.join("vangotest/casserts.h"));
+    headers.push(include.join("vangotest/asserts2.h"));
+    headers.push(include.join("vangotest/casserts2.h"));
+
+    let mut inherited = fetch::libraries(build.dependencies.clone(), switches, build.lang).unwrap();
+    inherited.defines.push("VANGO_TEST".to_string());
+    inherited.incdirs.extend([ "test".into(), include, profile.include_pub ]);
+    inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));
+
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
-    let relink = [
-        outdir.join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name)).with_extension(switches.toolchain.static_lib_ext())
-    ].into_iter().collect();
+    let mut relink = Vec::new();
     if switches.toolchain.is_msvc() {
-        partial.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
+        inherited.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
+        relink.push(outdir.join(&build.name).with_extension("lib"));
     } else {
-        partial.archives.insert(0, PathBuf::from(&build.name));
+        inherited.archives.insert(0, PathBuf::from(&build.name));
+        relink.push(outdir.join(format!("lib{}", build.name)).with_extension("a"));
     }
 
     let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
@@ -57,18 +44,18 @@ pub fn test_lib(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String
         cpprt:     build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
         settings:  profile.settings,
 
-        defines: partial.defines,
+        defines:   inherited.defines,
 
-        srcdir: "test".into(),
-        incdirs: partial.incdirs,
-        libdirs: [ PathBuf::from("bin").join(switches.profile.to_string()) ].into_iter().collect(),
+        srcdir:    "test".into(),
+        incdirs:   inherited.incdirs,
+        libdirs:   inherited.libdirs,
         outdir,
 
         pch: None,
         sources,
         headers,
-        archives: partial.archives,
-        relink,
+        archives: inherited.archives,
+        relink    ,
         outfile: outfile.clone(),
         implib: None,
 

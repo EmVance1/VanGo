@@ -20,14 +20,14 @@ interface = [ "CXX" ]
 - `interface`: at times you may want to implement a library using one standard, but provide an interface for use in another earlier standard, or in C. To partially bypass the compatibility checker, you can declare the `interface` field, which sets the earliest standard your library is compatible with. `interface` uses the same format as `lang`.
 
 ### Dependencies
-The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. A dependency that is not header-only must have a toml file in its root directory . Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
+The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. A dependency that is not header-only must have a toml file in its root directory. Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
 ```toml
 [dependencies]
-MyLib     = { path="../MyLib" } # source, local, contains build toml-config
-SFML      = { path="../SFML" }  # binary, local, contains static lib toml-config
-SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains build toml-config
+MyLib     = { path="../MyLib" } # source, local, contains [package] (build) toml-config
+SFML      = { path="../SFML" }  # binary, local, contains [staticlib] (prebuilt) toml-config
+SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains [package] toml-config
 stb_image = { headers="lib/stb_image" } # headers, local, contains no config
-Ws2       = { system="Ws2_32", target="windows" } # system libraries
+Ws2       = { system="Ws2_32", target="windows" } # system binaries require no config
 ```
 **Note**: if you are building a *static* library, it is important to remember that no dependencies are bundled into the binary you build - they still need to be linked into the final executable. For example, if you are building a wrapper library for the Winsock2 API, the executable consuming it must list said library **and** `Ws2_32.lib` in its dependencies (this is not the case for *shared* libraries, as they are created via the linker). Despite this, static library projects should always declare all dependencies, both for user clarity, and because tests need to inherit them (tests are effectively dependent executables).
 

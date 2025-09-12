@@ -8,6 +8,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.args(&info.comp_args);
     cmd.arg("/nologo");
+    cmd.arg("/showIncludes");
     cmd.arg("/diagnostics:caret");
     cmd.arg("/c");
     match info.lang {

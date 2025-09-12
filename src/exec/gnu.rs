@@ -7,6 +7,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
+    cmd.arg("-H");
     cmd.arg(format!("-std={}", info.lang));
     if !cfg!(windows) {
         match info.projkind {
@@ -66,9 +67,6 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         }
         PreCompHead::None => (),
     }
-    // /showIncludes
-
-    // -H
 
     cmd.arg(src);
     cmd.arg(format!("-o{}", obj.display()));

@@ -1,4 +1,4 @@
-use std::io::{BufRead, Write};
+use std::{io::{BufRead, Write}, path::PathBuf};
 use crate::{log_error_ln, log_warn_ln};
 
 
@@ -11,9 +11,15 @@ pub fn msvc_compiler(output: &std::process::Output) -> bool {
             log_error_ln!("{line}");
         }
     }
+    let mut includes = vec![];
     for line in output.stdout.lines().skip(1) {
         let line = line.unwrap();
-        if line.contains(": error C") || line.contains(": fatal error C") {
+        if let Some(inc) = line.strip_prefix("Note: including file:") {
+            let inc = inc.trim();
+            if !inc.starts_with("C:\\Program Files") {
+                includes.push(PathBuf::from(inc));
+            }
+        } else if line.contains(": error C") || line.contains(": fatal error C") {
             log_error_ln!("{line}");
         } else if line.contains(": warning C") {
             log_warn_ln!("{line}");
@@ -21,23 +27,40 @@ pub fn msvc_compiler(output: &std::process::Output) -> bool {
             println!("{line}");
         }
     }
+    // println!("{:?}", includes);
     output.status.success()
 }
 
+
+fn gnu_is_sys_include(path: &str) -> bool {
+    if cfg!(windows) {
+        path.starts_with("C:/msys64")
+    } else {
+        path.starts_with("/usr/include") || path.starts_with("/usr/lib")
+    }
+}
+
 pub fn gnu_compiler(output: &std::process::Output) -> bool {
+    let mut includes = vec![];
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.contains("In function") {
             continue
         }
-        if line.contains(": error: ") || line.contains(": fatal error: ") {
+        if line.starts_with(".") {
+            let inc = line.trim_start_matches('.').trim();
+            if !gnu_is_sys_include(inc) {
+                includes.push(PathBuf::from(inc));
+            }
+        } else if line.contains(": error: ") || line.contains(": fatal error: ") {
             log_error_ln!("{line}");
         } else if line.contains(" warning: ") {
             log_warn_ln!("{line}");
-        } else {
+        } else if line != "Multiple include guards may be useful for:" && !gnu_is_sys_include(&line) {
             println!("{line}");
         }
     }
+    // println!("{:?}", includes);
     output.status.success()
 }
 

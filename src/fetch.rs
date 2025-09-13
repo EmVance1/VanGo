@@ -18,7 +18,7 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Dependencies {
     pub incdirs:  Vec<PathBuf>,
     pub libdirs:  Vec<PathBuf>,
@@ -29,53 +29,43 @@ pub struct Dependencies {
 }
 
 pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+    let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
-
-    let mut incdirs  = Vec::new();
-    let mut libdirs  = Vec::new();
-    let mut archives = Vec::new();
-    let mut relink   = Vec::new();
-    let mut defines  = Vec::new();
-    let mut rebuilt  = false;
 
     for lib in libraries {
         let path = match lib {
-            #[allow(unused)]
-            Dependency::Git { git, tag, recipe, features } => {
-                let url = std::path::Path::new(&git);
-                let stem = url.file_stem().unwrap().to_string_lossy();
-                let dir = home.join(format!(".vango/packages/{stem}"));
-                if !std::fs::exists(&dir).unwrap() {
-                    let version: Vec<PathBuf> = if let Some(tag) = tag {
-                        vec![ "--branch".into(), tag.into(), "--depth".into(), "1".into() ]
+            Dependency::Git { git, tag, recipe, features: _ } => {
+                let git = Path::new(&git);
+                let stem = git.file_stem().unwrap().to_string_lossy();
+                let path = home.join(format!(".vango/packages/{stem}"));
+                if !std::fs::exists(&path).unwrap() {
+                    let branch: Vec<PathBuf> = if let Some(tag) = tag {
+                        vec![ "--branch".into(), tag.into(), "--depth".into(), "1".into(), git.into() ]
                     } else {
-                        vec![]
+                        vec![ git.into() ]
                     };
-                    log_info_ln!("cloning project dependency to: {:-<52}", format!("$ENV/packages/{stem} "));
+                    log_info_ln!("{:-<80}", format!("cloning project dependency to: $ENV/packages/{stem} "));
                     std::process::Command::new("git")
                         .arg("clone")
-                        .args(version)
-                        .arg(format!("{}", url.to_string_lossy()))
-                        .arg(&dir)
+                        .args(branch)
+                        .arg(&path)
                         .output()
                         .unwrap();
                     if let Some(recipe) = recipe {
                         log_info_ln!("building project dependency according to '{}'", recipe.display());
                         std::process::Command::new(PathBuf::from(".").join(recipe))
-                            .current_dir(&dir)
+                            .current_dir(&path)
                             .output()
                             .unwrap();
                     }
                 }
-                dir
-            }
-            #[allow(unused)]
-            Dependency::Local { path, features } => {
                 path
             }
-            #[allow(unused)]
-            Dependency::Headers { headers, features } => {
-                incdirs.push(headers);
+            Dependency::Local { path, features: _ } => {
+                path
+            }
+            Dependency::Headers { headers, features: _ } => {
+                deps.incdirs.push(headers);
                 continue;
             }
             Dependency::System { system, target } => {
@@ -87,9 +77,9 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                     continue;
                 }
                 if switches.toolchain.is_msvc() {
-                    archives.push(system.with_extension("lib"));
+                    deps.archives.push(system.with_extension("lib"));
                 } else {
-                    archives.push(system);
+                    deps.archives.push(system);
                 }
                 continue;
             }
@@ -99,57 +89,36 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        let bfile = crate::read_manifest(&path)?;
-        match VangoFile::from_str(&bfile)? {
+        let mut built = false;
+        let save = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&path).unwrap();
+        let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
             VangoFile::Build(build) => {
-                log_info_ln!("building project dependency: {:-<54}", format!("{} ", build.name));
-                let save = std::env::current_dir().unwrap();
-                std::env::set_current_dir(&path).unwrap();
-                let (reb, _) = crate::action::build(build.clone(), switches)?;
-                if reb {
-                    rebuilt = true;
-                } else {
-                    println!();
-                }
-                std::env::set_current_dir(&save).unwrap();
-                let mut libinfo = LibFile::try_from(build)?.validate(lang)?;
-                let profile = libinfo.take(&switches.profile)?;
-                incdirs.push(path.join(profile.include));
-                libdirs.push(path.join(&profile.libdir));
-                if switches.toolchain.is_msvc() {
-                    for l in profile.binaries {
-                        relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));
-                        archives.push(l.with_extension("lib"));
-                    }
-                } else {
-                    for l in profile.binaries {
-                        relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a"));
-                        archives.push(l);
-                    }
-                }
-                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+                built = true;
+                let (rebuilt, _) = crate::action::build(build.clone(), switches, true)?;
+                if rebuilt { deps.rebuilt = true; }
+                LibFile::try_from(build)?.validate(lang)?
             }
-            VangoFile::Lib(mut lib) => {
-                let profile = lib.take(&switches.profile)?;
-                incdirs.push(path.join(profile.include));
-                libdirs.push(path.join(profile.libdir));
-                if switches.toolchain.is_msvc() {
-                    archives.extend(profile.binaries.into_iter().map(|l| l.with_extension("lib")));
-                } else {
-                    archives.extend(profile.binaries);
-                }
-                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+            VangoFile::Lib(lib) => lib,
+        };
+        std::env::set_current_dir(&save).unwrap();
+        let profile = library.take(&switches.profile)?;
+        deps.incdirs.push(path.join(profile.include));
+        deps.libdirs.push(path.join(&profile.libdir));
+        if switches.toolchain.is_msvc() {
+            for l in profile.binaries {
+                if built { deps.relink.push(path.join(&profile.libdir).join(&l).with_extension("lib")); }
+                deps.archives.push(l.with_extension("lib"));
+            }
+        } else {
+            for l in profile.binaries {
+                if built { deps.relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a")); }
+                deps.archives.push(l);
             }
         }
+        deps.defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 
-    Ok(Dependencies {
-        incdirs,
-        libdirs,
-        archives,
-        relink,
-        defines,
-        rebuilt,
-    })
+    Ok(deps)
 }
 

@@ -78,9 +78,26 @@ fn msvc_check_iso(lang: Lang) {
 }
 
 
-pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
-    let mut built_pch = false;
+
+    let jobs = incremental::get_build_level(&info);
+
+    match jobs {
+        BuildLevel::UpToDate => {
+            if !recursive { log_info_ln!("build up to date for project: {}", info.outfile.display()); }
+            return Ok(false);
+        }
+        BuildLevel::LinkOnly => {
+            if recursive { log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display())); }
+            else { log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display())); }
+        }
+        BuildLevel::CompileAndLink(..) => {
+            if recursive { log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display())); }
+            else { log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display())); }
+            if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
+        }
+    }
 
     let pch_use = if let Some(pch) = &info.pch {
         let inpch = info.srcdir.join(pch);
@@ -93,9 +110,6 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         };
 
         if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
-            built_pch = true;
-            log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
-            if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
             log_info_ln!("precompiling header: '{}'", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc() {
@@ -116,48 +130,31 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Err
         PreCompHead::None
     };
 
-    match incremental::get_build_level(&info) {
-        BuildLevel::UpToDate => {
-            if !built_pch {
-                log_info_ln!("build up to date for \"{}\"", info.outfile.display());
+    if let BuildLevel::CompileAndLink(elems) = jobs {
+        let mut queue = queue::ProcQueue::new();
+        let mut failure = false;
+
+        for (src, obj) in elems {
+            log_info_ln!("compiling: {}", src.to_string_lossy());
+            let mut comp = if info.toolchain.is_msvc() {
+                msvc::compile(src, &obj, &info, &pch_use, echo, verbose)
+            } else {
+                gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
+            };
+            if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
+                && !on_compile_finish(info.toolchain, &output) {
+                failure = true;
             }
-            return Ok(false);
         }
-        BuildLevel::LinkOnly => {
-            // ALL GOOD BOSS
+
+        while !queue.is_empty() {
+            if !on_compile_finish(info.toolchain, &queue.flush_one()) {
+                failure = true;
+            }
         }
-        BuildLevel::CompileAndLink(elems) => {
-            if !built_pch {
-                log_info_ln!("starting build for {:=<64}", format!("\"{}\" ", info.outfile.display()));
-                if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
-            }
 
-            let mut queue = queue::ProcQueue::new();
-            let mut failure = false;
-
-            for (src, obj) in elems {
-                log_info_ln!("compiling: {}", src.to_string_lossy());
-                let mut comp = if info.toolchain.is_msvc() {
-                    msvc::compile(src, &obj, &info, &pch_use, echo, verbose)
-                } else {
-                    gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
-                };
-                if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
-                    && !on_compile_finish(info.toolchain, &output) {
-                    failure = true;
-                }
-            }
-
-            while !queue.is_empty() {
-                if !on_compile_finish(info.toolchain, &queue.flush_one()) {
-                    failure = true;
-                }
-            }
-
-            if failure { return Err(Error::CompilerFail(info.outfile)); }
-        }
+        if failure { return Err(Error::CompilerFail(info.outfile)); }
     }
-
 
     match info.projkind {
         ProjKind::App|ProjKind::SharedLib{..} => log_info_ln!("linking:   {: <30}", info.outfile.display()),

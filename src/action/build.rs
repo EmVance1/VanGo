@@ -8,7 +8,7 @@ use crate::{
 };
 
 
-pub fn build(mut build: BuildFile, switches: &BuildSwitches) -> Result<(bool, PathBuf), Error> {
+pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<(bool, PathBuf), Error> {
     let profile = build.take(&switches.profile)?;
     let srcdir = PathBuf::from("src");
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
@@ -83,7 +83,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches) -> Result<(bool, Pa
         comp_args: profile.compiler_options,
         link_args: profile.linker_options,
     };
-    match exec::run_build(info, switches.echo, switches.verbose) {
+    match exec::run_build(info, switches.echo, switches.verbose, recursive) {
         Err(e) => Err(e),
         Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outfile)),
     }

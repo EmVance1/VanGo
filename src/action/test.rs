@@ -48,7 +48,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         toolchain: switches.toolchain,
         lang:      build.lang,
         crtstatic: switches.crtstatic,
-        cpprt:     build.runtime.map(|rt| rt == "C++").unwrap_or_default(),
+        cpprt:     build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
 
         defines:   inherited.defines,
@@ -69,17 +69,14 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         comp_args: vec![],
         link_args: vec![],
     };
-    exec::run_build(info, switches.echo, false)?;
-    log_info_ln!(
-        "running tests for project {:=<57}",
-        format!("\"{}\" ", build.name)
-    );
+    exec::run_build(info, switches.echo, false, false)?;
+    log_info_ln!("{:=<80}", format!("running tests for project: {} ", build.name));
     Ok(std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
         .unwrap()
         .code()
-        .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
+        .ok_or(Error::ExeKilled(outfile))? as u8)
 }
 

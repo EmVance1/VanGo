@@ -10,6 +10,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd.arg("/nologo");
     cmd.arg("/showIncludes");
     cmd.arg("/diagnostics:caret");
+    // /WL (one line diagnostics)
     cmd.arg("/c");
     match info.lang {
         Lang::Cpp(123) => {
@@ -90,8 +91,6 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         }
         PreCompHead::None => (),
     }
-    // /showIncludes
-    // /WL
 
     cmd.arg(src);
     cmd.arg(format!("/Fo:{}", obj.display()));

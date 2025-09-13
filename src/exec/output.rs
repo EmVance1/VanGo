@@ -47,7 +47,7 @@ pub fn gnu_compiler(output: &std::process::Output) -> bool {
         if line.contains("In function") {
             continue
         }
-        if line.starts_with(".") {
+        if line.starts_with('.') {
             let inc = line.trim_start_matches('.').trim();
             if !gnu_is_sys_include(inc) {
                 includes.push(PathBuf::from(inc));

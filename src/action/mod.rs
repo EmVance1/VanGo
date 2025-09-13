@@ -17,7 +17,6 @@ pub use test::test;
 pub use generate::generate;
 
 
-
 pub fn clean(build: &BuildFile) -> Result<(), Error> {
     log_info_ln!("cleaning build files for \"{}\"", build.name);
     match std::fs::remove_dir_all("bin/debug") {
@@ -36,7 +35,7 @@ pub fn clean(build: &BuildFile) -> Result<(), Error> {
 }
 
 pub fn run(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
-    log_info_ln!("running application {:=<63}", format!("\"{}\" ", outfile.display()));
+    log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
     Ok(std::process::Command::new(PathBuf::from(".").join(outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())

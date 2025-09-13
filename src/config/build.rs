@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use crate::{config::ProjKind, error::Error};
-use super::{Lang, Profile};
+use crate::error::Error;
+use super::{Lang, Profile, ProjKind};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,11 +114,12 @@ pub enum Runtime { DynamicDebug, DynamicRelease, StaticDebug, StaticRelease }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildProfile {
+    pub baseprof: Profile,
+
     pub defines: Vec<String>,
     pub include: Vec<PathBuf>,
     pub include_pub: PathBuf,
     pub pch: Option<PathBuf>,
-
     pub settings: BuildSettings,
 
     pub compiler_options: Vec<String>,
@@ -132,6 +133,7 @@ impl BuildProfile {
             defines.extend(def.iter().map(String::to_owned));
         }
         Self{
+            baseprof: Profile::Debug,
             defines,
             include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
@@ -163,6 +165,7 @@ impl BuildProfile {
             defines.extend(def.iter().map(String::to_owned));
         }
         Self{
+            baseprof: Profile::Release,
             defines,
             include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             include_pub: defaults.include_pub.clone().unwrap_or("src".into()),

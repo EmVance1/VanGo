@@ -23,7 +23,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     }
     let sources = fetch::source_files(&srcdir, build.lang.src_ext()).unwrap();
 
-    let mut deps = fetch::libraries(&build.dependencies, switches, build.lang)?;
+    let mut deps = fetch::libraries(&build.dependencies, &profile.baseprof, switches, build.lang)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
     if cfg!(windows) {

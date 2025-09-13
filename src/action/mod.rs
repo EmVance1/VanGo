@@ -17,13 +17,7 @@ pub use generate::generate;
 
 pub fn clean(build: &BuildFile) -> Result<(), Error> {
     log_info_ln!("cleaning build files for \"{}\"", build.name);
-    match std::fs::remove_dir_all("bin/debug") {
-        Ok(()) => (),
-        Err(e) => if e.kind() != std::io::ErrorKind::NotFound {
-            return Err(Error::FileSystem(e));
-        }
-    }
-    match std::fs::remove_dir_all("bin/release") {
+    match std::fs::remove_dir_all("bin") {
         Ok(()) => (),
         Err(e) => if e.kind() != std::io::ErrorKind::NotFound {
             return Err(Error::FileSystem(e));

@@ -8,12 +8,12 @@ lang = "C++XX"
 # optional
 kind = "app|staticlib|sharedlib"
 implib = true
-interface = [ "CXX" ]
+interface = "CXX"
 ```
 - `name` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
 - `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for when versioned packages are implemented.
-- `lang` takes any valid C or C++ ISO standard, case insensitive. GNU standards not yet supported. Aside from compiler settings, if the `interface` field is not defined, `lang` also declares library compatibility (see [Library Configuration](libraries.md)).
-- `kind` is for declaring whether your project builds to an executable or a library. The default value here is `"app"`, though it can be written explicitly. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib, etc.). In contrast to other kinds, the behaviour of `sharedlib` varies widely per platform, *regardless of toolchain*. On linux, it creates a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and (by default) a static *import* library for automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a DLL file, for all your `__declspec` needs.
+- `lang` takes any valid C or C++ ISO standard, case insensitive. GNU standards not yet supported. Aside from compiler settings, if the `interface` field is not defined, `lang` also declares a libraries minimum compatibility (see [Library Configuration](libraries.md)).
+- `kind` is for declaring whether your project builds to an executable (`app`, default) or a library. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib). In contrast to other kinds, the behaviour of `sharedlib` varies widely per platform, *regardless of toolchain*. On linux, it creates a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and (by default) a static *import* library for automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a DLL file, for all your `__declspec` needs.
 
     **Note**: At time of writing, DLLs must be manually moved to the dependent projects working directory for correct linkage.
 

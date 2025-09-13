@@ -1,5 +1,5 @@
 use std::{ffi::OsStr, io::Write, path::{Path, PathBuf}};
-use crate::{config::{Dependency, Lang, LibFile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
+use crate::{config::{Dependency, Lang, LibFile, Profile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
 
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -28,9 +28,14 @@ pub struct Dependencies {
     pub rebuilt:  bool,
 }
 
-pub fn libraries(libraries: &[Dependency], switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: &[Dependency], profile: &Profile, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
+    let switches = if let Profile::Custom(..) = switches.profile {
+        BuildSwitches{ profile: profile.clone(), ..switches.clone() }
+    } else {
+        switches.clone()
+    };
 
     for lib in libraries {
         let path = match lib {
@@ -95,7 +100,7 @@ pub fn libraries(libraries: &[Dependency], switches: &BuildSwitches, lang: Lang)
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
             VangoFile::Build(build) => {
                 srcpkg = true;
-                if crate::action::build(&build, switches, true)? {
+                if crate::action::build(&build, &switches, true)? {
                     deps.rebuilt = true;
                 }
                 LibFile::try_from(build)?.validate(lang)?

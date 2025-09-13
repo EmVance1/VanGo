@@ -6,15 +6,16 @@ pub fn help(action: Option<&String>) {
         println!("Options:");
         println!("  -d, --debug             Build project in debug profile (default)");
         println!("  -r, --release           Build project in release profile");
+        println!("  -p, --profile=<PROF>    Specify compilation profile (debug, release, or custom)");
         println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})", ToolChain::default());
-        println!("      --install           On unix-like systems: installs headers and binaries into /usr/local/* on build");
+        // println!("      --install           On unix-like systems: installs headers and binaries into /usr/local/* on build");
         println!("      --crtstatic         Link statically with the C runtime library");
         println!("      --echo              Echo the entire build command composed by vango");
         println!("  -v, --verbose           Forward '--verbose' to invoked tool, if available");
         println!();
         println!("Profiles:");
-        println!("    debug    Build with no optimization; Generate debug symbols; 'VANGO_DEBUG' macro defined; Generally faster compile times;");
-        println!("    release  Build with high optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times;");
+        println!("    debug    No optimization; Generate debugging information; 'VANGO_DEBUG' macro defined; Generally faster compile times");
+        println!("    release  High optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times");
     };
 
     if let Some(action) = action {
@@ -25,8 +26,9 @@ pub fn help(action: Option<&String>) {
                 println!("Usage: vango new <NAME> [OPTIONS]");
                 println!();
                 println!("Options:");
-                println!("    --lib  Generate library boilerplate instead of application");
-                println!("    --c    Generate C boilerplate instead of C++");
+                println!("    --lib     Generate library boilerplate instead of application");
+                println!("    --c       Generate C boilerplate instead of C++");
+                println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
             "init" => {
                 println!("Create a boilerplate C++ project inside an existing folder");
@@ -34,8 +36,9 @@ pub fn help(action: Option<&String>) {
                 println!("Usage: vango init [OPTIONS]");
                 println!();
                 println!("Options:");
-                println!("    --lib  Generate library boilerplate instead of application");
-                println!("    --c    Generate C boilerplate instead of C++");
+                println!("    --lib     Generate library boilerplate instead of application");
+                println!("    --c       Generate C boilerplate instead of C++");
+                println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
             "clean" => {
                 println!("Remove all generated build files from the current project");
@@ -43,7 +46,7 @@ pub fn help(action: Option<&String>) {
                 println!("Usage: vango clean");
             }
             "clangd" => {
-                println!("Generate 'compile_flags.txt corresponding to the current project (language standard, include dirs, definitions");
+                println!("Generate 'compile_flags.txt' corresponding to the current project (language standard, include dirs, definitions");
                 println!();
                 println!("Usage: vango clangd");
             }
@@ -55,14 +58,14 @@ pub fn help(action: Option<&String>) {
                 print_build_details();
             }
             "run" => {
-                println!("Build and run the current project, with the working directory as the project root, and forwarding commandline arguments");
+                println!("Build and run the current project, forwarding command-line arguments, with project root as working directory");
                 println!();
                 println!("Usage: vango run [OPTIONS] [-- ARGS]");
                 println!();
                 print_build_details();
             }
             "test" => {
-                println!("Build the current project in test configuration, link it to your test app and run it. Defines 'VANGO_TEST'.");
+                println!("Build the current project and run all (or select) tests in 'test' directory. Defines 'VANGO_TEST'.");
                 println!();
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();
@@ -110,13 +113,13 @@ pub fn help(action: Option<&String>) {
         println!();
         println!("Commands:");
         println!("    new         Create a new empty project");
-        println!("    init        Create a new empty project in an existing location");
+        println!("    init        Create an empty project in an existing location");
         println!("    help        Display help about a command (list toolchains with 'help toolchains')");
-        println!("    clean, c    Remove all build files of the current project");
+        println!("    clean, c    Remove all generated build files from the current project");
         println!("    build, b    Build the current project");
         println!("    run,   r    Build the current project and run it");
         println!("    test,  t    Build the current project and test it");
-        println!("    clangd      Generate 'compile_flags.txt for the current project");
+        println!("    clangd      Generate 'compile_flags.txt' for the current project");
     }
     println!();
 }

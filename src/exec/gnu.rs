@@ -120,7 +120,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
 
     if echo { print_command(&cmd); }
     if output::gnu_linker(&cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
-        log_info_ln!("successfully built project {}\n", info.outfile.display());
+        log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(true)
     } else {
         Err(Error::LinkerFail(info.outfile))
@@ -141,7 +141,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: 
 
     if echo { print_command(&cmd); }
     if output::gnu_archiver(&cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?) {
-        log_info_ln!("successfully built project {}\n", info.outfile.display());
+        log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(true)
     } else {
         Err(Error::ArchiverFail(info.outfile))

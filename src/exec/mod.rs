@@ -110,7 +110,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         };
 
         if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
-            log_info_ln!("precompiling header: '{}'", inpch.display());
+            log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc() {
                 msvc::compile(&incpp, &outfile, &info, &var, echo, verbose)

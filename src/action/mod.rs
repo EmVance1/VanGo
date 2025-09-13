@@ -4,11 +4,9 @@ mod build;
 mod test;
 mod generate;
 
-use std::{io::Write, path::{Path, PathBuf}};
+use std::{io::Write, path::{PathBuf}};
 use crate::{
-    config::BuildFile,
-    error::Error,
-    log_info_ln,
+    config::BuildFile, input::BuildSwitches, error::Error, log_info_ln
 };
 pub use new::{init, new};
 pub use help::help;
@@ -34,14 +32,18 @@ pub fn clean(build: &BuildFile) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn run(outfile: &Path, runargs: Vec<String>) -> Result<u8, Error> {
+pub fn run(name: &str, switches: &BuildSwitches, runargs: Vec<String>) -> Result<u8, Error> {
+    let outfile = PathBuf::from("bin")
+        .join(switches.profile.to_string()).join(name)
+        .with_extension(switches.toolchain.app_ext());
+
     log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
-    Ok(std::process::Command::new(PathBuf::from(".").join(outfile))
+    Ok(std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
-        .map_err(|_| Error::InvalidExe(outfile.to_owned()))?
+        .map_err(|_| Error::InvalidExe(outfile.clone()))?
         .code()
-        .ok_or(Error::ExeKilled(outfile.to_owned()))? as u8)
+        .ok_or(Error::ExeKilled(outfile))? as u8)
 }
 

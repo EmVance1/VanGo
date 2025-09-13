@@ -8,8 +8,8 @@ use crate::{
 };
 
 
-pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<(bool, PathBuf), Error> {
-    let profile = build.take(&switches.profile)?;
+pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<bool, Error> {
+    let profile = build.get(&switches.profile)?.to_owned();
     let srcdir = PathBuf::from("src");
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     if build.lang.is_cpp() {
@@ -23,7 +23,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) ->
     }
     let sources = fetch::source_files(&srcdir, build.lang.src_ext()).unwrap();
 
-    let mut deps = fetch::libraries(build.dependencies, switches, build.lang)?;
+    let mut deps = fetch::libraries(&build.dependencies, switches, build.lang)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
     if cfg!(windows) {
@@ -39,7 +39,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) ->
     let outdir = PathBuf::from("bin").join(switches.profile.to_string());
     let (outfile, implib) = match build.kind {
         ProjKind::App => {
-            (outdir.join(build.name).with_extension(switches.toolchain.app_ext()), None)
+            (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None)
         }
         ProjKind::SharedLib{implib: false} => {
             (outdir.join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
@@ -62,7 +62,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) ->
         toolchain: switches.toolchain,
         lang:      build.lang,
         crtstatic: switches.crtstatic,
-        cpprt:     build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
+        cpprt:     build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
 
         defines:  deps.defines,
@@ -85,7 +85,7 @@ pub fn build(mut build: BuildFile, switches: &BuildSwitches, recursive: bool) ->
     };
     match exec::run_build(info, switches.echo, switches.verbose, recursive) {
         Err(e) => Err(e),
-        Ok(rebuilt) => Ok((rebuilt_dep || rebuilt, outfile)),
+        Ok(rebuilt) => Ok(rebuilt_dep || rebuilt),
     }
 }
 

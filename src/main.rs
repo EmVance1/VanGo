@@ -63,22 +63,23 @@ fn main() -> ExitCode {
         action::init(*library, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
 
     } else {
-        let bfile = read_manifest().unwrap_or_else(|e| exit_failure!("{}", e));
+        let bfile = read_manifest()
+            .unwrap_or_else(|e| exit_failure!("{}", e));
         let build = config::VangoFile::from_str(&bfile)
             .unwrap_or_else(|e| exit_failure!("{}", e))
             .unwrap_build();
 
         match cmd {
             input::Action::Build{ switches } => {
-                action::build(build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                let _ = action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Run{ switches, args } => {
                 if build.kind.is_lib() { exit_failure!("{}", Error::LibNotExe(build.name)); }
-                let (_, outfile) = action::build(build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                return action::run(&outfile, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
+                let _ = action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                return action::run(&build.name, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Test{ switches, args } => {
-                action::build(build.clone(), &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                let _ = action::build(&build, &switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
                 return action::test(build, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e)).into()
             }
             input::Action::Clean => {

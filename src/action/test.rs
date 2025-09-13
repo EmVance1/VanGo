@@ -26,7 +26,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     headers.push(include.join("vangotest/asserts2.h"));
     headers.push(include.join("vangotest/casserts2.h"));
 
-    let mut inherited = fetch::libraries(build.dependencies.clone(), switches, build.lang).unwrap();
+    let mut inherited = fetch::libraries(&build.dependencies, switches, build.lang).unwrap();
     inherited.defines.push("VANGO_TEST".to_string());
     inherited.incdirs.extend([ "test".into(), include, profile.include_pub ]);
     inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));

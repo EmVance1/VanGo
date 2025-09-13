@@ -28,7 +28,7 @@ pub struct Dependencies {
     pub rebuilt:  bool,
 }
 
-pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(libraries: &[Dependency], switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
     let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
 
@@ -59,13 +59,13 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                             .unwrap();
                     }
                 }
-                path
+                path.to_owned()
             }
             Dependency::Local { path, features: _ } => {
-                path
+                path.to_owned()
             }
             Dependency::Headers { headers, features: _ } => {
-                deps.incdirs.push(headers);
+                deps.incdirs.push(headers.clone());
                 continue;
             }
             Dependency::System { system, target } => {
@@ -79,7 +79,7 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
                 if switches.toolchain.is_msvc() {
                     deps.archives.push(system.with_extension("lib"));
                 } else {
-                    deps.archives.push(system);
+                    deps.archives.push(system.to_owned());
                 }
                 continue;
             }
@@ -89,14 +89,15 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
             return Err(Error::DirectoryNotFound(path))
         }
 
-        let mut built = false;
+        let mut srcpkg = false;
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
             VangoFile::Build(build) => {
-                built = true;
-                let (rebuilt, _) = crate::action::build(build.clone(), switches, true)?;
-                if rebuilt { deps.rebuilt = true; }
+                srcpkg = true;
+                if crate::action::build(&build, switches, true)? {
+                    deps.rebuilt = true;
+                }
                 LibFile::try_from(build)?.validate(lang)?
             }
             VangoFile::Lib(lib) => lib,
@@ -107,12 +108,12 @@ pub fn libraries(libraries: Vec<Dependency>, switches: &BuildSwitches, lang: Lan
         deps.libdirs.push(path.join(&profile.libdir));
         if switches.toolchain.is_msvc() {
             for l in profile.binaries {
-                if built { deps.relink.push(path.join(&profile.libdir).join(&l).with_extension("lib")); }
+                if srcpkg { deps.relink.push(path.join(&profile.libdir).join(&l).with_extension("lib")); }
                 deps.archives.push(l.with_extension("lib"));
             }
         } else {
             for l in profile.binaries {
-                if built { deps.relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a")); }
+                if srcpkg { deps.relink.push(path.join(&profile.libdir).join(format!("lib{}", l.display())).with_extension("a")); }
                 deps.archives.push(l);
             }
         }

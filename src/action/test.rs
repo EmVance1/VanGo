@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf};
+use std::{io::Write, path::PathBuf, process::ExitCode};
 use crate::{
     config::BuildFile,
     input::BuildSwitches,
@@ -9,7 +9,7 @@ use crate::{
 };
 
 
-pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<u8, Error> {
+pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<ExitCode, Error> {
     if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
 
     let include = std::env::current_exe()?
@@ -71,12 +71,15 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     };
     exec::run_build(info, switches.echo, false, false)?;
     log_info_ln!("{:=<80}", format!("running tests for project: {} ", build.name));
-    Ok(std::process::Command::new(PathBuf::from(".").join(&outfile))
+    let code: u8 = std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
         .unwrap()
         .code()
-        .ok_or(Error::ExeKilled(outfile))? as u8)
+        .ok_or(Error::ExeKilled(outfile))?
+        .try_into()
+        .unwrap_or(1);
+    Ok(code.into())
 }
 

@@ -59,10 +59,10 @@ pub fn libraries(libraries: &[Dependency], switches: &BuildSwitches, lang: Lang)
                             .unwrap();
                     }
                 }
-                path.to_owned()
+                path.clone()
             }
             Dependency::Local { path, features: _ } => {
-                path.to_owned()
+                path.clone()
             }
             Dependency::Headers { headers, features: _ } => {
                 deps.incdirs.push(headers.clone());
@@ -79,7 +79,7 @@ pub fn libraries(libraries: &[Dependency], switches: &BuildSwitches, lang: Lang)
                 if switches.toolchain.is_msvc() {
                     deps.archives.push(system.with_extension("lib"));
                 } else {
-                    deps.archives.push(system.to_owned());
+                    deps.archives.push(system.clone());
                 }
                 continue;
             }

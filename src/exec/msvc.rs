@@ -46,8 +46,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     match info.settings.opt_level {
         0 => { cmd.arg("/Od"); }
-        1 => { cmd.arg("/0x"); }
-        2 => { cmd.arg("/01"); }
+        1 => { cmd.arg("/Ox"); }
+        2 => { cmd.arg("/O1"); }
         3 => { cmd.args([ "/O2", "/Oi" ]); }
         _ => (),
     }
@@ -61,7 +61,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("/GL");
     }
     if info.settings.debug_info {
-        cmd.args([ "/Zi", "/Fd:bin\\debug\\obj\\", "/FS", "/sdl" ]);
+        cmd.args([ "/Zi", "/FS", "/sdl" ]);
+        cmd.arg(format!("/Fd:{}", info.outdir.display()));
         if !info.toolchain.is_clang() { cmd.arg("/Zf"); }
     }
     match info.settings.warn_level {

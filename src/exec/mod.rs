@@ -103,13 +103,13 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         let inpch = info.srcdir.join(pch);
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext()));
         let outfile = if info.toolchain.is_msvc() {
-            let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.to_string_lossy()));
+            let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.display()));
             info.outdir.join("obj").join(pch).with_extension("h.obj")
         } else {
             info.outdir.join("pch").join(pch).with_extension("h.gch")
         };
 
-        if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch).unwrap().modified()? > std::fs::metadata(&outfile).unwrap().modified()?) {
+        if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?) {
             log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc() {

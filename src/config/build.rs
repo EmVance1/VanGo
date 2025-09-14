@@ -223,6 +223,7 @@ impl BuildProfile {
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BuildSettings {
     pub opt_level:     u32,
     pub opt_size:      bool,

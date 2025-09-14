@@ -1,6 +1,5 @@
 use crate::{error::Error, config::{Profile, ToolChain}};
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     New { library: bool, is_c: bool, clangd: bool, name: String },
@@ -14,14 +13,15 @@ pub enum Action {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BuildSwitches {
     pub profile: Profile,
     pub toolchain: ToolChain,
     pub crtstatic: bool,
-    pub install: bool,
-    pub echo: bool,
-    pub verbose: bool,
-    pub is_test: bool,
+    pub install:   bool,
+    pub echo:      bool,
+    pub verbose:   bool,
+    pub is_test:   bool,
 }
 
 

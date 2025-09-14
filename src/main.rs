@@ -67,7 +67,8 @@ fn main() -> ExitCode {
             .unwrap_or_else(|e| exit_failure!("{}", e));
         let build = config::VangoFile::from_str(&bfile)
             .unwrap_or_else(|e| exit_failure!("{}", e))
-            .unwrap_build();
+            .get_build()
+            .unwrap_or_else(|| exit_failure!("action requires source code ([package]) type manifest"));
 
         match cmd {
             input::Action::Build{ switches } => {

@@ -10,18 +10,18 @@ pub enum Error {
     // MissingArgs(String),
     #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
     ExtraArgs(String, Vec<String>),
-    #[error("toolchain 'MSVC' unavailable on non-windows platforms")]
+    #[error("directory '{0}' does not contain a build manifest (Vango.toml)")]
+    MissingBuildScript(PathBuf),
+    #[error("Vango.toml error: {0}")]
+    TomlParse(#[from] toml::de::Error),
+    #[error("build script did not contain valid package header ([package] | [staticlib])")]
+    InvalidPkgHeader,
+    #[error("toolchain 'MSVC' is unavailable on non-windows platforms")]
     MsvcUnavailable,
     #[error("toolchain '{0}' is unavailable")]
     UnknownToolChain(String),
     #[error("directory '{0}' was not found")]
     DirectoryNotFound(PathBuf),
-    #[error("directory '{0}' does not contain a build script")]
-    MissingBuildScript(PathBuf),
-    #[error("toml error: {0}")]
-    TomlParse(#[from] toml::de::Error),
-    #[error("build script did not contain valid package header ([package] | [staticlib])")]
-    InvalidPkgHeader,
     #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
     #[error("library '{0}' C/C++ standard incompatible with current project")]

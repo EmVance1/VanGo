@@ -7,34 +7,39 @@ use crate::{
 
 
 pub fn generate(build: &BuildFile) -> Result<(), Error> {
-    log_info_ln!("generating 'compile_flags.txt' for \"{}\"", build.name);
-    let mut flags = format!("-std={}\n{}", build.lang, if build.lang.is_cpp() { "-xc++\n" } else { "" });
+    log_info_ln!("generating 'compile_flags.txt' for '{}'", build.name);
+    let mut file = std::io::BufWriter::new(std::fs::File::create("compile_flags.txt")?);
+    writeln!(file, "-std={}", build.lang)?;
+    if build.lang.is_cpp() {
+        writeln!(file, "-xc++")?;
+    }
 
     let profile = build.get(&Profile::Debug)?;
     match profile.settings.warn_level {
         WarnLevel::None => {
-            flags.push_str("-w\n");
+            writeln!(file, "-w")?;
             if profile.settings.iso_compliant {
-                flags.push_str("-Wpedantic\n");
+                writeln!(file, "-Wpedantic")?;
             }
         }
         WarnLevel::Basic => {
-            flags.push_str("-Wall\n");
+            writeln!(file, "-Wall")?;
             if profile.settings.iso_compliant {
-                flags.push_str("-Wpedantic\n");
+                writeln!(file, "-Wpedantic")?;
             }
         }
         WarnLevel::High => {
-            flags.push_str("-Wall\n");
-            flags.push_str("-Wextra\n");
-            flags.push_str("-Wpedantic\n");
-            flags.push_str("-Wconversion\n");
-            flags.push_str("-Wsign-conversion\n");
-            flags.push_str("-Wshadow\n");
-            flags.push_str("-Wformat=2\n");
-            flags.push_str("-Wnull-dereference\n");
-            flags.push_str("-Wdouble-promotion\n");
-            flags.push_str("-Wimplicit-fallthrough\n");
+            writeln!(file, "\
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Wshadow
+                -Wformat=2
+                -Wnull-dereference
+                -Wdouble-promotion
+                -Wimplicit-fallthrough")?;
         }
     }
 
@@ -96,16 +101,24 @@ pub fn generate(build: &BuildFile) -> Result<(), Error> {
         }
     }
     for dep in defines {
-        flags.push_str(&format!("-D{dep}\n"));
+        writeln!(file, "-D{dep}")?;
     }
     for inc in incdirs {
-        flags.push_str(&format!("-I{}\n", inc.display()));
+        writeln!(file, "-I{}", inc.display())?;
     }
     for inc in &profile.include {
-        flags.push_str(&format!("-I{}\n", inc.display()));
+        writeln!(file, "-I{}", inc.display())?;
     }
 
-    std::fs::write("compile_flags.txt", flags)?;
+    writeln!(file, "-I{}", std::env::current_exe()?
+        .parent()
+        .unwrap()
+        .to_owned()
+        .join("testframework")
+        .display())?;
+
+    file.flush()?;
+
     Ok(())
 }
 

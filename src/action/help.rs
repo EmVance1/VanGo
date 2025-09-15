@@ -1,3 +1,5 @@
+use std::io::BufRead;
+
 use crate::config::ToolChain;
 
 
@@ -74,34 +76,25 @@ pub fn help(action: Option<&String>) {
             "toolchains" => {
                 println!("Toolchains currently installed on this system:");
                 println!();
-                if std::process::Command::new("gcc").output().is_ok() {
-                    if cfg!(windows) {
-                        println!("    gcc        - GCC, Gnu Compiler Collection for MinGW");
-                    } else {
-                        println!("    gcc        - GCC, Gnu Compiler Collection");
-                    }
+                if let Ok(ver) = std::process::Command::new("gcc").arg("--version").output() {
+                    println!("    gcc    - {}", ver.stdout.lines().next().unwrap().unwrap());
                 } else {
-                    println!("    gcc        - unavailable");
+                    println!("    gcc    - unavailable");
                 }
-                if std::process::Command::new("clang").output().is_ok() {
-                    if cfg!(windows) {
-                        println!("    clang-gnu  - Clang Compiler with LLVM Backend");
-                        println!("    clang-msvc - Clang/LLVM Compatible with MSVC Toolchain");
-                    } else {
-                        println!("    clang      - Clang Compiler with LLVM Backend");
-                    }
+                if let Ok(ver) = std::process::Command::new("clang").arg("--version").output() {
+                    println!("    clang  - {}", ver.stdout.lines().next().unwrap().unwrap());
                 } else {
-                    println!("    clang      - unavailable");
+                    println!("    clang  - unavailable");
                 }
-                if std::process::Command::new("cl.exe").output().is_ok() {
-                    println!("    msvc       - MSVC, Microsoft Visual C/C++ Compiler for Windows ");
+                if let Ok(ver) = std::process::Command::new("cl.exe").arg("--version").output() {
+                    println!("    msvc   - {}", ver.stderr.lines().next().unwrap().unwrap());
                 } else {
-                    println!("    msvc       - unavailable");
+                    println!("    msvc   - unavailable");
                 }
-                if std::process::Command::new("zig").output().is_ok() {
-                    println!("    zig        - Zig Wrapper for Clang/LLVM Compiler");
+                if let Ok(ver) = std::process::Command::new("zig").arg("version").output() {
+                    println!("    zig    - {}", ver.stdout.lines().next().unwrap().unwrap());
                 } else {
-                    println!("    zig        - unavailable");
+                    println!("    zig    - unavailable");
                 }
             }
             _ => (),

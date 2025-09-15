@@ -1,13 +1,13 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
 use crate::error::Error;
-use super::{Lang, Profile, ProjKind};
+use super::{Version, Lang, Profile, ProjKind};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildFile {
     pub name: String,
-    pub version: String,
+    pub version: Version,
     pub lang: Lang,
     pub kind: ProjKind,
     pub interface: Lang,
@@ -57,7 +57,7 @@ impl BuildFile {
 
         Ok(BuildFile{
             name:      file.package.name,
-            version:   file.package.version,
+            version:   Version::from_str(&file.package.version)?,
             lang,
             kind,
             interface,

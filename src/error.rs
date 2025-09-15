@@ -16,7 +16,9 @@ pub enum Error {
     #[error("toml parse error: {0}")]
     TomlParse(#[from] toml::de::Error),
     #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
-    ProjkindMimicToml(String),
+    MimicTomlSemver(String),
+    #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
+    MimicTomlProjkind(String),
     #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
     InvalidPkgHeader(PathBuf),
     #[error("toolchain 'MSVC' is unavailable on non-windows platforms")]

@@ -6,6 +6,36 @@ use std::{
 use crate::{log_warn_ln, Error};
 
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Version {
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+impl FromStr for Version {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut result = Version{ major: 0, minor: 0, patch: 0 };
+        for (i, n) in s.split('.').enumerate() {
+            match i {
+                0 => result.major = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+                1 => result.minor = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+                2 => result.patch = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+                _ => return Err(Error::MimicTomlSemver(s.to_string()))
+            }
+        }
+        Ok(result)
+    }
+}
+
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ProjKind {
     #[default]
@@ -34,7 +64,7 @@ impl FromStr for ProjKind {
             "app"       => Ok(ProjKind::App),
             "sharedlib" => Ok(ProjKind::SharedLib{ implib: true }),
             "staticlib" => Ok(ProjKind::StaticLib),
-            _ => Err(Error::ProjkindMimicToml(s.to_string()))
+            _ => Err(Error::MimicTomlProjkind(s.to_string()))
         }
     }
 }

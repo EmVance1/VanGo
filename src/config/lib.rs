@@ -1,13 +1,13 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
 use crate::error::Error;
-use super::{build::BuildFile, Profile, Lang};
+use super::{build::BuildFile, Version, Profile, Lang};
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibFile {
     pub name:     String,
-    pub version:  String,
+    pub version:  Version,
     pub lang:     Lang,
     pub profiles: HashMap<String, LibProfile>,
 }
@@ -38,7 +38,7 @@ impl LibFile {
 
         Ok(LibFile{
             name:    file.staticlib.name,
-            version: file.staticlib.version,
+            version: Version::from_str(&file.staticlib.version)?,
             lang:    Lang::from_str(&file.staticlib.lang)?,
             profiles,
         })

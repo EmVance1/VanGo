@@ -103,7 +103,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Build(BuildFile{
             name: "Shimmy".to_string(),
-            version: "0.1.0".to_string(),
+            version: "0.1.0".parse().unwrap(),
             lang: Lang::Cpp(120),
             kind: ProjKind::App,
             interface: Lang::Cpp(120),
@@ -153,7 +153,7 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
 
         assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Lib(LibFile{
             name:    "SFML".to_string(),
-            version: "3.0.1".to_string(),
+            version: "3.0.1".parse().unwrap(),
             lang:    Lang::from_str("C++17").unwrap(),
             profiles,
         }));

@@ -74,8 +74,8 @@ pub fn generate(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         incdirs.push(path.join(profile.include));
     }
 
-    for dep in defines {
-        writeln!(file, "-D{dep}")?;
+    for def in defines {
+        writeln!(file, "-D{def}")?;
     }
     if cfg!(windows) {
         writeln!(file, "-DUNICODE")?;
@@ -84,6 +84,11 @@ pub fn generate(build: &BuildFile, block_output: bool) -> Result<(), Error> {
             writeln!(file, "-DVANGO_EXPORT_SHARED")?;
         }
     }
+    writeln!(file, "-DVANGO_DEBUG")?;
+    writeln!(file, "-DVANGO_PKG_VERSION=\"{}\"", build.version)?;
+    writeln!(file, "-DVANGO_PKG_VERSION_MAJOR={}", build.version.major)?;
+    writeln!(file, "-DVANGO_PKG_VERSION_MINOR={}", build.version.minor)?;
+    writeln!(file, "-DVANGO_PKG_VERSION_PATCH={}", build.version.patch)?;
     for inc in incdirs {
         writeln!(file, "-I{}", inc.display())?;
     }

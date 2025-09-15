@@ -33,6 +33,10 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
+    deps.defines.push(format!("VANGO_PKG_VERSION=\"{}\"", build.version));
+    deps.defines.push(format!("VANGO_PKG_VERSION_MAJOR={}", build.version.major));
+    deps.defines.push(format!("VANGO_PKG_VERSION_MINOR={}", build.version.minor));
+    deps.defines.push(format!("VANGO_PKG_VERSION_PATCH={}", build.version.patch));
     deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;

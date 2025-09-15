@@ -30,7 +30,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
             let pairs: Vec<_> = info.sources.iter()
                 .filter_map(|src| {
                     if src.metadata().unwrap().modified().unwrap() > pivot {
-                        Some((src.as_path(), transform_file(&src, &info.outdir, info.toolchain.is_msvc())))
+                        Some((src.as_path(), transform_file(src, &info.outdir, info.toolchain.is_msvc())))
                     } else {
                         None
                     }
@@ -51,7 +51,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
         // RECOMPILE ANY SOURCE THAT IS NEWER THAN ITS OBJECT
         let pairs: Vec<_> = info.sources.iter()
             .filter_map(|src| {
-                let obj = transform_file(&src, &info.outdir, info.toolchain.is_msvc());
+                let obj = transform_file(src, &info.outdir, info.toolchain.is_msvc());
                 if !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()) {
                     Some((src.as_path(), obj))
                 } else {

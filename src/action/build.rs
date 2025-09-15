@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use crate::{
-    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version}, error::Error, exec::{self, BuildInfo}, fetch, input::BuildSwitches
+    input::BuildSwitches,
+    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version},
+    fetch,
+    exec::{self, BuildInfo},
+    error::Error,
 };
 
 
@@ -99,6 +103,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 struct BuildCache {
     opt_level:     u32,
     opt_size:      bool,
@@ -119,7 +124,7 @@ struct BuildCache {
     version:       Version
 }
 
-fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &PathBuf) -> bool {
+fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &std::path::Path) -> bool {
     let newcache = BuildCache{
         opt_level:     settings.opt_level,
         opt_size:      settings.opt_size,
@@ -140,13 +145,13 @@ fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, 
         version,
     };
     let cachepath = outdir.join("build_cache.json");
-    if !cachepath.exists() {
-        let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
-        false
-    } else {
+    if cachepath.exists() {
         let oldcache: BuildCache = serde_json::from_str(&std::fs::read_to_string(&cachepath).unwrap()).unwrap();
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
         oldcache != newcache
+    } else {
+        let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
+        false
     }
 }
 

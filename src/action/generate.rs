@@ -6,8 +6,10 @@ use crate::{
 };
 
 
-pub fn generate(build: &BuildFile) -> Result<(), Error> {
-    log_info_ln!("generating 'compile_flags.txt' for '{}'", build.name);
+pub fn generate(build: &BuildFile, block_output: bool) -> Result<(), Error> {
+    if !block_output {
+        log_info_ln!("generating 'compile_flags.txt' for '{}'", build.name);
+    }
     let mut file = std::io::BufWriter::new(std::fs::File::create("compile_flags.txt")?);
     writeln!(file, "-std={}", build.lang)?;
     if build.lang.is_cpp() {
@@ -33,14 +35,22 @@ pub fn generate(build: &BuildFile) -> Result<(), Error> {
         writeln!(file, "-Wpedantic")?;
     }
 
+    let home = std::env::home_dir().unwrap();
     let mut defines = Vec::new();
     let mut incdirs = Vec::new();
 
     for lib in &build.dependencies {
         let path = match lib {
             Dependency::Local { path, .. } => path.clone(),
-            #[allow(unused)]
-            Dependency::Git { git, tag, .. } => continue,
+            Dependency::Git { git, tag, recipe, .. } => {
+                let git = std::path::Path::new(&git);
+                let stem = git.file_stem().unwrap().to_string_lossy();
+                let path = home.join(format!(".vango/packages/{stem}"));
+                if !std::fs::exists(&path).unwrap() {
+                    crate::fetch::pull_git_repo(git, tag, recipe, &path);
+                }
+                path.clone()
+            }
             Dependency::Headers { headers, .. } => {
                 incdirs.push(headers.clone());
                 continue;
@@ -54,20 +64,14 @@ pub fn generate(build: &BuildFile) -> Result<(), Error> {
 
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
-        match VangoFile::from_str(&crate::read_manifest()?)? {
-            VangoFile::Build(build) => {
-                let profile = LibFile::try_from(build)?
-                    .take(&Profile::Debug)?;
-                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
-                incdirs.push(path.join(profile.include));
-            }
-            VangoFile::Lib(mut lib) => {
-                let profile = lib.take(&Profile::Debug)?;
-                defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
-                incdirs.push(path.join(profile.include));
-            }
-        }
+        let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
+            VangoFile::Build(build) => LibFile::try_from(build)?,
+            VangoFile::Lib(lib) => lib,
+        };
         std::env::set_current_dir(&save).unwrap();
+        let profile = library.take(&Profile::Debug)?;
+        defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+        incdirs.push(path.join(profile.include));
     }
 
     for dep in defines {

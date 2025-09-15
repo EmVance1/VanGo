@@ -57,7 +57,7 @@ int func(int a, int b) {{
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(&build.unwrap_build())?;
+            generate(&build.unwrap_build(), true)?;
         }
     } else {
         let toml = format!("\
@@ -78,7 +78,7 @@ int main() {{
         std::fs::write("Vango.toml", &toml)?;
         if clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(&build.unwrap_build())?;
+            generate(&build.unwrap_build(), true)?;
         }
     }
     log_info_ln!("successfully created project '{name}'");

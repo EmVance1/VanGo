@@ -1,5 +1,6 @@
 use thiserror::Error;
 use std::path::PathBuf;
+use crate::config::Lang;
 
 
 #[derive(Debug, Error)]
@@ -12,10 +13,12 @@ pub enum Error {
     ExtraArgs(String, Vec<String>),
     #[error("directory '{0}' does not contain a build manifest (Vango.toml)")]
     MissingBuildScript(PathBuf),
-    #[error("Vango.toml error: {0}")]
+    #[error("toml parse error: {0}")]
     TomlParse(#[from] toml::de::Error),
-    #[error("build script did not contain valid package header ([package] | [staticlib])")]
-    InvalidPkgHeader,
+    #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
+    ProjkindMimicToml(String),
+    #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
+    InvalidPkgHeader(PathBuf),
     #[error("toolchain 'MSVC' is unavailable on non-windows platforms")]
     MsvcUnavailable,
     #[error("toolchain '{0}' is unavailable")]
@@ -24,8 +27,8 @@ pub enum Error {
     DirectoryNotFound(PathBuf),
     #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
-    #[error("library '{0}' C/C++ standard incompatible with current project")]
-    IncompatibleCppStd(String),
+    #[error("library '{0}' uses {1}, incompatible with project '{2}' ({3})")]
+    IncompatibleCppStd(String, Lang, String, Lang),
     #[error("project '{0}' does not contain profile '{1}'")]
     ProfileUnavailable(String, String),
     #[error("custom profile '{0}' must inherit from a builtin profile")]
@@ -44,18 +47,20 @@ pub enum Error {
     ArchiverFail(PathBuf),
     #[error("failed to link project '{0}'")]
     LinkerFail(PathBuf),
-    #[error("project does not contain 'test' directory")]
-    MissingTests,
+    #[error("project '{0}' does not contain 'test' directory")]
+    MissingTests(String),
     #[error("binary '{0}' is not runnable on current platform")]
     InvalidExe(PathBuf),
     #[error("project '{0}' does not build an executable")]
     LibNotExe(String),
     #[error("executable '{0}' was killed by the host OS (potential segfault)")]
     ExeKilled(PathBuf),
-    #[error("OS or IO error: {0}")]
+    #[error("OS error: {0}")]
     FileSystem(#[from] std::io::Error),
+
     #[error("build failed")]
-    #[allow(unused)]
+    #[allow(dead_code)]
+    #[deprecated(note = "use of catch-all default error is discouraged")]
     Unknown,
 }
 

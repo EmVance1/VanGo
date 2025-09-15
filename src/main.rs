@@ -87,7 +87,7 @@ fn main() -> ExitCode {
                 action::clean(&build).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Gen{ target: _ } => {
-                action::generate(&build).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::generate(&build, false).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             _ => unreachable!(),
         }

@@ -62,7 +62,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     if info.settings.debug_info {
         cmd.args([ "/Zi", "/FS", "/sdl" ]);
-        cmd.arg(format!("/Fd:{}", info.outdir.display()));
+        cmd.arg(format!("/Fd:{}\\", info.outdir.display()));
         if !info.toolchain.is_clang() { cmd.arg("/Zf"); }
     }
     match info.settings.warn_level {

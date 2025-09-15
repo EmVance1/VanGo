@@ -52,9 +52,9 @@ impl LibFile {
         }.ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
-    pub fn validate(self, max_lang: Lang) -> Result<Self, Error> {
-        if self.lang > max_lang {
-            Err(Error::IncompatibleCppStd(self.name))
+    pub fn validate(self, other_name: &str, other_lang: Lang) -> Result<Self, Error> {
+        if self.lang > other_lang {
+            Err(Error::IncompatibleCppStd(self.name, self.lang, other_name.to_string(), other_lang))
         } else {
             Ok(self)
         }
@@ -164,7 +164,7 @@ struct SerdeLibProfile {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
-#[allow(unused)]
+#[allow(dead_code)]
 pub struct SerdeFeature {
     requires: Vec<String>,
     binaries: Option<Vec<PathBuf>>,

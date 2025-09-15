@@ -10,7 +10,7 @@ use crate::{
 
 
 pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<ExitCode, Error> {
-    if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests); }
+    if !std::fs::exists("test").unwrap_or_default() { return Err(Error::MissingTests(build.name)); }
 
     let include = std::env::current_exe()?
         .parent()
@@ -26,7 +26,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     headers.push(include.join("vangotest/asserts2.h"));
     headers.push(include.join("vangotest/casserts2.h"));
 
-    let mut inherited = fetch::libraries(&build.dependencies, &profile.baseprof, switches, build.lang).unwrap();
+    let mut inherited = fetch::libraries(&build, &profile.baseprof, switches)?;
     inherited.defines.push("VANGO_TEST".to_string());
     inherited.incdirs.extend([ "test".into(), include, profile.include_pub ]);
     inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));

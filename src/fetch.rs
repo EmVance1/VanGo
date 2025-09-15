@@ -1,5 +1,5 @@
 use std::{ffi::OsStr, io::Write, path::{Path, PathBuf}};
-use crate::{config::{Dependency, Lang, LibFile, Profile, VangoFile}, error::Error, input::BuildSwitches, log_info_ln};
+use crate::{config::{VangoFile, BuildFile, LibFile, Dependency, Profile}, input::BuildSwitches, error::Error, log_info_ln};
 
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -18,6 +18,29 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
 }
 
 
+pub fn pull_git_repo(url: &Path, tag: &Option<String>, recipe: &Option<PathBuf>, install_loc: &Path) {
+    let branch: Vec<PathBuf> = if let Some(tag) = tag {
+        vec![ "--branch".into(), tag.into(), "--depth".into(), "1".into(), url.into() ]
+    } else {
+        vec![ url.into() ]
+    };
+    log_info_ln!("{:-<80}", format!("cloning project dependency to: {} ", install_loc.display()));
+    std::process::Command::new("git")
+        .arg("clone")
+        .args(branch)
+        .arg(install_loc)
+        .output()
+        .unwrap();
+    if let Some(recipe) = recipe {
+        log_info_ln!("building project dependency according to '{}'", recipe.display());
+        std::process::Command::new(PathBuf::from(".").join(recipe))
+            .current_dir(install_loc)
+            .output()
+            .unwrap();
+    }
+}
+
+
 #[derive(Debug, Default, Clone)]
 pub struct Dependencies {
     pub incdirs:  Vec<PathBuf>,
@@ -28,7 +51,7 @@ pub struct Dependencies {
     pub rebuilt:  bool,
 }
 
-pub fn libraries(libraries: &[Dependency], profile: &Profile, switches: &BuildSwitches, lang: Lang) -> Result<Dependencies, Error> {
+pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) -> Result<Dependencies, Error> {
     let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
     let switches = if let Profile::Custom(..) = switches.profile {
@@ -37,34 +60,16 @@ pub fn libraries(libraries: &[Dependency], profile: &Profile, switches: &BuildSw
         switches.clone()
     };
 
-    for lib in libraries {
+    for lib in &info.dependencies {
         let path = match lib {
             Dependency::Git { git, tag, recipe, features: _ } => {
                 let git = Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&path).unwrap() {
-                    let branch: Vec<PathBuf> = if let Some(tag) = tag {
-                        vec![ "--branch".into(), tag.into(), "--depth".into(), "1".into(), git.into() ]
-                    } else {
-                        vec![ git.into() ]
-                    };
-                    log_info_ln!("{:-<80}", format!("cloning project dependency to: $ENV/packages/{stem} "));
-                    std::process::Command::new("git")
-                        .arg("clone")
-                        .args(branch)
-                        .arg(&path)
-                        .output()
-                        .unwrap();
-                    if let Some(recipe) = recipe {
-                        log_info_ln!("building project dependency according to '{}'", recipe.display());
-                        std::process::Command::new(PathBuf::from(".").join(recipe))
-                            .current_dir(&path)
-                            .output()
-                            .unwrap();
-                    }
+                    pull_git_repo(git, tag, recipe, &path);
                 }
-                path.clone()
+                path
             }
             Dependency::Local { path, features: _ } => {
                 path.clone()
@@ -100,12 +105,15 @@ pub fn libraries(libraries: &[Dependency], profile: &Profile, switches: &BuildSw
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
             VangoFile::Build(build) => {
                 srcpkg = true;
+                if build.interface > info.lang {
+                    return Err(Error::IncompatibleCppStd(build.name, build.interface, info.name.clone(), info.lang))
+                }
                 if crate::action::build(&build, &switches, true)? {
                     deps.rebuilt = true;
                 }
-                LibFile::try_from(build)?.validate(lang)?
+                LibFile::try_from(build)?
             }
-            VangoFile::Lib(lib) => lib,
+            VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };
         std::env::set_current_dir(&save).unwrap();
         let profile = library.take(&switches.profile)?;

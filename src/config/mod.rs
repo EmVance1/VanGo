@@ -14,7 +14,7 @@ pub enum VangoFile {
     Lib(LibFile),
 }
 
-#[allow(unused)]
+#[allow(dead_code)]
 impl VangoFile {
     pub fn from_str(value: &str) -> Result<VangoFile, Error> {
         let table: toml::Table = toml::from_str(value)?;
@@ -23,7 +23,7 @@ impl VangoFile {
         } else if table.contains_key("staticlib") {
             Ok(VangoFile::Lib(LibFile::from_table(table)?))
         } else {
-            Err(Error::InvalidPkgHeader)
+            Err(Error::InvalidPkgHeader(std::env::current_dir()?))
         }
     }
 

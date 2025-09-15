@@ -41,10 +41,15 @@ impl BuildFile {
             }
         }
         let lang = Lang::from_str(&file.package.lang)?;
-        let mut kind = file.package.kind.map(|p| ProjKind::from_str(&p).unwrap()).unwrap_or_default();
+        let mut kind = ProjKind::from_str(&file.package.kind.unwrap_or("app".to_string()))?;
         if let ProjKind::SharedLib{ implib } = &mut kind {
             *implib = file.package.implib.unwrap_or(true);
         }
+        let interface = if let Some(interface) = file.package.interface {
+            Lang::from_str(&interface)?
+        } else {
+            lang
+        };
 
         for (_, v) in file.dependencies {
             dependencies.push(v.try_into()?);
@@ -55,7 +60,7 @@ impl BuildFile {
             version:   file.package.version,
             lang,
             kind,
-            interface: file.package.interface.map_or(lang, |l| Lang::from_str(&l).unwrap()),
+            interface,
             runtime:   file.package.runtime,
             dependencies,
             profiles,

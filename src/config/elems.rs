@@ -34,7 +34,7 @@ impl FromStr for ProjKind {
             "app"       => Ok(ProjKind::App),
             "sharedlib" => Ok(ProjKind::SharedLib{ implib: true }),
             "staticlib" => Ok(ProjKind::StaticLib),
-            _ => Err(Error::Unknown)
+            _ => Err(Error::ProjkindMimicToml(s.to_string()))
         }
     }
 }
@@ -79,19 +79,19 @@ impl ToolChain {
         }
     }
 
-    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn is_msvc(self) -> bool {
         matches!(self, Self::Msvc|Self::ClangMsvc)
     }
-    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn is_gnu(self) -> bool {
         matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig)
     }
-    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn is_clang(self) -> bool {
         matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
     }
-    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn is_llvm(self) -> bool {
         matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
     }

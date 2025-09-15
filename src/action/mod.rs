@@ -2,9 +2,9 @@ mod new;
 mod help;
 mod build;
 mod test;
-mod generate;
+mod clangd;
 
-use std::{io::Write, path::PathBuf, process::ExitCode};
+use std::{path::PathBuf, process::ExitCode};
 use crate::{
     config::BuildFile, input::BuildSwitches, error::Error, log_info_ln
 };
@@ -12,7 +12,7 @@ pub use new::{init, new};
 pub use help::help;
 pub use build::build;
 pub use test::test;
-pub use generate::generate;
+pub use clangd::clangd;
 
 
 pub fn clean(build: &BuildFile) -> Result<(), Error> {

@@ -6,7 +6,7 @@ use crate::{
 };
 
 
-pub fn generate(build: &BuildFile, block_output: bool) -> Result<(), Error> {
+pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if !block_output {
         log_info_ln!("generating 'compile_flags.txt' for '{}'", build.name);
     }

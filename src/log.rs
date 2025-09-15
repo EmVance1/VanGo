@@ -2,6 +2,7 @@
 #[macro_export]
 macro_rules! log_info {
     () => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
@@ -9,6 +10,7 @@ macro_rules! log_info {
         <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
     } };
     ($($arg:tt)*) => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
@@ -21,6 +23,7 @@ macro_rules! log_info {
 #[macro_export]
 macro_rules! log_info_ln {
     () => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
@@ -28,6 +31,7 @@ macro_rules! log_info_ln {
         <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
     } };
     ($($arg:tt)*) => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Green))).unwrap();
@@ -40,6 +44,7 @@ macro_rules! log_info_ln {
 #[macro_export]
 macro_rules! log_warn_ln {
     () => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Yellow))).unwrap();
@@ -47,6 +52,7 @@ macro_rules! log_warn_ln {
         <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stdout).unwrap();
     } };
     ($($arg:tt)*) => { {
+        use std::io::Write;
         let mut termcolor_stdout = ::termcolor::StandardStream::stdout(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stdout, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Yellow))).unwrap();
@@ -59,6 +65,7 @@ macro_rules! log_warn_ln {
 #[macro_export]
 macro_rules! log_error_ln {
     () => { {
+        use std::io::Write;
         let mut termcolor_stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stderr, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Red))).unwrap();
@@ -66,6 +73,7 @@ macro_rules! log_error_ln {
         <::termcolor::StandardStream as ::termcolor::WriteColor>::reset(&mut termcolor_stderr).unwrap();
     } };
     ($($arg:tt)*) => { {
+        use std::io::Write;
         let mut termcolor_stderr = ::termcolor::StandardStream::stderr(::termcolor::ColorChoice::Always);
         <::termcolor::StandardStream as ::termcolor::WriteColor>::set_color(&mut termcolor_stderr, ::termcolor::ColorSpec::new()
             .set_fg(Some(::termcolor::Color::Red))).unwrap();

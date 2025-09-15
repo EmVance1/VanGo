@@ -9,10 +9,7 @@ mod action;
 mod log;
 
 use error::Error;
-use std::{
-    io::Write,
-    process::ExitCode,
-};
+use std::process::ExitCode;
 
 
 macro_rules! exit_failure {
@@ -86,8 +83,8 @@ fn main() -> ExitCode {
             input::Action::Clean => {
                 action::clean(&build).unwrap_or_else(|e| exit_failure!("{}", e));
             }
-            input::Action::Gen{ target: _ } => {
-                action::generate(&build, false).unwrap_or_else(|e| exit_failure!("{}", e));
+            input::Action::Clangd => {
+                action::clangd(&build, false).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             _ => unreachable!(),
         }

@@ -1,4 +1,4 @@
-use std::{io::Write, path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 use super::{BuildInfo, PreCompHead};
 use crate::{config::{ProjKind, WarnLevel}, Error, exec::output, log_info_ln};
 

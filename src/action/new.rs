@@ -1,10 +1,9 @@
-use std::io::Write;
 use crate::{
     config::VangoFile,
     error::Error,
     log_info_ln,
 };
-use super::generate;
+use super::clangd;
 
 
 pub fn new(library: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Error> {
@@ -14,7 +13,7 @@ pub fn new(library: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Er
 }
 
 
-pub fn init(library: bool, is_c: bool, clangd: bool) -> Result<(), Error> {
+pub fn init(library: bool, is_c: bool, gen_clangd: bool) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
     log_info_ln!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext =    if is_c { "c" } else { "cpp" };
@@ -55,9 +54,9 @@ int func(int a, int b) {{
 }}
 "))?;
         std::fs::write("Vango.toml", &toml)?;
-        if clangd {
+        if gen_clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(&build.unwrap_build(), true)?;
+            clangd(&build.unwrap_build(), true)?;
         }
     } else {
         let toml = format!("\
@@ -76,9 +75,9 @@ int main() {{
 }}
 "))?;
         std::fs::write("Vango.toml", &toml)?;
-        if clangd {
+        if gen_clangd {
             let build = VangoFile::from_str(&toml).unwrap();
-            generate(&build.unwrap_build(), true)?;
+            clangd(&build.unwrap_build(), true)?;
         }
     }
     log_info_ln!("successfully created project '{name}'");

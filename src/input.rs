@@ -5,6 +5,8 @@ pub enum Action {
     New { library: bool, is_c: bool, clangd: bool, name: String },
     Init{ library: bool, is_c: bool, clangd: bool },
     Clean,
+    Clangd,
+    #[allow(dead_code)]
     Gen  { target: String },
     Build{ switches: BuildSwitches },
     Run  { switches: BuildSwitches, args: Vec<String> },
@@ -113,7 +115,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
         }
         "clangd" => {
             if args.is_empty() {
-                Ok(Action::Gen{ target: "clangd".to_string() })
+                Ok(Action::Clangd)
             } else {
                 Err(Error::ExtraArgs("gen".to_string(), args))
             }

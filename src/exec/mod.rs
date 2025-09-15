@@ -7,7 +7,7 @@ mod output;
 #[cfg(test)]
 mod mocks;
 
-use std::{io::Write, path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 use incremental::BuildLevel;
 use crate::{
     config::{BuildSettings, Lang, ProjKind, ToolChain}, error::Error, log_info_ln, log_warn_ln

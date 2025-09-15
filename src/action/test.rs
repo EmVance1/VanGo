@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf, process::ExitCode};
+use std::{path::PathBuf, process::ExitCode};
 use crate::{
     config::BuildFile,
     input::BuildSwitches,

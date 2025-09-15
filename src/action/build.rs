@@ -1,11 +1,7 @@
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use crate::{
-    input::BuildSwitches,
-    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version},
-    fetch,
-    exec::{self, BuildInfo},
-    error::Error,
+    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version, WarnLevel}, error::Error, exec::{self, BuildInfo}, fetch, input::BuildSwitches
 };
 
 
@@ -66,7 +62,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         }
     };
 
-    let changed = cache_changed_and_update(&profile.settings, switches, build.version, &outdir);
+    let changed = settings_cache_changed(&profile.settings, switches, build.version, &outdir);
 
     let info = BuildInfo{
         projkind:  build.kind,
@@ -110,6 +106,7 @@ struct BuildCache {
     opt_speed:     bool,
     opt_linktime:  bool,
     iso_compliant: bool,
+    warn_level:    WarnLevel,
     warn_as_error: bool,
     debug_info:    bool,
     runtime:       crate::config::Runtime,
@@ -117,20 +114,18 @@ struct BuildCache {
     aslr:          bool,
     rtti:          bool,
     crtstatic:     bool,
-    install:       bool,
-    echo:          bool,
-    verbose:       bool,
     is_test:       bool,
     version:       Version
 }
 
-fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &std::path::Path) -> bool {
+fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &std::path::Path) -> bool {
     let newcache = BuildCache{
         opt_level:     settings.opt_level,
         opt_size:      settings.opt_size,
         opt_speed:     settings.opt_speed,
         opt_linktime:  settings.opt_linktime,
         iso_compliant: settings.iso_compliant,
+        warn_level:    settings.warn_level,
         warn_as_error: settings.warn_as_error,
         debug_info:    settings.debug_info,
         runtime:       settings.runtime,
@@ -138,9 +133,6 @@ fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, 
         aslr:          settings.aslr,
         rtti:          settings.rtti,
         crtstatic:     switches.crtstatic,
-        install:       switches.install,
-        echo:          switches.echo,
-        verbose:       switches.verbose,
         is_test:       switches.is_test,
         version,
     };
@@ -148,7 +140,22 @@ fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, 
     if cachepath.exists() {
         let oldcache: BuildCache = serde_json::from_str(&std::fs::read_to_string(&cachepath).unwrap()).unwrap();
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
-        oldcache != newcache
+
+        newcache.opt_level     != oldcache.opt_level ||
+        newcache.opt_size      != oldcache.opt_size ||
+        newcache.opt_speed     != oldcache.opt_speed ||
+        newcache.opt_linktime  != oldcache.opt_linktime ||
+        (newcache.iso_compliant && !oldcache.iso_compliant) ||
+        ((newcache.warn_level > oldcache.warn_level) && newcache.warn_as_error) ||
+        (newcache.warn_as_error && !oldcache.warn_as_error) ||
+        newcache.debug_info    != oldcache.debug_info ||
+        newcache.runtime       != oldcache.runtime ||
+        newcache.pthreads      != oldcache.pthreads ||
+        newcache.aslr          != oldcache.aslr ||
+        newcache.rtti          != oldcache.rtti ||
+        newcache.crtstatic     != oldcache.crtstatic ||
+        newcache.is_test       != oldcache.is_test ||
+        newcache.version       != oldcache.version
     } else {
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
         false

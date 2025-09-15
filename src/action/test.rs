@@ -1,11 +1,6 @@
 use std::{path::PathBuf, process::ExitCode};
 use crate::{
-    config::BuildFile,
-    input::BuildSwitches,
-    fetch,
-    exec::{self, BuildInfo},
-    Error,
-    log_info_ln
+    config::{BuildFile, ToolChain}, exec::{self, BuildInfo}, fetch, input::BuildSwitches, log_info_ln, Error
 };
 
 
@@ -28,10 +23,19 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
 
     let mut inherited = fetch::libraries(&build, &profile.baseprof, switches)?;
     inherited.defines.push("VANGO_TEST".to_string());
+    if cfg!(windows) {
+        inherited.defines.push("UNICODE".to_string());
+        inherited.defines.push("_UNICODE".to_string());
+    }
     inherited.incdirs.extend([ "test".into(), include, profile.include_pub ]);
     inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));
 
-    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
+    let outdir = if switches.toolchain == ToolChain::system_default() {
+        PathBuf::from("bin").join(switches.profile.to_string())
+    } else {
+        PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
+    };
+    let outfile = outdir.join(format!("test_{}.exe", build.name));
     let mut relink = Vec::new();
     if switches.toolchain.is_msvc() {
         inherited.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
@@ -42,7 +46,6 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     }
 
     let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
-    let outfile = outdir.join(format!("test_{}.exe", build.name));
     let info = BuildInfo {
         projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,

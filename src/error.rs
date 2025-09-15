@@ -15,7 +15,7 @@ pub enum Error {
     MissingBuildScript(PathBuf),
     #[error("toml parse error: {0}")]
     TomlParse(#[from] toml::de::Error),
-    #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
+    #[error("toml parse error: `{0}` is not a valid semver string")]
     MimicTomlSemver(String),
     #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
     MimicTomlProjkind(String),

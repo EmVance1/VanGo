@@ -40,7 +40,11 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     deps.incdirs.extend(profile.include);
 
     let rebuilt_dep = deps.rebuilt;
-    let outdir = PathBuf::from("bin").join(switches.profile.to_string());
+    let outdir = if switches.toolchain == ToolChain::system_default() {
+        PathBuf::from("bin").join(switches.profile.to_string())
+    } else {
+        PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
+    };
     let (outfile, implib) = match build.kind {
         ProjKind::App => {
             (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None)
@@ -60,6 +64,8 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
              .with_extension(switches.toolchain.static_lib_ext()), None)
         }
     };
+
+    cache_last_settings(build, switches);
 
     let info = BuildInfo{
         projkind:  build.kind,
@@ -91,5 +97,9 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         Err(e) => Err(e),
         Ok(rebuilt) => Ok(rebuilt_dep || rebuilt),
     }
+}
+
+
+fn cache_last_settings(_build: &BuildFile, _switches: &BuildSwitches) {
 }
 

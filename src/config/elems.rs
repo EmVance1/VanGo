@@ -18,16 +18,18 @@ impl Display for Version {
 impl FromStr for Version {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut result = Version{ major: 0, minor: 0, patch: 0 };
-        for (i, n) in s.split('.').enumerate() {
-            match i {
-                0 => result.major = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
-                1 => result.minor = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
-                2 => result.patch = n.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
-                _ => return Err(Error::MimicTomlSemver(s.to_string()))
-            }
+        let mut iter = s.split('.');
+        let result = Version{
+            major: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+            minor: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+            patch: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+        };
+        println!("called: {}", result);
+        if iter.next().is_some() {
+            Err(Error::MimicTomlSemver(s.to_string()))
+        } else {
+            Ok(result)
         }
-        Ok(result)
     }
 }
 
@@ -102,6 +104,16 @@ impl ToolChain {
             ToolChain::Gcc
         } else {
             ToolChain::ClangGnu
+        }
+    }
+
+    pub fn as_directory(self) -> &'static str {
+        match self {
+            Self::Msvc  => "msvc",
+            Self::Gcc   => "gcc",
+            Self::ClangGnu  => "clang-gnu",
+            Self::ClangMsvc => "clang-msvc",
+            Self::Zig   => "zig",
         }
     }
 

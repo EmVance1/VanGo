@@ -10,7 +10,12 @@ pub enum BuildLevel<'a> {
 
 
 pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
-    if info.outfile.exists() {
+    if info.changed {
+        BuildLevel::CompileAndLink(info.sources.iter()
+            .map(|src| (src.as_path(), transform_file(src, &info.outdir, info.toolchain.is_msvc())))
+            .collect())
+
+    } else if info.outfile.exists() {
         let pivot = info.outfile.metadata().unwrap().modified().unwrap();
 
         // FULL REBUILD IF ANY HEADER IS NEWER THAN THE BINARY

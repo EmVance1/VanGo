@@ -1,10 +1,7 @@
 use std::path::PathBuf;
+use serde::{Serialize, Deserialize};
 use crate::{
-    input::BuildSwitches,
-    exec::{self, BuildInfo},
-    config::{BuildFile, ProjKind, ToolChain},
-    fetch,
-    error::Error,
+    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version}, error::Error, exec::{self, BuildInfo}, fetch, input::BuildSwitches
 };
 
 
@@ -65,7 +62,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         }
     };
 
-    cache_last_settings(build, switches);
+    let changed = cache_changed_and_update(&profile.settings, switches, build.version, &outdir);
 
     let info = BuildInfo{
         projkind:  build.kind,
@@ -74,6 +71,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         crtstatic: switches.crtstatic,
         cpprt:     build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
+        changed,
 
         defines:  deps.defines,
 
@@ -100,6 +98,55 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 }
 
 
-fn cache_last_settings(_build: &BuildFile, _switches: &BuildSwitches) {
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct BuildCache {
+    opt_level:     u32,
+    opt_size:      bool,
+    opt_speed:     bool,
+    opt_linktime:  bool,
+    iso_compliant: bool,
+    warn_as_error: bool,
+    debug_info:    bool,
+    runtime:       crate::config::Runtime,
+    pthreads:      bool,
+    aslr:          bool,
+    rtti:          bool,
+    crtstatic:     bool,
+    install:       bool,
+    echo:          bool,
+    verbose:       bool,
+    is_test:       bool,
+    version:       Version
+}
+
+fn cache_changed_and_update(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &PathBuf) -> bool {
+    let newcache = BuildCache{
+        opt_level:     settings.opt_level,
+        opt_size:      settings.opt_size,
+        opt_speed:     settings.opt_speed,
+        opt_linktime:  settings.opt_linktime,
+        iso_compliant: settings.iso_compliant,
+        warn_as_error: settings.warn_as_error,
+        debug_info:    settings.debug_info,
+        runtime:       settings.runtime,
+        pthreads:      settings.pthreads,
+        aslr:          settings.aslr,
+        rtti:          settings.rtti,
+        crtstatic:     switches.crtstatic,
+        install:       switches.install,
+        echo:          switches.echo,
+        verbose:       switches.verbose,
+        is_test:       switches.is_test,
+        version,
+    };
+    let cachepath = outdir.join("build_cache.json");
+    if !cachepath.exists() {
+        let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
+        false
+    } else {
+        let oldcache: BuildCache = serde_json::from_str(&std::fs::read_to_string(&cachepath).unwrap()).unwrap();
+        let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
+        oldcache != newcache
+    }
 }
 

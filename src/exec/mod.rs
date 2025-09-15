@@ -22,6 +22,7 @@ pub struct BuildInfo {
     pub crtstatic: bool,
     pub cpprt: bool,
     pub settings: BuildSettings,
+    pub changed: bool,
 
     pub defines:  Vec<String>,
 

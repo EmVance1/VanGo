@@ -1,5 +1,5 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use crate::error::Error;
 use super::{Version, Lang, Profile, ProjKind};
 
@@ -113,7 +113,7 @@ pub enum Dependency {
 #[serde(rename_all = "kebab-case")]
 pub enum WarnLevel { None, Basic, High }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Runtime { DynamicDebug, DynamicRelease, StaticDebug, StaticRelease }
 

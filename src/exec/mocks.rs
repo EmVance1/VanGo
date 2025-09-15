@@ -16,6 +16,7 @@ impl BuildInfo {
             lang: Lang::Cpp(120),
             crtstatic: false,
             cpprt: false,
+            changed: false,
             settings: BuildSettings{
                 opt_level: 0,
                 opt_size: false,

@@ -1,8 +1,9 @@
 use std::{str::FromStr, fmt::Display};
+use serde::{Serialize, Deserialize};
 use crate::{log_warn_ln, Error};
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,
@@ -24,7 +25,6 @@ impl FromStr for Version {
             minor: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
             patch: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
         };
-        println!("called: {}", result);
         if iter.next().is_some() {
             Err(Error::MimicTomlSemver(s.to_string()))
         } else {
@@ -68,7 +68,7 @@ impl FromStr for ProjKind {
 }
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ToolChain {
     Msvc,
     Gcc,
@@ -231,7 +231,7 @@ impl Display for ToolChain {
 }
 
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Profile {
     #[default]
     Debug,

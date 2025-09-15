@@ -76,7 +76,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("/permissive-");
     }
-    if !info.settings.rtti {
+    if !info.settings.rtti && info.lang.is_cpp() {
         cmd.arg("/GR-");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));

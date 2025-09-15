@@ -47,7 +47,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("-pedantic-errors");
     }
-    if !info.settings.rtti {
+    if !info.settings.rtti && info.lang.is_cpp() {
         cmd.arg("-fno-rtti");
     }
     if info.settings.pthreads {

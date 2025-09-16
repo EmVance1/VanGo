@@ -95,6 +95,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
         BuildLevel::CompileAndLink(..) => {
             if recursive { log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display())); }
+            else if info.changed { log_info_ln!("{:=<80}", format!("environment changed - rebuilding project: {} ", info.outfile.display())); }
             else { log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display())); }
             if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
         }
@@ -110,7 +111,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             info.outdir.join("pch").join(pch).with_extension("h.gch")
         };
 
-        if !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?) {
+        if info.changed || !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?) {
             log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc() {

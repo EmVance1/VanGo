@@ -85,6 +85,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         }
     }
     writeln!(file, "-DVANGO_DEBUG")?;
+    writeln!(file, "-DVANGO_PKG_NAME=\"{}\"", build.name)?;
     writeln!(file, "-DVANGO_PKG_VERSION=\"{}\"", build.version)?;
     writeln!(file, "-DVANGO_PKG_VERSION_MAJOR={}", build.version.major)?;
     writeln!(file, "-DVANGO_PKG_VERSION_MINOR={}", build.version.minor)?;

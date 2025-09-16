@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use crate::{log_warn_ln, Error};
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,

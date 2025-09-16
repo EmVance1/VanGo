@@ -1,13 +1,16 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use serde::{Serialize, Deserialize};
 use crate::{
-    config::{BuildFile, BuildSettings, ProjKind, ToolChain, Version, WarnLevel}, error::Error, exec::{self, BuildInfo}, fetch, input::BuildSwitches
+    input::BuildSwitches,
+    config::{BuildFile, BuildSettings, ProjKind, ToolChain, WarnLevel},
+    exec::{self, BuildInfo},
+    fetch,
+    error::Error,
 };
 
 
 pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<bool, Error> {
     let profile = build.get(&switches.profile)?.to_owned();
-    let srcdir = PathBuf::from("src");
     let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
     if build.lang.is_cpp() {
         headers.extend(fetch::source_files(&profile.include_pub, "hpp").unwrap());
@@ -18,7 +21,6 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
             headers.extend(fetch::source_files(incdir, "hpp").unwrap());
         }
     }
-    let sources = fetch::source_files(&srcdir, build.lang.src_ext()).unwrap();
 
     let mut deps = fetch::libraries(build, &profile.baseprof, switches)?;
     deps.defines.extend(profile.defines);
@@ -30,13 +32,13 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
+    deps.defines.push(format!("VANGO_PKG_NAME=\"{}\"", build.name));
     deps.defines.push(format!("VANGO_PKG_VERSION=\"{}\"", build.version));
     deps.defines.push(format!("VANGO_PKG_VERSION_MAJOR={}", build.version.major));
     deps.defines.push(format!("VANGO_PKG_VERSION_MINOR={}", build.version.minor));
     deps.defines.push(format!("VANGO_PKG_VERSION_PATCH={}", build.version.patch));
     deps.incdirs.extend(profile.include);
 
-    let rebuilt_dep = deps.rebuilt;
     let outdir = if switches.toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
@@ -62,25 +64,23 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         }
     };
 
-    let changed = settings_cache_changed(&profile.settings, switches, build.version, &outdir);
-
     let info = BuildInfo{
+        changed:   settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),
         projkind:  build.kind,
         toolchain: switches.toolchain,
         lang:      build.lang,
         cpprt:     build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
-        changed,
 
         defines:  deps.defines,
 
-        srcdir,
+        srcdir:   PathBuf::from("src"),
         incdirs:  deps.incdirs,
         libdirs:  deps.libdirs,
         outdir,
 
         pch:      profile.pch,
-        sources,
+        sources:  fetch::source_files(&Path::new("src"), build.lang.src_ext()).unwrap(),
         headers,
         archives: deps.archives,
         relink:   deps.relink,
@@ -92,7 +92,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     };
     match exec::run_build(info, switches.echo, switches.verbose, recursive) {
         Err(e) => Err(e),
-        Ok(rebuilt) => Ok(rebuilt_dep || rebuilt),
+        Ok(rebuilt) => Ok(deps.rebuilt || rebuilt),
     }
 }
 
@@ -100,6 +100,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(clippy::struct_excessive_bools)]
 struct BuildCache {
+    defines:       Vec<String>,
     opt_level:     u32,
     opt_size:      bool,
     opt_speed:     bool,
@@ -113,11 +114,11 @@ struct BuildCache {
     aslr:          bool,
     rtti:          bool,
     is_test:       bool,
-    version:       Version
 }
 
-fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, version: Version, outdir: &std::path::Path) -> bool {
+fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switches: &BuildSwitches, outdir: &std::path::Path) -> bool {
     let newcache = BuildCache{
+        defines,
         opt_level:     settings.opt_level,
         opt_size:      settings.opt_size,
         opt_speed:     settings.opt_speed,
@@ -131,13 +132,15 @@ fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, ve
         aslr:          settings.aslr,
         rtti:          settings.rtti,
         is_test:       switches.is_test,
-        version,
     };
     let cachepath = outdir.join("build_cache.json");
-    if cachepath.exists() {
-        let oldcache: BuildCache = serde_json::from_str(&std::fs::read_to_string(&cachepath).unwrap()).unwrap();
+    if let Ok(cachefile) = std::fs::read_to_string(&cachepath) {
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
+        let Ok(oldcache) = serde_json::from_str::<BuildCache>(&cachefile) else {
+            return true
+        };
 
+        newcache.defines       != oldcache.defines ||
         newcache.opt_level     != oldcache.opt_level ||
         newcache.opt_size      != oldcache.opt_size ||
         newcache.opt_speed     != oldcache.opt_speed ||
@@ -150,11 +153,10 @@ fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, ve
         newcache.pthreads      != oldcache.pthreads ||
         newcache.aslr          != oldcache.aslr ||
         newcache.rtti          != oldcache.rtti ||
-        newcache.is_test       != oldcache.is_test ||
-        newcache.version       != oldcache.version
+        newcache.is_test       != oldcache.is_test
     } else {
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
-        false
+        true
     }
 }
 

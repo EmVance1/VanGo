@@ -34,7 +34,7 @@ impl BuildInfo {
             srcdir:   "src".into(),
             incdirs:  vec![ "src".into() ],
             libdirs:  vec![],
-            outdir:   "bin".into(),
+            outdir:   "bin\\debug".into(),
             pch:      None,
             sources:  vec![],
             headers:  vec![],

@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use crate::{
     input::BuildSwitches,
     config::{BuildFile, BuildSettings, ProjKind, ToolChain, WarnLevel},
-    exec::{self, BuildInfo},
+    exec::{self, prep, BuildInfo},
     fetch,
     error::Error,
 };
@@ -63,6 +63,8 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
              .with_extension(switches.toolchain.static_lib_ext()), None)
         }
     };
+
+    prep::ensure_out_dirs(Path::new("src"), &outdir);
 
     let info = BuildInfo{
         changed:   settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),

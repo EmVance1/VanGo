@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use serde::Deserialize;
-use crate::error::Error;
+use crate::{config::ToolChain, error::Error};
 use super::{build::BuildFile, Version, Profile, Lang};
 
 
@@ -61,19 +61,22 @@ impl LibFile {
     }
 }
 
-impl TryFrom<BuildFile> for LibFile {
-    type Error = Error;
-
-    fn try_from(value: BuildFile) -> Result<Self, Self::Error> {
+impl LibFile {
+    pub fn from_build(value: BuildFile, toolchain: ToolChain) -> Result<Self, Error> {
         let name = value.name;
         if !value.kind.is_lib() {
             return Err(Error::InvalidDependency(name));
         }
+        let libbase = if toolchain == ToolChain::system_default() {
+            PathBuf::from("bin")
+        } else {
+            PathBuf::from("bin").join(toolchain.as_directory())
+        };
         let haslib = value.kind.has_lib();
         let profiles: HashMap<_, _> = value.profiles.into_iter().map(|(k, p)| {
             let prof = LibProfile{
                 include: p.include_pub,
-                libdir: format!("bin/{k}").into(),
+                libdir: libbase.join(&k).into(),
                 binaries: if haslib { vec![ name.clone().into() ] } else { Vec::new() },
                 defines: p.defines,
             };

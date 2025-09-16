@@ -1,6 +1,6 @@
 use std::io::Write;
 use crate::{
-    config::{VangoFile, BuildFile, LibFile, ProjKind, Profile, Dependency, WarnLevel},
+    config::{BuildFile, Dependency, LibFile, Profile, ProjKind, ToolChain, VangoFile, WarnLevel},
     error::Error,
     log_info_ln,
 };
@@ -65,7 +65,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
-            VangoFile::Build(build) => LibFile::try_from(build)?,
+            VangoFile::Build(build) => LibFile::from_build(build, ToolChain::system_default())?,
             VangoFile::Lib(lib) => lib,
         };
         std::env::set_current_dir(&save).unwrap();

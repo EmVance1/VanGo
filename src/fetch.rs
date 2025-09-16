@@ -111,7 +111,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 if crate::action::build(&build, &switches, true)? {
                     deps.rebuilt = true;
                 }
-                LibFile::try_from(build)?
+                LibFile::from_build(build, switches.toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };

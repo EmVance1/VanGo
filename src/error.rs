@@ -49,6 +49,8 @@ pub enum Error {
     ArchiverFail(PathBuf),
     #[error("failed to link project '{0}'")]
     LinkerFail(PathBuf),
+    #[error("project '{0}' does not contain 'src' directory")]
+    MissingSource(String),
     #[error("project '{0}' does not contain 'test' directory")]
     MissingTests(String),
     #[error("binary '{0}' is not runnable on current platform")]

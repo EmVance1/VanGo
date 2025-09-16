@@ -48,12 +48,13 @@ pub struct Dependencies {
     pub archives: Vec<PathBuf>,
     pub relink:   Vec<PathBuf>,
     pub defines:  Vec<String>,
-    pub rebuilt:  bool,
 }
 
 pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) -> Result<Dependencies, Error> {
     let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
+
+    // recursive builds only forward base (inherited) profile, custom profiles ignored
     let switches = if let Profile::Custom(..) = switches.profile {
         BuildSwitches{ profile: profile.clone(), ..switches.clone() }
     } else {
@@ -61,6 +62,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
     };
 
     for lib in &info.dependencies {
+        // get path to library root, pull repo if necessary
         let path = match lib {
             Dependency::Git { git, tag, recipe, features: _ } => {
                 let git = Path::new(&git);
@@ -104,18 +106,19 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
             VangoFile::Build(build) => {
-                srcpkg = true;
+                // could use .validate(), but prefer checking *before* build to save user time
                 if build.interface > info.lang {
                     return Err(Error::IncompatibleCppStd(build.name, build.interface, info.name.clone(), info.lang))
                 }
-                if crate::action::build(&build, &switches, true)? {
-                    deps.rebuilt = true;
-                }
+                srcpkg = true;
+                crate::action::build(&build, &switches, true)?;
                 LibFile::from_build(build, switches.toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };
         std::env::set_current_dir(&save).unwrap();
+
+        // collect all dependency artefacts (includes, definitions, libraries, libdirs) into SOA
         let profile = library.take(&switches.profile)?;
         deps.incdirs.push(path.join(profile.include));
         deps.libdirs.push(path.join(&profile.libdir));
@@ -130,6 +133,8 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 deps.archives.push(l);
             }
         }
+
+        // no vango generated definitions are propagated - all such defs are tailored to the project being built
         deps.defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 

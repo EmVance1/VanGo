@@ -70,15 +70,17 @@ fn msvc_check_iso(lang: Lang) {
 }
 
 
-pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<bool, Error> {
+pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<(), Error> {
+    // remove all objects created from sources that no longer exist
     prep::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
 
+    // incremental build, compute outdated files
     let jobs = incremental::get_build_level(&info);
 
     match jobs {
         BuildLevel::UpToDate => {
             if !recursive { log_info_ln!("build up to date for project: {}", info.outfile.display()); }
-            return Ok(false);
+            return Ok(());
         }
         BuildLevel::LinkOnly => {
             if recursive { log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display())); }
@@ -88,20 +90,24 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             if recursive { log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display())); }
             else if info.changed { log_info_ln!("{:=<80}", format!("environment changed - rebuilding project: {} ", info.outfile.display())); }
             else { log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display())); }
+
+            // MSVC has sketchy ISO settings...
             if info.toolchain.is_msvc() { msvc_check_iso(info.lang); }
         }
     }
 
+    // precompiled headers must finish before compilation can begin
     let pch_use = if let Some(pch) = &info.pch {
-        let inpch = info.srcdir.join(pch);
-        let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext()));
-        let outfile = if info.toolchain.is_msvc() {
+        let inpch = info.srcdir.join(pch);                                             // path/to/header
+        let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
+        let outfile = if info.toolchain.is_msvc() {                                    // output file
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.display()));
-            info.outdir.join("obj").join(pch).with_extension("h.obj")
+            info.outdir.join("obj").join(pch).with_extension("h.obj")  // MSVC internally reates a .obj and .pch
         } else {
-            info.outdir.join("pch").join(pch).with_extension("h.gch")
+            info.outdir.join("pch").join(pch).with_extension("h.gch")  // GNU .gch
         };
 
+        // if PCH requires rebuild
         if info.changed || !std::fs::exists(&outfile)? || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?) {
             log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
@@ -123,11 +129,12 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         PreCompHead::None
     };
 
-    if let BuildLevel::CompileAndLink(elems) = jobs {
+    // recompile all outdated objects, subprocess queue with capacity #cores
+    if let BuildLevel::CompileAndLink(jobs) = jobs {
         let mut queue = queue::ProcQueue::new();
         let mut failure = false;
 
-        for (src, obj) in elems {
+        for (src, obj) in jobs {
             log_info_ln!("compiling: {}", src.to_string_lossy());
             let mut comp = if info.toolchain.is_msvc() {
                 msvc::compile(src, &obj, &info, &pch_use, echo, verbose)

@@ -10,7 +10,6 @@ pub fn help(action: Option<&String>) {
         println!("  -p, --profile=<PROF>    Specify compilation profile (debug, release, or custom)");
         println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})", ToolChain::default());
         // println!("      --install           On unix-like systems: installs headers and binaries into /usr/local/* on build");
-        // println!("      --crtstatic         Link statically with the C runtime library");
         println!("      --echo              Echo the entire build command composed by vango");
         println!("  -v, --verbose           Forward '--verbose' to invoked tool, if available");
         println!();

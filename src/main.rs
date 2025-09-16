@@ -73,11 +73,11 @@ fn main() -> ExitCode {
             }
             input::Action::Run{ switches, args } => {
                 if build.kind.is_lib() { exit_failure!("{}", Error::LibNotExe(build.name)); }
-                let _ = action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 return action::run(&build.name, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e))
             }
             input::Action::Test{ switches, args } => {
-                let _ = action::build(&build, &switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::build(&build, &switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
                 return action::test(build, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e))
             }
             input::Action::Clean => {

@@ -18,15 +18,15 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     } else if info.outfile.exists() {
         let pivot = info.outfile.metadata().unwrap().modified().unwrap();
 
-        // FULL REBUILD IF ANY HEADER IS NEWER THAN THE BINARY
+        // full rebuild if any header is newer than the binary
         if any_changed(&info.headers, pivot) {
             BuildLevel::CompileAndLink(info.sources.iter()
                 .map(|src| (src.as_path(), transform_file(src, &info.outdir, info.toolchain.is_msvc())))
                 .collect())
 
-        // NO HEADER IS NEWER THAN THE BINARY
+        // no header is newer than the binary
         } else {
-            // RECOMPILE ANY SOURCE THAT IS NEWER THAN THE BINARY
+            // recompile any source that is newer than the binary
             let pairs: Vec<_> = info.sources.iter()
                 .filter_map(|src| {
                     if src.metadata().unwrap().modified().unwrap() > pivot {
@@ -48,7 +48,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
             }
         }
     } else {
-        // RECOMPILE ANY SOURCE THAT IS NEWER THAN ITS OBJECT
+        // recompile any source that is newer than its object
         let pairs: Vec<_> = info.sources.iter()
             .filter_map(|src| {
                 let obj = transform_file(src, &info.outdir, info.toolchain.is_msvc());

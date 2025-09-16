@@ -7,7 +7,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
-    cmd.arg("-H");
+    cmd.arg("-H");  // output configuration (see output parser)
     cmd.arg(format!("-std={}", info.lang));
     if !cfg!(windows) {
         match info.projkind {
@@ -27,7 +27,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("-Os");
     }
     if info.settings.opt_speed {
-        cmd.arg("-Ofast");
+        cmd.arg("-Ofast");  // problematic, causes unpredictable IEEE and others
     }
     if info.settings.opt_linktime {
         cmd.arg("-flto");
@@ -48,7 +48,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("-pedantic-errors");
     }
     if !info.settings.rtti && info.lang.is_cpp() {
-        cmd.arg("-fno-rtti");
+        cmd.arg("-fno-rtti");  // rtti on by default
     }
     if info.settings.pthreads {
         cmd.arg("-pthread");
@@ -78,8 +78,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd
 }
 
-pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);
+pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
+    let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt);  // use g++/clang++ etc. when combining C and C++
 
     cmd.args(info.link_args);
     if let ProjKind::SharedLib{ implib } = info.projkind {
@@ -89,12 +89,12 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
             cmd.arg("-shared");
         }
         if implib {
-            cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display()));
+            cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display()));  // forward to LINK.exe
         }
     }
     if info.settings.aslr {
         if cfg!(windows) {
-            cmd.arg("-Wl,--dynamicbase");
+            cmd.arg("-Wl,--dynamicbase");  // forward to LINK.exe
         } else if let ProjKind::App = info.projkind {
             cmd.arg("-pie");
         }
@@ -121,13 +121,13 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if echo { print_command(&cmd); }
     if output::gnu_linker(&cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(true)
+        Ok(())
     } else {
         Err(Error::LinkerFail(info.outfile))
     }
 }
 
-pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<bool, Error> {
+pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
     let mut cmd = info.toolchain.archiver();
 
     if verbose {
@@ -142,7 +142,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: 
     if echo { print_command(&cmd); }
     if output::gnu_archiver(&cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(true)
+        Ok(())
     } else {
         Err(Error::ArchiverFail(info.outfile))
     }

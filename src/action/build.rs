@@ -9,19 +9,25 @@ use crate::{
 };
 
 
-pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<bool, Error> {
+pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<(), Error> {
+    if !std::fs::exists("src").unwrap_or_default() { return Err(Error::MissingSource(build.name.clone())); }
+
+    // extract settings for current profile
     let profile = build.get(&switches.profile)?.to_owned();
-    let mut headers = fetch::source_files(&profile.include_pub, "h").unwrap();
+
+    // BANDAID: collect all headers from all (direct) include directories (for incremental builds)
+    let mut headers = fetch::source_files(&profile.include_pub, "h")?;
     if build.lang.is_cpp() {
-        headers.extend(fetch::source_files(&profile.include_pub, "hpp").unwrap());
+        headers.extend(fetch::source_files(&profile.include_pub, "hpp")?);
     }
     for incdir in &profile.include {
-        headers.extend(fetch::source_files(incdir, "h").unwrap());
+        headers.extend(fetch::source_files(incdir, "h")?);
         if build.lang.is_cpp() {
-            headers.extend(fetch::source_files(incdir, "hpp").unwrap());
+            headers.extend(fetch::source_files(incdir, "hpp")?);
         }
     }
 
+    // collect and linearize all dependency information
     let mut deps = fetch::libraries(build, &profile.baseprof, switches)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
@@ -39,11 +45,14 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     deps.defines.push(format!("VANGO_PKG_VERSION_PATCH={}", build.version.patch));
     deps.incdirs.extend(profile.include);
 
+    // scope all output to correct directory
     let outdir = if switches.toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
     };
+
+    // determine output file names and extensions
     let (outfile, implib) = match build.kind {
         ProjKind::App => {
             (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None)
@@ -64,6 +73,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         }
     };
 
+    // replicate source directory hierarchy in output directory
     prep::ensure_out_dirs(Path::new("src"), &outdir);
 
     let info = BuildInfo{
@@ -92,10 +102,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         comp_args: profile.compiler_options,
         link_args: profile.linker_options,
     };
-    match exec::run_build(info, switches.echo, switches.verbose, recursive) {
-        Err(e) => Err(e),
-        Ok(rebuilt) => Ok(deps.rebuilt || rebuilt),
-    }
+    exec::run_build(info, switches.echo, switches.verbose, recursive)
 }
 
 
@@ -142,6 +149,7 @@ fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switch
             return true
         };
 
+        // settings that may or may not trigger project rebuilds
         newcache.defines       != oldcache.defines ||
         newcache.opt_level     != oldcache.opt_level ||
         newcache.opt_size      != oldcache.opt_size ||

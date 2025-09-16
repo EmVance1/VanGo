@@ -80,7 +80,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         outdir,
 
         pch:      profile.pch,
-        sources:  fetch::source_files(&Path::new("src"), build.lang.src_ext()).unwrap(),
+        sources:  fetch::source_files(Path::new("src"), build.lang.src_ext()).unwrap(),
         headers,
         archives: deps.archives,
         relink:   deps.relink,

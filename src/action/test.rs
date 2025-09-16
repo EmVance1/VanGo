@@ -50,7 +50,6 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,
         lang:      build.lang,
-        crtstatic: switches.crtstatic,
         cpprt:     build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
         changed:   false,

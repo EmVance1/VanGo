@@ -68,7 +68,6 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         projkind:  build.kind,
         toolchain: switches.toolchain,
         lang:      build.lang,
-        crtstatic: switches.crtstatic,
         cpprt:     build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings:  profile.settings,
         changed,
@@ -113,7 +112,6 @@ struct BuildCache {
     pthreads:      bool,
     aslr:          bool,
     rtti:          bool,
-    crtstatic:     bool,
     is_test:       bool,
     version:       Version
 }
@@ -132,7 +130,6 @@ fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, ve
         pthreads:      settings.pthreads,
         aslr:          settings.aslr,
         rtti:          settings.rtti,
-        crtstatic:     switches.crtstatic,
         is_test:       switches.is_test,
         version,
     };
@@ -153,7 +150,6 @@ fn settings_cache_changed(settings: &BuildSettings, switches: &BuildSwitches, ve
         newcache.pthreads      != oldcache.pthreads ||
         newcache.aslr          != oldcache.aslr ||
         newcache.rtti          != oldcache.rtti ||
-        newcache.crtstatic     != oldcache.crtstatic ||
         newcache.is_test       != oldcache.is_test ||
         newcache.version       != oldcache.version
     } else {

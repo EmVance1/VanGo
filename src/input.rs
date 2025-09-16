@@ -19,7 +19,6 @@ pub enum Action {
 pub struct BuildSwitches {
     pub profile: Profile,
     pub toolchain: ToolChain,
-    pub crtstatic: bool,
     pub install:   bool,
     pub echo:      bool,
     pub verbose:   bool,
@@ -63,12 +62,11 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
             let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install   = args.remove_if(|s| *s == "--install").is_some();
-            let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo      = args.remove_if(|s| *s == "--echo").is_some();
             let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
             let profile   = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: false } })
+                Ok(Action::Build{ switches: BuildSwitches{ profile, toolchain, install, echo, verbose, is_test: false } })
             } else {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
@@ -85,12 +83,11 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
             let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install   = args.remove_if(|s| *s == "--install").is_some();
-            let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo      = args.remove_if(|s| *s == "--echo").is_some();
             let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
-                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: false }, args: user_args })
+                Ok(Action::Run{ switches: BuildSwitches{ profile, toolchain, install, echo, verbose, is_test: false }, args: user_args })
             } else {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
@@ -100,11 +97,10 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
             let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install   = args.remove_if(|s| *s == "--install").is_some();
-            let crtstatic = args.remove_if(|s| *s == "--crtstatic").is_some();
             let echo      = args.remove_if(|s| *s == "--echo").is_some();
             let verbose   = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
-            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, install, crtstatic, echo, verbose, is_test: true }, args })
+            Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, install, echo, verbose, is_test: true }, args })
         }
         "clean" | "c" => {
             if args.is_empty() {

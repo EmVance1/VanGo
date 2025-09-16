@@ -19,7 +19,6 @@ pub struct BuildInfo {
     pub projkind: ProjKind,
     pub toolchain: ToolChain,
     pub lang: Lang,
-    pub crtstatic: bool,
     pub cpprt: bool,
     pub settings: BuildSettings,
     pub changed: bool,

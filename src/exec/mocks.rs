@@ -14,7 +14,6 @@ impl BuildInfo {
             projkind: ProjKind::App,
             toolchain: ToolChain::Msvc,
             lang: Lang::Cpp(120),
-            crtstatic: false,
             cpprt: false,
             changed: false,
             settings: BuildSettings{

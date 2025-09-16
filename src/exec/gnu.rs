@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
-use super::{BuildInfo, PreCompHead};
-use crate::{config::{ProjKind, WarnLevel}, Error, exec::output, log_info_ln};
+use super::{BuildInfo, PreCompHead, output};
+use crate::{config::{ProjKind, WarnLevel, Runtime}, Error, log_info_ln};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
@@ -99,7 +99,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
             cmd.arg("-pie");
         }
     }
-    if info.crtstatic {
+    if matches!(info.settings.runtime, Runtime::StaticDebug|Runtime::StaticRelease) {
         if info.lang.is_cpp() || info.cpprt {
             cmd.arg("-static-libstdc++");
         }

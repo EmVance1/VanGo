@@ -81,6 +81,7 @@ fn msvc_check_iso(lang: Lang) {
 
 pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<bool, Error> {
     prep::ensure_out_dirs(&info.srcdir, &info.outdir);
+    prep::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
 
     let jobs = incremental::get_build_level(&info);
 

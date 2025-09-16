@@ -8,7 +8,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.args(&info.comp_args);
     cmd.arg("/nologo");
-    cmd.arg("/showIncludes");
+    // cmd.arg("/showIncludes");
     cmd.arg("/diagnostics:caret");
     // /WL (one line diagnostics)
     cmd.arg("/c");
@@ -212,7 +212,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                "/showIncludes",
+                // "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++20",
@@ -248,7 +248,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                "/showIncludes",
+                // "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -283,7 +283,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                "/showIncludes",
+                // "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -316,7 +316,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                "/showIncludes",
+                // "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",

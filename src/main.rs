@@ -69,7 +69,7 @@ fn main() -> ExitCode {
 
         match cmd {
             input::Action::Build{ switches } => {
-                let _ = action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Run{ switches, args } => {
                 if build.kind.is_lib() { exit_failure!("{}", Error::LibNotExe(build.name)); }

@@ -7,36 +7,36 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
-    cmd.arg("/nologo");
-    // cmd.arg("/showIncludes");
-    cmd.arg("/diagnostics:caret");
-    // /WL (one line diagnostics)
+    cmd.arg("/nologo");             // output configuration (see output parser)
+    cmd.arg("/showIncludes");       // "
+    cmd.arg("/diagnostics:caret");  // "
+    // /WL (one line diagnostics)   // "
     cmd.arg("/c");
     match info.lang {
         Lang::Cpp(123) => {
             cmd.arg("/std:c++latest");
         }
-        Lang::Cpp(114) => {
+        Lang::Cpp(n) if n < 114 => {
             cmd.arg("/std:c++14");
         }
         Lang::C(120) => {
             cmd.arg("/std:clatest");
         }
-        Lang::C(99) => {} // extensions on by default
-        Lang::C(80) => {
-            cmd.arg("/Za");
+        Lang::C(99) => {}    // extensions on by default
+        Lang::C(89) => {
+            cmd.arg("/Za");  // disable MS pseudo C99 extensions
         }
         Lang::Cpp(_)|Lang::C(_) => {
             cmd.arg(format!("/std:{}", info.lang));
         }
     }
     if info.lang.is_cpp() {
-        cmd.arg("/Zc:__cplusplus");
+        cmd.arg("/Zc:__cplusplus");  // correctly define '__cplusplus' macro
     } else {
-        cmd.arg("/TC");
+        cmd.arg("/TC");              // enforce C for all sources (needed for MS pseudo C99)
     }
     if info.lang.is_cpp() {
-        cmd.arg("/EHsc");
+        cmd.arg("/EHsc"); // default exception handler
     }
     match info.settings.runtime {
         Runtime::DynamicDebug   => { cmd.arg("/MDd"); }
@@ -61,9 +61,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("/GL");
     }
     if info.settings.debug_info {
-        cmd.args([ "/Zi", "/FS", "/sdl" ]);
-        cmd.arg(format!("/Fd:{}\\", info.outdir.display()));
-        if !info.toolchain.is_clang() { cmd.arg("/Zf"); }
+        cmd.args([ "/Zi", "/FS", "/sdl" ]);                  // debug info, thread safe, extra security
+        cmd.arg(format!("/Fd:{}\\", info.outdir.display())); // PDB output dir
+        if !info.toolchain.is_clang() { cmd.arg("/Zf"); }    // faster PDB gen??
     }
     match info.settings.warn_level {
         WarnLevel::None  => { cmd.arg("/w"); }
@@ -106,14 +106,14 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     let mut cmd = info.toolchain.linker(info.lang.is_cpp());
 
     cmd.args(info.link_args);
+    cmd.arg("/NOLOGO");
+    cmd.arg("/MACHINE:X64");
     if let ProjKind::SharedLib{ implib } = info.projkind {
         cmd.arg("/DLL");
         if implib {
             cmd.arg(format!("/IMPLIB:{}", info.implib.unwrap().display()));
         }
     }
-    cmd.arg("/MACHINE:X64");
-    cmd.arg("/NOLOGO");
     if info.settings.aslr {
         cmd.arg("/DYNAMICBASE");
     }
@@ -121,8 +121,8 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
         cmd.arg("/DEBUG");
     }
     if info.settings.opt_linktime {
-        cmd.arg("/LTCG");
-        cmd.arg("/OPT:REF");
+        cmd.arg("/LTCG");    // link-time codegen, iff /GL
+        cmd.arg("/OPT:REF"); // strip unreferenced symbols
     }
     if info.settings.warn_as_error {
         cmd.arg("/WX");
@@ -146,10 +146,10 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
     let mut cmd = info.toolchain.archiver();
 
     cmd.args(info.link_args);
-    cmd.arg("/MACHINE:X64");
     cmd.arg("/NOLOGO");
+    cmd.arg("/MACHINE:X64");
     if info.settings.opt_linktime {
-        cmd.arg("/LTCG");
+        cmd.arg("/LTCG");    // link-time codegen, iff /GL
     }
     if info.settings.warn_as_error {
         cmd.arg("/WX");
@@ -212,7 +212,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                // "/showIncludes",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++20",
@@ -248,7 +248,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                // "/showIncludes",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -283,7 +283,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                // "/showIncludes",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",
@@ -316,7 +316,7 @@ mod tests {
         let cmd: Vec<_> = cmd.get_args().collect();
         assert_eq!(cmd, [
                 "/nologo",
-                // "/showIncludes",
+                "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
                 "/std:c++23",

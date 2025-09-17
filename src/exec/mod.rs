@@ -156,6 +156,9 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         if failure { return Err(Error::CompilerFail(info.outfile)); }
     }
 
+    // remove all objects created from sources that no longer exist
+    // prep::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
+
     match info.projkind {
         ProjKind::App|ProjKind::SharedLib{..} => log_info_ln!("linking:   {: <30}", info.outfile.display()),
         ProjKind::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),

@@ -18,10 +18,12 @@ fn ensure_out_dirs_rec(root: &Path, sdir: &Path, odir: &Path) {
 }
 
 
+#[allow(dead_code)]
 pub fn cull_zombies(sdir: &Path, odir: &Path, ext: &str) {
     cull_zombies_rec(&odir.join("obj"), sdir, &odir.join("obj"), ext);
 }
 
+#[allow(dead_code)]
 fn cull_zombies_rec(root: &Path, sdir: &Path, odir: &Path, ext: &str) {
     for e in std::fs::read_dir(root).ok().unwrap() {
         let e = e.ok().unwrap();

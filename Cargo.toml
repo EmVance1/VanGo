@@ -1,6 +1,6 @@
 [package]
 name = "vango"
-version = "2.12.2"
+version = "2.12.3"
 edition = "2024"
 
 license = "GPL-2.0-only"

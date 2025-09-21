@@ -210,7 +210,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Msvc, None, false),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(120), ToolChain::Msvc, None, false),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
@@ -221,7 +221,6 @@ mod tests {
                 "/c",
                 "/std:c++20",
                 "/Zc:__cplusplus",
-                "/EHsc",
                 "/MDd",
                 "/Od",
                 "/Zi",
@@ -230,6 +229,7 @@ mod tests {
                 "/Fd:bin\\debug\\",
                 "/Zf",
                 "/W1",
+                "/EHsc",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -246,7 +246,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(23), ToolChain::ClangMsvc, None, true),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(123), ToolChain::ClangMsvc, None, true),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
@@ -255,9 +255,8 @@ mod tests {
                 "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
-                "/std:c++23",
+                "/std:c++latest",
                 "/Zc:__cplusplus",
-                "/EHsc",
                 "/MTd",
                 "/Od",
                 "/Zi",
@@ -265,6 +264,7 @@ mod tests {
                 "/sdl",
                 "/Fd:bin\\debug\\",
                 "/W1",
+                "/EHsc",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -281,7 +281,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Msvc, None, false),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, false),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
@@ -290,14 +290,14 @@ mod tests {
                 "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
-                "/std:c++23",
+                "/std:c++latest",
                 "/Zc:__cplusplus",
-                "/EHsc",
                 "/MD",
                 "/O2",
                 "/Oi",
                 "/GL",
                 "/W1",
+                "/EHsc",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",
@@ -314,7 +314,7 @@ mod tests {
         let obj = PathBuf::from("bin/debug/obj/main.obj");
 
         let cmd = super::compile(&src, &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Msvc, None, true),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, true),
             &PreCompHead::None, false, false);
 
         let cmd: Vec<_> = cmd.get_args().collect();
@@ -323,14 +323,14 @@ mod tests {
                 "/showIncludes",
                 "/diagnostics:caret",
                 "/c",
-                "/std:c++23",
+                "/std:c++latest",
                 "/Zc:__cplusplus",
-                "/EHsc",
                 "/MT",
                 "/O2",
                 "/Oi",
                 "/GL",
                 "/W1",
+                "/EHsc",
                 "/Isrc",
                 "/DUNICODE",
                 "/D_UNICODE",

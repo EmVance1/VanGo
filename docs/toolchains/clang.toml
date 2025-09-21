@@ -50,7 +50,8 @@ opt-linktime = [ "-flto" ]
 aslr-app = [ "-fpie" ]
 aslr-lib = [ "-fPIC" ]
 
-rtti = [ "-rtti" ]
+no-rtti = [ "-fno-rtti" ]
+no-except = [ "-fno-exceptions" ]
 
 pthread = [ "-pthread" ]
 

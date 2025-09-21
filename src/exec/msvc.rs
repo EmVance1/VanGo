@@ -35,9 +35,6 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     } else {
         cmd.arg("/TC");              // enforce C for all sources (needed for MS pseudo C99)
     }
-    if info.lang.is_cpp() {
-        cmd.arg("/EHsc"); // default exception handler
-    }
     match info.settings.runtime {
         Runtime::DynamicDebug   => { cmd.arg("/MDd"); }
         Runtime::DynamicRelease => { cmd.arg("/MD"); }
@@ -76,8 +73,15 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("/permissive-");
     }
-    if !info.settings.rtti && info.lang.is_cpp() {
-        cmd.arg("/GR-");
+    if info.lang.is_cpp() {
+        if info.settings.no_rtti {
+            cmd.arg("/GR-");   // rtti on by default
+        }
+        if info.settings.no_except {
+            cmd.arg("/EHsc-");
+        } else {
+            cmd.arg("/EHsc");  // default C++ exception handling, extern "C" -> noexcept
+        }
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
@@ -149,7 +153,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
     cmd.arg("/NOLOGO");
     cmd.arg("/MACHINE:X64");
     if info.settings.opt_linktime {
-        cmd.arg("/LTCG");    // link-time codegen, iff /GL
+        cmd.arg("/LTCG");    // link-time codegen HINT, iff /GL
     }
     if info.settings.warn_as_error {
         cmd.arg("/WX");

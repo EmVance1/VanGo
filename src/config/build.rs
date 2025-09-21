@@ -154,7 +154,8 @@ impl BuildProfile {
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
                 pthreads:      defaults.build_settings.pthreads.unwrap_or(false),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
-                rtti:          defaults.build_settings.rtti.unwrap_or(true),
+                no_rtti:       defaults.build_settings.no_rtti.unwrap_or(false),
+                no_except:     defaults.build_settings.no_except.unwrap_or(false),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
@@ -185,7 +186,8 @@ impl BuildProfile {
                 runtime:       defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
                 pthreads:      defaults.build_settings.pthreads.unwrap_or(false),
                 aslr:          defaults.build_settings.aslr.unwrap_or(true),
-                rtti:          defaults.build_settings.rtti.unwrap_or(true),
+                no_rtti:       defaults.build_settings.no_rtti.unwrap_or(false),
+                no_except:     defaults.build_settings.no_except.unwrap_or(false),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
@@ -209,7 +211,8 @@ impl BuildProfile {
         other.build_settings.runtime.inspect(      |s| self.settings.runtime = *s);
         other.build_settings.pthreads.inspect(     |s| self.settings.pthreads = *s);
         other.build_settings.aslr.inspect(         |s| self.settings.aslr = *s);
-        other.build_settings.rtti.inspect(         |s| self.settings.rtti = *s);
+        other.build_settings.no_rtti.inspect(      |s| self.settings.no_rtti = *s);
+        other.build_settings.no_except.inspect(    |s| self.settings.no_except = *s);
 
         self.compiler_options.extend(other.compiler_options.unwrap_or_default());
         self.linker_options.extend(other.linker_options.unwrap_or_default());
@@ -237,7 +240,8 @@ pub struct BuildSettings {
     pub runtime:       Runtime,
     pub pthreads:      bool,
     pub aslr:          bool,
-    pub rtti:          bool,
+    pub no_rtti:       bool,
+    pub no_except:     bool,
 }
 
 
@@ -295,6 +299,7 @@ struct SerdeBuildSettings {
     runtime:       Option<Runtime>,
     pthreads:      Option<bool>,
     aslr:          Option<bool>,
-    rtti:          Option<bool>,
+    no_rtti:       Option<bool>,
+    no_except:     Option<bool>,
 }
 

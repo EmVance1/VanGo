@@ -122,7 +122,8 @@ struct BuildCache {
     runtime:       crate::config::Runtime,
     pthreads:      bool,
     aslr:          bool,
-    rtti:          bool,
+    no_rtti:       bool,
+    no_except:     bool,
     is_test:       bool,
 }
 
@@ -140,7 +141,8 @@ fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switch
         runtime:       settings.runtime,
         pthreads:      settings.pthreads,
         aslr:          settings.aslr,
-        rtti:          settings.rtti,
+        no_rtti:       settings.no_rtti,
+        no_except:     settings.no_except,
         is_test:       switches.is_test,
     };
     let cachepath = outdir.join("build_cache.json");
@@ -163,7 +165,8 @@ fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switch
         newcache.runtime       != oldcache.runtime ||
         newcache.pthreads      != oldcache.pthreads ||
         newcache.aslr          != oldcache.aslr ||
-        newcache.rtti          != oldcache.rtti ||
+        newcache.no_rtti       != oldcache.no_rtti ||
+        newcache.no_except     != oldcache.no_except ||
         newcache.is_test       != oldcache.is_test
     } else {
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());

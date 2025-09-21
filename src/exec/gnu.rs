@@ -47,8 +47,13 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.iso_compliant {
         cmd.arg("-pedantic-errors");
     }
-    if !info.settings.rtti && info.lang.is_cpp() {
-        cmd.arg("-fno-rtti");  // rtti on by default
+    if info.lang.is_cpp() {
+        if info.settings.no_rtti {
+            cmd.arg("-fno-rtti");       // rtti on by default
+        }
+        if info.settings.no_except {
+            cmd.arg("-fno-exceptions"); // exceptions on by default
+        }
     }
     if info.settings.pthreads {
         cmd.arg("-pthread");

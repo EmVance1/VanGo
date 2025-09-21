@@ -32,10 +32,11 @@ opt-size =  [ "/Os" ]
 opt-speed = [ "/Ot" ]
 opt-linktime = [ "/GL" ]
 
-aslr-app = []
-aslr-lib = []
+aslr-app = [] # LINKTIME
+aslr-lib = [] # LINKTIME
 
-rtti = [ "/GR" ]
+no-rtti = [ "/GR-" ]
+no-except = [ "/EHsc-" ]
 
 pthread = [] # UNAVAILABLE
 
@@ -90,5 +91,5 @@ default-libs = [
 object =  [ "{objfile}" ]
 output =  [ "/OUT:{archive}" ]
 
-opt-linktime = [ "/LTCG", "OPT:REF" ]
+opt-linktime = [ "/LTCG" ]
 

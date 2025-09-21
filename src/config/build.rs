@@ -123,7 +123,6 @@ pub struct BuildProfile {
 
     pub defines: Vec<String>,
     pub include: Vec<PathBuf>,
-    pub include_pub: PathBuf,
     pub pch: Option<PathBuf>,
     pub settings: BuildSettings,
 
@@ -141,7 +140,6 @@ impl BuildProfile {
             baseprof: Profile::Debug,
             defines,
             include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
-            include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -173,7 +171,6 @@ impl BuildProfile {
             baseprof: Profile::Release,
             defines,
             include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
-            include_pub: defaults.include_pub.clone().unwrap_or("src".into()),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -199,7 +196,6 @@ impl BuildProfile {
     fn merge(mut self, other: SerdeBuildProfile) -> Self {
         self.defines.extend(other.defines.unwrap_or_default());
         self.include.extend(other.include.unwrap_or_default());
-        if let Some(inc) = other.include_pub { self.include_pub = inc; }
         if let Some(pch) = other.pch { self.pch = Some(pch); }
 
         other.build_settings.opt_level.inspect(    |s| self.settings.opt_level = *s);
@@ -276,7 +272,6 @@ pub(super) struct SerdeBuildProfile {
 
     defines: Option<Vec<String>>,
     include: Option<Vec<PathBuf>>,
-    include_pub: Option<PathBuf>,
     pch: Option<PathBuf>,
 
     #[serde(flatten)]

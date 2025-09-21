@@ -51,6 +51,8 @@ pub enum Error {
     LinkerFail(PathBuf),
     #[error("project '{0}' does not contain 'src' directory")]
     MissingSource(String),
+    #[error("project '{0}' does not contain library 'include' directory")]
+    MissingInclude(String),
     #[error("project '{0}' does not contain 'test' directory")]
     MissingTests(String),
     #[error("binary '{0}' is not runnable on current platform")]

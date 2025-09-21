@@ -96,6 +96,9 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     for inc in &profile.include {
         writeln!(file, "-I{}", inc.display())?;
     }
+    if build.kind.is_lib() {
+        writeln!(file, "-Iinclude")?;
+    }
     writeln!(file, "-I{}", std::env::current_exe()?
         .parent()
         .unwrap()

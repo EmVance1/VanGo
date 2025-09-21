@@ -75,7 +75,7 @@ impl LibFile {
         let haslib = value.kind.has_lib();
         let profiles: HashMap<_, _> = value.profiles.into_iter().map(|(k, p)| {
             let prof = LibProfile{
-                include: p.include_pub,
+                include: "include".into(),
                 libdir: libbase.join(&k),
                 binaries: if haslib { vec![ name.clone().into() ] } else { Vec::new() },
                 defines: p.defines,

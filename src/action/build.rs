@@ -13,12 +13,13 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     if !std::fs::exists("src").unwrap_or_default() { return Err(Error::MissingSource(build.name.clone())); }
 
     // extract settings for current profile
-    let profile = build.get(&switches.profile)?.to_owned();
+    let mut profile = build.get(&switches.profile)?.to_owned();
 
     // BANDAID: collect all headers from all (direct) include directories (for incremental builds)
-    let mut headers = fetch::source_files(&profile.include_pub, "h")?;
-    if build.lang.is_cpp() {
-        headers.extend(fetch::source_files(&profile.include_pub, "hpp")?);
+    let mut headers = Vec::new();
+    if build.kind.is_lib() {
+        if !std::fs::exists("include").unwrap_or_default() { return Err(Error::MissingInclude(build.name.clone())); }
+        profile.include.push("include".into());
     }
     for incdir in &profile.include {
         headers.extend(fetch::source_files(incdir, "h")?);

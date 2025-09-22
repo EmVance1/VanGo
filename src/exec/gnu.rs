@@ -1,15 +1,17 @@
 use std::path::{Path, PathBuf};
 use super::{BuildInfo, PreCompHead, output};
-use crate::{config::{ProjKind, WarnLevel, Runtime}, Error, log_info_ln};
+use crate::{config::{ProjKind, Runtime, WarnLevel}, log_info_ln, Error};
 
 
 pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
-    cmd.arg("-H");  // output configuration (see output parser)
+    if !info.toolchain.is_emcc()  {
+        cmd.arg("-H");  // output configuration (see output parser)
+    }
     cmd.arg(format!("-std={}", info.lang));
-    if !cfg!(windows) {
+    if !cfg!(windows) && !info.toolchain.is_emcc() {
         match info.projkind {
             ProjKind::App|ProjKind::StaticLib => if info.settings.aslr { cmd.arg("-fpie"); },
             ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
@@ -72,6 +74,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         }
         PreCompHead::None => (),
     }
+    if info.toolchain.is_emcc() {
+        cmd.arg("-sUSE_SDL=2");
+    }
 
     cmd.arg(src);
     cmd.arg(format!("-o{}", obj.display()));
@@ -97,9 +102,9 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
             cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display()));  // forward to LINK.exe
         }
     }
-    if info.settings.aslr {
+    if info.settings.aslr && !info.toolchain.is_emcc() {
         if cfg!(windows) {
-            cmd.arg("-Wl,--dynamicbase");  // forward to LINK.exe
+            cmd.arg("-Wl,--dynamicbase");  // forward --dynamicbase to LINK.exe
         } else if let ProjKind::App = info.projkind {
             cmd.arg("-pie");
         }
@@ -116,7 +121,10 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-
+    if info.toolchain.is_emcc() {
+        cmd.arg("-sUSE_SDL=2");
+        cmd.arg("-sFULL_ES3");
+    }
     cmd.args(objs);
     cmd.args(info.libdirs .iter().map(|l| format!("-L{}", l.display())));
     cmd.args(info.archives.iter().map(|l| format!("-l{}", l.display())));

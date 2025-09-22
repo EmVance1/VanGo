@@ -94,6 +94,11 @@ pub fn help(action: Option<&String>) {
                 } else {
                     println!("    zig    - unavailable");
                 }
+                if let Ok(ver) = std::process::Command::new("emcc.bat").arg("--version").output() {
+                    println!("    emcc   - {}", ver.stdout.lines().next().unwrap().unwrap());
+                } else {
+                    println!("    emcc   - unavailable");
+                }
             }
             _ => (),
         }

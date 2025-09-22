@@ -179,6 +179,8 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
             }
         } else if tc == "zig" {
             Ok(ToolChain::Zig)
+        } else if tc == "emcc" {
+            Ok(ToolChain::Emcc)
         } else {
             Err(Error::UnknownToolChain(tc.to_string()))
         }

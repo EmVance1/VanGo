@@ -75,6 +75,7 @@ pub enum ToolChain {
     ClangGnu,
     ClangMsvc,
     Zig,
+    Emcc,
 }
 
 impl Default for ToolChain {
@@ -87,6 +88,7 @@ impl Default for ToolChain {
                 "clang-gnu"  => return ToolChain::ClangGnu,
                 "clang-msvc" => return ToolChain::ClangMsvc,
                 "zig"   => return ToolChain::Zig,
+                "emcc"  => return ToolChain::Emcc,
                 _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             }
             Err(std::env::VarError::NotUnicode(..)) => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
@@ -114,6 +116,7 @@ impl ToolChain {
             Self::ClangGnu  => "clang-gnu",
             Self::ClangMsvc => "clang-msvc",
             Self::Zig   => "zig",
+            Self::Emcc  => "emcc",
         }
     }
 
@@ -123,15 +126,19 @@ impl ToolChain {
     }
     #[allow(dead_code)]
     pub fn is_gnu(self) -> bool {
-        matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig)
+        matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig|Self::Emcc)
     }
     #[allow(dead_code)]
     pub fn is_clang(self) -> bool {
-        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
+        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig|Self::Emcc)
     }
     #[allow(dead_code)]
     pub fn is_llvm(self) -> bool {
-        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig)
+        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig|Self::Emcc)
+    }
+    #[allow(dead_code)]
+    pub fn is_emcc(self) -> bool {
+        matches!(self, Self::Emcc)
     }
 
     pub fn shared_lib_prefix() -> &'static str {
@@ -150,6 +157,7 @@ impl ToolChain {
     pub fn app_ext(self) -> &'static str {
         match self {
             Self::Msvc|Self::ClangMsvc => "exe",
+            Self::Emcc => "html",
             _ => "",
         }
     }
@@ -184,6 +192,7 @@ impl ToolChain {
                 cmd.arg(if cpp { "c++" } else { "cc" });
                 cmd
             }
+            Self::Emcc   => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
         }
     }
     pub fn linker(self, cpp: bool) -> std::process::Command {
@@ -201,6 +210,7 @@ impl ToolChain {
                 cmd.arg(if cpp { "c++" } else { "cc" });
                 cmd
             }
+            Self::Emcc   => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
         }
     }
     pub fn archiver(self) -> std::process::Command {
@@ -214,6 +224,7 @@ impl ToolChain {
                 cmd.arg("ar");
                 cmd
             }
+            Self::Emcc  => std::process::Command::new("llvm-ar"),
         }
     }
 }
@@ -226,6 +237,7 @@ impl Display for ToolChain {
             Self::ClangGnu  => write!(f, "Clang (GNU)"),
             Self::ClangMsvc => write!(f, "Clang (MSVC)"),
             Self::Zig   => write!(f, "Zig/Clang"),
+            Self::Emcc  => write!(f, "Emscripten/Clang"),
         }
     }
 }

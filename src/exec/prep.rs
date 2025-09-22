@@ -3,7 +3,6 @@ use std::path::Path;
 
 pub fn ensure_out_dirs(sdir: &Path, odir: &Path) {
     let _ = std::fs::create_dir_all(odir);
-    let _ = std::fs::create_dir(odir.join("pch"));
     ensure_out_dirs_rec(sdir, sdir, &odir.join("obj"));
 }
 

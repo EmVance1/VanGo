@@ -98,6 +98,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
     // precompiled headers must finish before compilation can begin
     let pch_use = if let Some(pch) = &info.pch {
+        let _ = std::fs::create_dir(info.outdir.join("pch"));
         let inpch = info.srcdir.join(pch);                                             // path/to/header
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
         let outfile = if info.toolchain.is_msvc() {                                    // output file

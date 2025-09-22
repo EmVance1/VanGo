@@ -1,6 +1,11 @@
 use std::{path::{Path, PathBuf}, process::ExitCode};
 use crate::{
-    config::{BuildFile, ToolChain}, exec::{self, BuildInfo}, fetch, input::BuildSwitches, log_info_ln, Error
+    input::BuildSwitches,
+    config::{BuildFile, ToolChain},
+    exec::{self, prep, BuildInfo},
+    fetch,
+    Error,
+    log_info_ln,
 };
 
 
@@ -30,22 +35,25 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     inherited.incdirs.extend([ "test".into(), include, "include".into() ]);
     inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));
 
-    let outdir = if switches.toolchain == ToolChain::system_default() {
+    let base_outdir = if switches.toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
     };
+    let outdir = base_outdir.join("test");
     let outfile = outdir.join(format!("test_{}.exe", build.name));
     let mut relink = Vec::new();
     if switches.toolchain.is_msvc() {
         inherited.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
-        relink.push(outdir.join(&build.name).with_extension("lib"));
+        relink.push(base_outdir.join(&build.name).with_extension("lib"));
     } else {
         inherited.archives.insert(0, PathBuf::from(&build.name));
-        relink.push(outdir.join(format!("lib{}", build.name)).with_extension("a"));
+        relink.push(base_outdir.join(format!("lib{}", build.name)).with_extension("a"));
     }
 
-    let sources = fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap();
+    // replicate source directory hierarchy in output directory
+    prep::ensure_out_dirs(Path::new("test"), &outdir);
+
     let info = BuildInfo {
         projkind:  crate::config::ProjKind::App,
         toolchain: switches.toolchain,
@@ -62,7 +70,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         outdir,
 
         pch: None,
-        sources,
+        sources:  fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap(),
         headers,
         archives: inherited.archives,
         relink    ,

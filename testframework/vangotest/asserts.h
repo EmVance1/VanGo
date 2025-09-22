@@ -58,8 +58,8 @@ TestFuncArray* init_testfunc(const char* name, TestFunc func, bool noassign);
     } } while (0)
 
 
-#define test(name) void name(); ::vango::TestFuncArray* _##name##_runner = ::vango::init_testfunc( #name, name, false ); void name()
-#define decl_test(name) void name()
+#define vango_test(name) void name(); ::vango::TestFuncArray* _##name##_runner = ::vango::init_testfunc( #name, name, false ); void name()
+#define vango_test_decl(name) void name()
 
 
 #ifdef VANGO_TEST_ROOT
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
         for (size_t i = 0; i < arr->names.size(); i++) {
             try {
                 (arr->funcs[i])();
-                fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s"'\033[m\n", arr->names[i]);
+                fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s'\033[m\n", arr->names[i]);
             } catch (const ::vango::AssertionFail& e) {
                 fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %d: \033[m%s\n", arr->names[i], e.failline, e.msg.c_str());
                 _vg_failures++;
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
                 if (strcmp(arr->names[i], argv[j]) == 0) {
                     try {
                         (arr->funcs[i])();
-                        fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s"'\033[m\n", arr->names[i]);
+                        fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s'\033[m\n", arr->names[i]);
                     } catch (const ::vango::AssertionFail& e) {
                         fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %d: \033[m%s\n", arr->names[i], e.failline, e.msg.c_str());
                         _vg_failures++;

@@ -28,7 +28,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         }
     }
 
-    // collect and linearize all dependency information
+    // collect and flatten all dependency information into single SOA
     let mut deps = fetch::libraries(build, &profile.baseprof, switches)?;
     deps.defines.extend(profile.defines);
     if switches.is_test { deps.defines.push("VANGO_TEST".to_string()); }
@@ -53,7 +53,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
     };
 
-    // determine output file names and extensions
+    // determine output filenames, depends on project type, toolchain and platform (see elems::{ToolChain, ProjKind})
     let (outfile, implib) = match build.kind {
         ProjKind::App => {
             (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None)

@@ -52,7 +52,9 @@ fn read_manifest() -> Result<String, Error> {
 fn main() -> ExitCode {
     let cmd = input::collect_args().unwrap_or_else(|e| exit_failure!("{}", e));
 
-    if let input::Action::Help{ action } = &cmd {
+    if let input::Action::Version = &cmd {
+        action::version();
+    } else if let input::Action::Help{ action } = &cmd {
         action::help(action.as_ref());
     } else if let input::Action::New { library, is_c, clangd, name } = &cmd {
         action::new(*library, *is_c, *clangd, name).unwrap_or_else(|e| exit_failure!("{}", e));

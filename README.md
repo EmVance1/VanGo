@@ -6,6 +6,13 @@ The system supports most popular toolchains, specifically: GNU and Clang/LLVM on
 
 For a more in-depth explanation, see the [documentation](docs/README.md).
 
+## Installation
+VanGo currently only releases as source code.
+- To build, simply `git clone` the repository and run `cargo build`. It is recommended to build in release mode, though not required.
+- For everything to work correctly, create a symlink/shortcut to the built executable in the repository root, such that its working directory is in the right place.
+- Add the install location to your `PATH` environment variable.
+- Run `vango --version`
+
 ## Features Available So Far
 - Subcommands for creating, building, running, testing, and cleaning C/C++ projects. Some usage examples are as follows, but for a more complete list see the help action.
     * `vango new     [--lib] [--c] [--clangd] <name>`

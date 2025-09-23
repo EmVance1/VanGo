@@ -2,6 +2,10 @@ use std::io::BufRead;
 use crate::config::ToolChain;
 
 
+pub fn version() {
+    println!("VanGo {} - C/C++ build automation tool", env!("CARGO_PKG_VERSION"));
+}
+
 pub fn help(action: Option<&String>) {
     let print_build_details = || {
         println!("Options:");
@@ -103,9 +107,13 @@ pub fn help(action: Option<&String>) {
             _ => (),
         }
     } else {
-        println!("VanGo {} - C/C++ build automation tool", env!("CARGO_PKG_VERSION"));
+        version();
         println!();
-        println!("Usage: vango [ACTION] [OPTIONS]");
+        println!("Usage: vango [OPTIONS] [ACTION]");
+        println!();
+        println!("Options:");
+        println!("    -h, --help     Print basic help info");
+        println!("    -v, --version  Print version and exit");
         println!();
         println!("Commands:");
         println!("    new         Create a new empty project");

@@ -9,7 +9,7 @@ use crate::{
     config::{BuildFile, ToolChain}, error::Error, input::BuildSwitches, log_info_ln
 };
 pub use new::{init, new};
-pub use help::help;
+pub use help::{version, help};
 pub use build::build;
 pub use test::test;
 pub use clangd::clangd;

@@ -2,10 +2,9 @@ todo.md
 token.txt
 build.bat
 
-vango-linux/
-vango-win/
 recipes/
 target/
 *.zip
+*.lnk
 docs/toolchains/warnings.txt
 

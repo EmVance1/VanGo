@@ -12,6 +12,7 @@ pub enum Action {
     Run  { switches: BuildSwitches, args: Vec<String> },
     Test { switches: BuildSwitches, args: Vec<String> },
     Help { action: Option<String> },
+    Version,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -57,7 +58,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                 Err(Error::ExtraArgs("init".to_string(), args))
             }
         }
-        "build" | "b" => {
+        "build"|"b" => {
             let debug     = args.remove_if(|s| *s == "--debug"   || *s == "-d").is_some();
             let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
@@ -71,7 +72,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                 Err(Error::ExtraArgs("build".to_string(), args))
             }
         }
-        "run" | "r" => {
+        "run"|"r" => {
             let user_args = if let Some(i) = args.iter().position(|a| *a == "--") {
                 let mut temp = args.split_off(i);
                 temp.remove(0);
@@ -92,7 +93,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                 Err(Error::ExtraArgs("run".to_string(), args))
             }
         }
-        "test" | "t" => {
+        "test"|"t" => {
             let debug     = args.remove_if(|s| *s == "--debug"   || *s == "-d").is_some();
             let release   = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
             let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
@@ -102,7 +103,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
             let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             Ok(Action::Test{ switches: BuildSwitches{ profile, toolchain, install, echo, verbose, is_test: true }, args })
         }
-        "clean" | "c" => {
+        "clean"|"c" => {
             if args.is_empty() {
                 Ok(Action::Clean)
             } else {
@@ -116,6 +117,8 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                 Err(Error::ExtraArgs("gen".to_string(), args))
             }
         }
+        "-v"|"--version"|"version" => Ok(Action::Version),
+        "-h"|"--help" => Ok(Action::Help{ action: None }),
         "help" => {
             if args.is_empty() {
                 Ok(Action::Help{ action: None })

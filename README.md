@@ -9,7 +9,7 @@ For a more in-depth explanation, see the [documentation](docs/README.md).
 ## Installation
 VanGo currently only releases as source code.
 - To build, simply `git clone` the repository and run `cargo build`. It is recommended to build in release mode, though not required.
-- For everything to work correctly, copy or create a symlink/shortcut to the built executable in the repository root, such that that is where its working directory will be.
+- For everything to work correctly, copy or create a symlink to the built executable in the repository root, such that that is where its working directory will be.
 - Add the install location to your `PATH` environment variable.
 - Run `vango --version` from a new terminal to check that your install was successful.
 

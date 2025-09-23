@@ -1,10 +1,11 @@
-todo.md
-token.txt
 build.bat
+vango-win/
+*.zip
+*.lnk
 
 recipes/
 target/
-*.zip
-*.lnk
+todo.md
 docs/toolchains/warnings.txt
+token.txt
 

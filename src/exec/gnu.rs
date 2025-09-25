@@ -13,8 +13,16 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     cmd.arg(format!("-std={}", info.lang));
     if !cfg!(windows) && !info.toolchain.is_emcc() {
         match info.projkind {
-            ProjKind::App|ProjKind::StaticLib => if info.settings.aslr { cmd.arg("-fpie"); },
-            ProjKind::SharedLib{..} => { cmd.arg("-fPIC"); },
+            ProjKind::App => if info.settings.aslr {
+                cmd.arg("-fpie");
+            } else {
+                cmd.arg("-fno-pie"); // explicitly disable ASLR on macos 10.7 (2011)
+            }
+            ProjKind::StaticLib|ProjKind::SharedLib{..} => if info.settings.aslr {
+                cmd.arg("-fPIC");
+            } else {
+                cmd.arg("-fno-pic"); // explicitly disable ASLR on macos 10.7 (2011)
+            }
         }
     }
     cmd.arg("-c");
@@ -102,11 +110,15 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
             cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display()));  // forward to LINK.exe
         }
     }
-    if info.settings.aslr && !info.toolchain.is_emcc() {
-        if cfg!(windows) {
-            cmd.arg("-Wl,--dynamicbase");  // forward --dynamicbase to LINK.exe
-        } else if let ProjKind::App = info.projkind {
-            cmd.arg("-pie");
+    if !info.toolchain.is_emcc() {
+        if info.settings.aslr {
+            if cfg!(windows) {
+                cmd.arg("-Wl,--dynamicbase");  // forward --dynamicbase to LINK.exe
+            } else if let ProjKind::App = info.projkind && cfg!(target_os = "linux") {
+                cmd.arg("-pie");
+            }
+        } else if cfg!(target_os = "macos") {  // ASLR on by default since macos 10.7 (2011)
+            cmd.arg("-Wl,-no_pie");            // forward -no_pie to ld
         }
     }
     if matches!(info.settings.runtime, Runtime::StaticDebug|Runtime::StaticRelease) {

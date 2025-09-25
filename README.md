@@ -30,7 +30,7 @@ VanGo currently only releases as source code.
 defines = [ "MACRO", "VALUE=10" ]
 
 [profile.myprofile]
-include = [ "src", "../some/other/headers" ]
+include = [ "../some/other/headers" ]
 ```
 - Configure prebuilt libraries with a staticlib-type toml file
 ```toml

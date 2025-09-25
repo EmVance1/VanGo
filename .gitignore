@@ -1,5 +1,8 @@
 build.bat
+release.bat
 vango-win/
+vango-linux/
+vango-macos/
 *.zip
 *.lnk
 

@@ -156,9 +156,8 @@ impl ToolChain {
     }
     pub fn app_ext(self) -> &'static str {
         match self {
-            Self::Msvc|Self::ClangMsvc => "exe",
             Self::Emcc => "html",
-            _ => "",
+            _ => if cfg!(windows) { "exe" } else { "" }
         }
     }
     pub fn shared_lib_ext() -> &'static str {

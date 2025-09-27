@@ -285,7 +285,7 @@ mod tests {
             assert_eq!(cmd, [ "-H", "-std=c++20", "-c", "-O0", "-g", "-Wall", "-Isrc", "-DUNICODE", "-D_UNICODE",
                             src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
         } else {
-            assert_eq!(cmd, [ "-H", "-std=c++20", "-fpie", "-c", "-O0", "-g", "-Wall", "-Isrc",
+            assert_eq!(cmd, [ "-H", "-std=c++20", "-fPIC", "-c", "-O0", "-g", "-Wall", "-Isrc",
                             src.to_str().unwrap(), &format!("-o{}", obj.display()) ]);
         }
     }

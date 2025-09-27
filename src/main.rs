@@ -56,10 +56,10 @@ fn main() -> ExitCode {
         action::version();
     } else if let input::Action::Help{ action } = &cmd {
         action::help(action.as_ref());
-    } else if let input::Action::New { library, is_c, clangd, name } = &cmd {
-        action::new(*library, *is_c, *clangd, name).unwrap_or_else(|e| exit_failure!("{}", e));
-    } else if let input::Action::Init{ library, is_c, clangd } = &cmd {
-        action::init(*library, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
+    } else if let input::Action::New { library, strict, is_c, clangd, name } = &cmd {
+        action::new(*library, *strict, *is_c, *clangd, name).unwrap_or_else(|e| exit_failure!("{}", e));
+    } else if let input::Action::Init{ library, strict, is_c, clangd } = &cmd {
+        action::init(*library, *strict, *is_c, *clangd).unwrap_or_else(|e| exit_failure!("{}", e));
 
     } else {
         let bfile = read_manifest()

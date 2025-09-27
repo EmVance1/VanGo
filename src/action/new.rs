@@ -6,19 +6,20 @@ use crate::{
 use super::clangd;
 
 
-pub fn new(library: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Error> {
+pub fn new(library: bool, strict: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Error> {
     std::fs::create_dir(name)?;
     std::env::set_current_dir(name)?;
-    init(library, is_c, clangd)
+    init(library, strict, is_c, clangd)
 }
 
 
-pub fn init(library: bool, is_c: bool, gen_clangd: bool) -> Result<(), Error> {
+pub fn init(library: bool, strict: bool, is_c: bool, gen_clangd: bool) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
     log_info_ln!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext =    if is_c { "c" } else { "cpp" };
     let lang =   if is_c { "C11" } else { "C++17" };
     let header = if is_c { "stdio.h" } else { "cstdio" };
+    let warns  = if strict { "warn-level = \"high\"\niso-compliant = true\n" } else { "" };
     std::fs::create_dir("src")?;
     if library {
         std::fs::create_dir_all(format!("include/{name}"))?;
@@ -41,9 +42,8 @@ name = \"{name}\"
 version = \"0.1.0\"
 lang = \"{lang}\"
 kind = \"staticlib\"
-include = [ \"include\" ]
-include-pub = \"include\"
 
+{warns}
 [dependencies]
 ");
         std::fs::write(format!("src/lib.{ext}"), format!("\
@@ -65,6 +65,7 @@ name = \"{name}\"
 version = \"0.1.0\"
 lang = \"{lang}\"
 
+{warns}
 [dependencies]
 ");
         std::fs::write(format!("src/main.{ext}"), format!("\

@@ -31,6 +31,7 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
+                println!("    --strict  Include  options 'warn-level=\"high\"' and 'iso-compliat=true'");
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
@@ -41,6 +42,7 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
+                println!("    --strict  Include options 'warn-level=\"high\"' and 'iso-compliat=true'");
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }

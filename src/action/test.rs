@@ -33,13 +33,14 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         inherited.defines.push("_UNICODE".to_string());
     }
     inherited.incdirs.extend([ "test".into(), include, "include".into() ]);
-    inherited.libdirs.push(PathBuf::from("bin").join(switches.profile.to_string()));
 
     let base_outdir = if switches.toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin").join(switches.toolchain.as_directory()).join(switches.profile.to_string())
     };
+    inherited.libdirs.push(base_outdir.clone());
+
     let outdir = base_outdir.join("test");
     let outfile = outdir.join(format!("test_{}.exe", build.name));
     let mut relink = Vec::new();

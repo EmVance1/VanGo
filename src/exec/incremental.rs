@@ -1,6 +1,5 @@
-use std::path::{Path, PathBuf};
 use super::BuildInfo;
-
+use std::path::{Path, PathBuf};
 
 pub enum BuildLevel<'a> {
     UpToDate,
@@ -8,29 +7,58 @@ pub enum BuildLevel<'a> {
     CompileAndLink(Vec<(&'a Path, PathBuf)>),
 }
 
-
 pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     if info.changed {
-        BuildLevel::CompileAndLink(info.sources.iter()
-            .map(|src| (src.as_path(), transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc())))
-            .collect())
-
+        BuildLevel::CompileAndLink(
+            info.sources
+                .iter()
+                .map(|src| {
+                    (
+                        src.as_path(),
+                        transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
+                    )
+                })
+                .collect(),
+        )
     } else if info.outfile.exists() {
         let pivot = info.outfile.metadata().unwrap().modified().unwrap();
 
         // full rebuild if any header is newer than the binary
         if any_changed(&info.headers, pivot) {
-            BuildLevel::CompileAndLink(info.sources.iter()
-                .map(|src| (src.as_path(), transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc())))
-                .collect())
+            BuildLevel::CompileAndLink(
+                info.sources
+                    .iter()
+                    .map(|src| {
+                        (
+                            src.as_path(),
+                            transform_file(
+                                src,
+                                &info.srcdir,
+                                &info.outdir,
+                                info.toolchain.is_msvc(),
+                            ),
+                        )
+                    })
+                    .collect(),
+            )
 
         // no header is newer than the binary
         } else {
             // recompile any source that is newer than the binary
-            let pairs: Vec<_> = info.sources.iter()
+            let pairs: Vec<_> = info
+                .sources
+                .iter()
                 .filter_map(|src| {
                     if src.metadata().unwrap().modified().unwrap() > pivot {
-                        Some((src.as_path(), transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc())))
+                        Some((
+                            src.as_path(),
+                            transform_file(
+                                src,
+                                &info.srcdir,
+                                &info.outdir,
+                                info.toolchain.is_msvc(),
+                            ),
+                        ))
                     } else {
                         None
                     }
@@ -49,10 +77,15 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
         }
     } else {
         // recompile any source that is newer than its object
-        let pairs: Vec<_> = info.sources.iter()
+        let pairs: Vec<_> = info
+            .sources
+            .iter()
             .filter_map(|src| {
                 let obj = transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc());
-                if !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()) {
+                if !obj.exists()
+                    || (src.metadata().unwrap().modified().unwrap()
+                        > obj.metadata().unwrap().modified().unwrap())
+                {
                     Some((src.as_path(), obj))
                 } else {
                     None
@@ -68,12 +101,14 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
     }
 }
 
-
 fn any_changed(sources: &[PathBuf], pivot: std::time::SystemTime) -> bool {
-    sources.iter().any(|src| src.metadata().unwrap().modified().unwrap() > pivot)
+    sources
+        .iter()
+        .any(|src| src.metadata().unwrap().modified().unwrap() > pivot)
 }
 
 fn transform_file(path: &Path, sdir: &Path, odir: &Path, msvc: bool) -> PathBuf {
-    odir.join("obj").join(path.strip_prefix(sdir).unwrap()).with_extension(if msvc { "obj" } else { "o" })
+    odir.join("obj")
+        .join(path.strip_prefix(sdir).unwrap())
+        .with_extension(if msvc { "obj" } else { "o" })
 }
-

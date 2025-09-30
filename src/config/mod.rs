@@ -1,12 +1,11 @@
 mod build;
-mod lib;
 mod elems;
+mod lib;
 
-pub use build::*;
-pub use lib::*;
-pub use elems::*;
 use crate::error::Error;
-
+pub use build::*;
+pub use elems::*;
+pub use lib::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VangoFile {
@@ -52,17 +51,14 @@ impl VangoFile {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use super::{build::*, lib::*, VangoFile, ProjKind, Lang};
+    use super::{Lang, ProjKind, VangoFile, build::*, lib::*};
     use std::{collections::HashMap, str::FromStr};
 
     #[test]
     fn parse_buildfile() {
-        let file =
-r#"
+        let file = r#"
 [package]
 name = "Shimmy"
 version = "0.1.0"
@@ -80,43 +76,63 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 "#;
 
         let mut dependencies = Vec::new();
-        dependencies.push(Dependency::Local{ path: "../engine".into(),     features: vec![] });
-        dependencies.push(Dependency::Local{ path: "../../NavMesh".into(), features: vec![] });
-        dependencies.push(Dependency::Git{
-            git: "https://github.com/SFML/SFML.git".into(), tag: None, recipe: Some("recipes/SFML.bat".into()), features: vec![ "graphics".into() ]
+        dependencies.push(Dependency::Local {
+            path: "../engine".into(),
+            features: vec![],
         });
-        dependencies.push(Dependency::Git{
-            git: "https://github.com/LuaJIT/LuaJIT.git".into(), tag: None, recipe: Some("recipes/LuaJIT.bat".into()), features: vec![]
+        dependencies.push(Dependency::Local {
+            path: "../../NavMesh".into(),
+            features: vec![],
+        });
+        dependencies.push(Dependency::Git {
+            git: "https://github.com/SFML/SFML.git".into(),
+            tag: None,
+            recipe: Some("recipes/SFML.bat".into()),
+            features: vec!["graphics".into()],
+        });
+        dependencies.push(Dependency::Git {
+            git: "https://github.com/LuaJIT/LuaJIT.git".into(),
+            tag: None,
+            recipe: Some("recipes/LuaJIT.bat".into()),
+            features: vec![],
         });
 
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
-        profiles.insert("debug".into(), BuildProfile{
-            include: vec![ "headers".into(), "dbg_headers".into(), "src".into() ],
-            defines: vec![ "VANGO_DEBUG".into() ],
-            ..BuildProfile::debug(&Default::default())
-        });
-        profiles.insert("release".into(), BuildProfile{
-            include: vec![ "headers".into(), "src".into()  ],
-            defines: vec![ "VANGO_RELEASE".into() ],
-            ..BuildProfile::release(&Default::default())
-        });
+        profiles.insert(
+            "debug".into(),
+            BuildProfile {
+                include: vec!["headers".into(), "dbg_headers".into(), "src".into()],
+                defines: vec!["VANGO_DEBUG".into()],
+                ..BuildProfile::debug(&Default::default())
+            },
+        );
+        profiles.insert(
+            "release".into(),
+            BuildProfile {
+                include: vec!["headers".into(), "src".into()],
+                defines: vec!["VANGO_RELEASE".into()],
+                ..BuildProfile::release(&Default::default())
+            },
+        );
 
-        assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Build(BuildFile{
-            name: "Shimmy".to_string(),
-            version: "0.1.0".parse().unwrap(),
-            lang: Lang::Cpp(120),
-            kind: ProjKind::App,
-            interface: Lang::Cpp(120),
-            runtime: None,
-            dependencies,
-            profiles,
-        }));
+        assert_eq!(
+            VangoFile::from_str(file).unwrap(),
+            VangoFile::Build(BuildFile {
+                name: "Shimmy".to_string(),
+                version: "0.1.0".parse().unwrap(),
+                lang: Lang::Cpp(120),
+                kind: ProjKind::App,
+                interface: Lang::Cpp(120),
+                runtime: None,
+                dependencies,
+                profiles,
+            })
+        );
     }
 
     #[test]
     fn parse_libfile() {
-        let file =
-r#"
+        let file = r#"
 [staticlib]
 name = "SFML"
 version = "3.0.1"
@@ -134,29 +150,45 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
 "#;
 
         let mut profiles: HashMap<String, LibProfile> = HashMap::new();
-        profiles.insert("debug".into(),
-            LibProfile{
-                include:  "include".into(),
-                libdir:   "bin/debug".into(),
-                binaries: vec![ "sfml-network-s".into(), "sfml-audio-s".into(), "sfml-graphics-s".into(), "sfml-window-s".into(), "sfml-system-s".into() ],
-                defines:  vec![ "VANGO_DEBUG".into(), "SFML_STATIC".into() ],
-            }
+        profiles.insert(
+            "debug".into(),
+            LibProfile {
+                include: "include".into(),
+                libdir: "bin/debug".into(),
+                binaries: vec![
+                    "sfml-network-s".into(),
+                    "sfml-audio-s".into(),
+                    "sfml-graphics-s".into(),
+                    "sfml-window-s".into(),
+                    "sfml-system-s".into(),
+                ],
+                defines: vec!["VANGO_DEBUG".into(), "SFML_STATIC".into()],
+            },
         );
-        profiles.insert("release".into(),
-            LibProfile{
-                include:  "include".into(),
-                libdir:   "bin/release".into(),
-                binaries: vec![ "sfml-network-s".into(), "sfml-audio-s".into(), "sfml-graphics-s".into(), "sfml-window-s".into(), "sfml-system-s".into() ],
-                defines:  vec![ "VANGO_RELEASE".into(), "SFML_STATIC".into() ],
-            }
+        profiles.insert(
+            "release".into(),
+            LibProfile {
+                include: "include".into(),
+                libdir: "bin/release".into(),
+                binaries: vec![
+                    "sfml-network-s".into(),
+                    "sfml-audio-s".into(),
+                    "sfml-graphics-s".into(),
+                    "sfml-window-s".into(),
+                    "sfml-system-s".into(),
+                ],
+                defines: vec!["VANGO_RELEASE".into(), "SFML_STATIC".into()],
+            },
         );
 
-        assert_eq!(VangoFile::from_str(file).unwrap(), VangoFile::Lib(LibFile{
-            name:    "SFML".to_string(),
-            version: "3.0.1".parse().unwrap(),
-            lang:    Lang::from_str("C++17").unwrap(),
-            profiles,
-        }));
+        assert_eq!(
+            VangoFile::from_str(file).unwrap(),
+            VangoFile::Lib(LibFile {
+                name: "SFML".to_string(),
+                version: "3.0.1".parse().unwrap(),
+                lang: Lang::from_str("C++17").unwrap(),
+                profiles,
+            })
+        );
     }
 }
-

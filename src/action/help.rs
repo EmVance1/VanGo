@@ -1,9 +1,11 @@
-use std::io::BufRead;
 use crate::config::ToolChain;
-
+use std::io::BufRead;
 
 pub fn version() {
-    println!("VanGo {} - C/C++ build automation tool", env!("CARGO_PKG_VERSION"));
+    println!(
+        "VanGo {} - C/C++ build automation tool",
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 pub fn help(action: Option<&String>) {
@@ -11,15 +13,24 @@ pub fn help(action: Option<&String>) {
         println!("Options:");
         println!("  -d, --debug             Build project in debug profile (default)");
         println!("  -r, --release           Build project in release profile");
-        println!("  -p, --profile=<PROF>    Specify compilation profile (debug, release, or custom)");
-        println!("  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})", ToolChain::default());
+        println!(
+            "  -p, --profile=<PROF>    Specify compilation profile (debug, release, or custom)"
+        );
+        println!(
+            "  -t, --toolchain=<TOOL>  Specify a toolchain for compilation (user default: {})",
+            ToolChain::default()
+        );
         // println!("      --install           On unix-like systems: installs headers and binaries into /usr/local/* on build");
         println!("      --echo              Echo the entire build command composed by vango");
         println!("  -v, --verbose           Forward '--verbose' to invoked tool, if available");
         println!();
         println!("Profiles:");
-        println!("    debug    No optimization; Generate debugging information; 'VANGO_DEBUG' macro defined; Generally faster compile times");
-        println!("    release  High optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times");
+        println!(
+            "    debug    No optimization; Generate debugging information; 'VANGO_DEBUG' macro defined; Generally faster compile times"
+        );
+        println!(
+            "    release  High optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times"
+        );
     };
 
     if let Some(action) = action {
@@ -31,7 +42,9 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
-                println!("    --strict  Include  options 'warn-level=\"high\"' and 'iso-compliat=true'");
+                println!(
+                    "    --strict  Include  options 'warn-level=\"high\"' and 'iso-compliat=true'"
+                );
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
@@ -42,7 +55,9 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
-                println!("    --strict  Include options 'warn-level=\"high\"' and 'iso-compliat=true'");
+                println!(
+                    "    --strict  Include options 'warn-level=\"high\"' and 'iso-compliat=true'"
+                );
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
@@ -52,7 +67,9 @@ pub fn help(action: Option<&String>) {
                 println!("Usage: vango clean");
             }
             "clangd" => {
-                println!("Generate 'compile_flags.txt' corresponding to the current project (language standard, include dirs, definitions");
+                println!(
+                    "Generate 'compile_flags.txt' corresponding to the current project (language standard, include dirs, definitions"
+                );
                 println!();
                 println!("Usage: vango clangd");
             }
@@ -64,14 +81,18 @@ pub fn help(action: Option<&String>) {
                 print_build_details();
             }
             "run" => {
-                println!("Build and run the current project, forwarding command-line arguments, with project root as working directory");
+                println!(
+                    "Build and run the current project, forwarding command-line arguments, with project root as working directory"
+                );
                 println!();
                 println!("Usage: vango run [OPTIONS] [-- ARGS]");
                 println!();
                 print_build_details();
             }
             "test" => {
-                println!("Build the current project and run all (or select) tests in 'test' directory. Defines 'VANGO_TEST'.");
+                println!(
+                    "Build the current project and run all (or select) tests in 'test' directory. Defines 'VANGO_TEST'."
+                );
                 println!();
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();
@@ -81,27 +102,51 @@ pub fn help(action: Option<&String>) {
                 println!("Toolchains currently installed on this system:");
                 println!();
                 if let Ok(ver) = std::process::Command::new("gcc").arg("--version").output() {
-                    println!("    gcc    - {}", ver.stdout.lines().next().unwrap().unwrap());
+                    println!(
+                        "    gcc    - {}",
+                        ver.stdout.lines().next().unwrap().unwrap()
+                    );
                 } else {
                     println!("    gcc    - unavailable");
                 }
-                if let Ok(ver) = std::process::Command::new("clang").arg("--version").output() {
-                    println!("    clang  - {}", ver.stdout.lines().next().unwrap().unwrap());
+                if let Ok(ver) = std::process::Command::new("clang")
+                    .arg("--version")
+                    .output()
+                {
+                    println!(
+                        "    clang  - {}",
+                        ver.stdout.lines().next().unwrap().unwrap()
+                    );
                 } else {
                     println!("    clang  - unavailable");
                 }
-                if let Ok(ver) = std::process::Command::new("cl.exe").arg("--version").output() {
-                    println!("    msvc   - {}", ver.stderr.lines().next().unwrap().unwrap());
+                if let Ok(ver) = std::process::Command::new("cl.exe")
+                    .arg("--version")
+                    .output()
+                {
+                    println!(
+                        "    msvc   - {}",
+                        ver.stderr.lines().next().unwrap().unwrap()
+                    );
                 } else {
                     println!("    msvc   - unavailable");
                 }
                 if let Ok(ver) = std::process::Command::new("zig").arg("version").output() {
-                    println!("    zig    - {}", ver.stdout.lines().next().unwrap().unwrap());
+                    println!(
+                        "    zig    - {}",
+                        ver.stdout.lines().next().unwrap().unwrap()
+                    );
                 } else {
                     println!("    zig    - unavailable");
                 }
-                if let Ok(ver) = std::process::Command::new("emcc.bat").arg("--version").output() {
-                    println!("    emcc   - {}", ver.stdout.lines().next().unwrap().unwrap());
+                if let Ok(ver) = std::process::Command::new("emcc.bat")
+                    .arg("--version")
+                    .output()
+                {
+                    println!(
+                        "    emcc   - {}",
+                        ver.stdout.lines().next().unwrap().unwrap()
+                    );
                 } else {
                     println!("    emcc   - unavailable");
                 }
@@ -120,7 +165,9 @@ pub fn help(action: Option<&String>) {
         println!("Commands:");
         println!("    new         Create a new empty project");
         println!("    init        Create an empty project in an existing location");
-        println!("    help        Display help about a command (list toolchains with 'help toolchains')");
+        println!(
+            "    help        Display help about a command (list toolchains with 'help toolchains')"
+        );
         println!("    clean, c    Remove all generated build files from the current project");
         println!("    build, b    Build the current project");
         println!("    run,   r    Build the current project and run it");
@@ -129,4 +176,3 @@ pub fn help(action: Option<&String>) {
     }
     println!();
 }
-

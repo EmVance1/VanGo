@@ -1,7 +1,6 @@
-use std::{str::FromStr, fmt::Display};
-use serde::{Serialize, Deserialize};
-use crate::{log_warn_ln, Error};
-
+use crate::{Error, log_warn_ln};
+use serde::{Deserialize, Serialize};
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {
@@ -20,10 +19,22 @@ impl FromStr for Version {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut iter = s.split('.');
-        let result = Version{
-            major: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
-            minor: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
-            patch: iter.next().ok_or(Error::MimicTomlSemver(s.to_string()))?.parse().map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+        let result = Version {
+            major: iter
+                .next()
+                .ok_or(Error::MimicTomlSemver(s.to_string()))?
+                .parse()
+                .map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+            minor: iter
+                .next()
+                .ok_or(Error::MimicTomlSemver(s.to_string()))?
+                .parse()
+                .map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
+            patch: iter
+                .next()
+                .ok_or(Error::MimicTomlSemver(s.to_string()))?
+                .parse()
+                .map_err(|_| Error::MimicTomlSemver(s.to_string()))?,
         };
         if iter.next().is_some() {
             Err(Error::MimicTomlSemver(s.to_string()))
@@ -33,22 +44,23 @@ impl FromStr for Version {
     }
 }
 
-
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ProjKind {
     #[default]
     App,
-    SharedLib{ implib: bool },
+    SharedLib {
+        implib: bool,
+    },
     StaticLib,
 }
 
 impl ProjKind {
     pub fn is_lib(self) -> bool {
-        matches!(self, ProjKind::StaticLib|ProjKind::SharedLib{..})
+        matches!(self, ProjKind::StaticLib | ProjKind::SharedLib { .. })
     }
     pub fn has_lib(self) -> bool {
         match self {
-            ProjKind::SharedLib{ implib } => !cfg!(windows) || implib,
+            ProjKind::SharedLib { implib } => !cfg!(windows) || implib,
             ProjKind::StaticLib => true,
             ProjKind::App => false,
         }
@@ -59,14 +71,13 @@ impl FromStr for ProjKind {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "app"       => Ok(ProjKind::App),
-            "sharedlib" => Ok(ProjKind::SharedLib{ implib: true }),
+            "app" => Ok(ProjKind::App),
+            "sharedlib" => Ok(ProjKind::SharedLib { implib: true }),
             "staticlib" => Ok(ProjKind::StaticLib),
-            _ => Err(Error::MimicTomlProjkind(s.to_string()))
+            _ => Err(Error::MimicTomlProjkind(s.to_string())),
         }
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ToolChain {
@@ -83,16 +94,20 @@ impl Default for ToolChain {
         let sysdef = Self::system_default();
         match std::env::var("VANGO_DEFAULT_TOOLCHAIN") {
             Ok(var) => match var.as_str() {
-                "msvc"  => return ToolChain::Msvc,
-                "gcc"   => return ToolChain::Gcc,
-                "clang-gnu"  => return ToolChain::ClangGnu,
+                "msvc" => return ToolChain::Msvc,
+                "gcc" => return ToolChain::Gcc,
+                "clang-gnu" => return ToolChain::ClangGnu,
                 "clang-msvc" => return ToolChain::ClangMsvc,
-                "zig"   => return ToolChain::Zig,
-                "emcc"  => return ToolChain::Emcc,
-                _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
-            }
-            Err(std::env::VarError::NotUnicode(..)) => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
-            _ => ()
+                "zig" => return ToolChain::Zig,
+                "emcc" => return ToolChain::Emcc,
+                _ => log_warn_ln!(
+                    "'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"
+                ),
+            },
+            Err(std::env::VarError::NotUnicode(..)) => log_warn_ln!(
+                "'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"
+            ),
+            _ => (),
         }
         sysdef
     }
@@ -111,30 +126,36 @@ impl ToolChain {
 
     pub fn as_directory(self) -> &'static str {
         match self {
-            Self::Msvc  => "msvc",
-            Self::Gcc   => "gcc",
-            Self::ClangGnu  => "clang-gnu",
+            Self::Msvc => "msvc",
+            Self::Gcc => "gcc",
+            Self::ClangGnu => "clang-gnu",
             Self::ClangMsvc => "clang-msvc",
-            Self::Zig   => "zig",
-            Self::Emcc  => "emcc",
+            Self::Zig => "zig",
+            Self::Emcc => "emcc",
         }
     }
 
     #[allow(dead_code)]
     pub fn is_msvc(self) -> bool {
-        matches!(self, Self::Msvc|Self::ClangMsvc)
+        matches!(self, Self::Msvc | Self::ClangMsvc)
     }
     #[allow(dead_code)]
     pub fn is_gnu(self) -> bool {
-        matches!(self, Self::Gcc|Self::ClangGnu|Self::Zig|Self::Emcc)
+        matches!(self, Self::Gcc | Self::ClangGnu | Self::Zig | Self::Emcc)
     }
     #[allow(dead_code)]
     pub fn is_clang(self) -> bool {
-        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig|Self::Emcc)
+        matches!(
+            self,
+            Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc
+        )
     }
     #[allow(dead_code)]
     pub fn is_llvm(self) -> bool {
-        matches!(self, Self::ClangGnu|Self::ClangMsvc|Self::Zig|Self::Emcc)
+        matches!(
+            self,
+            Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc
+        )
     }
     #[allow(dead_code)]
     pub fn is_emcc(self) -> bool {
@@ -142,22 +163,24 @@ impl ToolChain {
     }
 
     pub fn shared_lib_prefix() -> &'static str {
-        if cfg!(windows) {
-            ""
-        } else {
-            "lib"
-        }
+        if cfg!(windows) { "" } else { "lib" }
     }
     pub fn static_lib_prefix(self) -> &'static str {
         match self {
-            Self::Msvc|Self::ClangMsvc => "",
+            Self::Msvc | Self::ClangMsvc => "",
             _ => "lib",
         }
     }
     pub fn app_ext(self) -> &'static str {
         match self {
             Self::Emcc => "html",
-            _ => if cfg!(windows) { "exe" } else { "" }
+            _ => {
+                if cfg!(windows) {
+                    "exe"
+                } else {
+                    ""
+                }
+            }
         }
     }
     pub fn shared_lib_ext() -> &'static str {
@@ -171,59 +194,63 @@ impl ToolChain {
     }
     pub fn static_lib_ext(self) -> &'static str {
         match self {
-            Self::Msvc|Self::ClangMsvc => "lib",
+            Self::Msvc | Self::ClangMsvc => "lib",
             _ => "a",
         }
     }
 
     pub fn compiler(self, cpp: bool) -> std::process::Command {
         match self {
-            Self::Msvc  => std::process::Command::new("cl.exe"),
-            Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
-            Self::ClangGnu  => {
+            Self::Msvc => std::process::Command::new("cl.exe"),
+            Self::Gcc => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
+            Self::ClangGnu => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(windows) { cmd.arg("--target=x86_64-w64-mingw32"); }
+                if cfg!(windows) {
+                    cmd.arg("--target=x86_64-w64-mingw32");
+                }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("clang-cl"),
-            Self::Zig   => {
+            Self::Zig => {
                 let mut cmd = std::process::Command::new("zig");
                 cmd.arg(if cpp { "c++" } else { "cc" });
                 cmd
             }
-            Self::Emcc   => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
+            Self::Emcc => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
         }
     }
     pub fn linker(self, cpp: bool) -> std::process::Command {
         match self {
-            Self::Msvc  => std::process::Command::new("LINK.exe"),
-            Self::Gcc   => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
-            Self::ClangGnu  => {
+            Self::Msvc => std::process::Command::new("LINK.exe"),
+            Self::Gcc => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
+            Self::ClangGnu => {
                 let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                if cfg!(windows) { cmd.arg("--target=x86_64-w64-mingw32"); }
+                if cfg!(windows) {
+                    cmd.arg("--target=x86_64-w64-mingw32");
+                }
                 cmd
             }
             Self::ClangMsvc => std::process::Command::new("lld-link"),
-            Self::Zig   => {
+            Self::Zig => {
                 let mut cmd = std::process::Command::new("zig");
                 cmd.arg(if cpp { "c++" } else { "cc" });
                 cmd
             }
-            Self::Emcc   => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
+            Self::Emcc => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
         }
     }
     pub fn archiver(self) -> std::process::Command {
         match self {
-            Self::Msvc  => std::process::Command::new("LIB.exe"),
-            Self::Gcc   => std::process::Command::new("ar"),
-            Self::ClangGnu  => std::process::Command::new("llvm-ar"),
+            Self::Msvc => std::process::Command::new("LIB.exe"),
+            Self::Gcc => std::process::Command::new("ar"),
+            Self::ClangGnu => std::process::Command::new("llvm-ar"),
             Self::ClangMsvc => std::process::Command::new("llvm-lib"),
-            Self::Zig   => {
+            Self::Zig => {
                 let mut cmd = std::process::Command::new("zig");
                 cmd.arg("ar");
                 cmd
             }
-            Self::Emcc  => std::process::Command::new("llvm-ar"),
+            Self::Emcc => std::process::Command::new("llvm-ar"),
         }
     }
 }
@@ -231,16 +258,15 @@ impl ToolChain {
 impl Display for ToolChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Msvc  => write!(f, "MSVC"),
-            Self::Gcc   => write!(f, "GCC"),
-            Self::ClangGnu  => write!(f, "Clang (GNU)"),
+            Self::Msvc => write!(f, "MSVC"),
+            Self::Gcc => write!(f, "GCC"),
+            Self::ClangGnu => write!(f, "Clang (GNU)"),
             Self::ClangMsvc => write!(f, "Clang (MSVC)"),
-            Self::Zig   => write!(f, "Zig/Clang"),
-            Self::Emcc  => write!(f, "Emscripten/Clang"),
+            Self::Zig => write!(f, "Zig/Clang"),
+            Self::Emcc => write!(f, "Emscripten/Clang"),
         }
     }
 }
-
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Profile {
@@ -260,15 +286,15 @@ impl Profile {
     }
     pub fn as_define(&self) -> Option<&'static str> {
         match self {
-            Self::Debug     => Some("VANGO_DEBUG"),
-            Self::Release   => Some("VANGO_RELEASE"),
+            Self::Debug => Some("VANGO_DEBUG"),
+            Self::Release => Some("VANGO_RELEASE"),
             Self::Custom(s) => None,
         }
     }
     pub fn as_arg(&self) -> String {
         match self {
-            Self::Debug     => "--debug".to_string(),
-            Self::Release   => "--release".to_string(),
+            Self::Debug => "--debug".to_string(),
+            Self::Release => "--release".to_string(),
             Self::Custom(s) => format!("--profile={s}"),
         }
     }
@@ -277,13 +303,12 @@ impl Profile {
 impl Display for Profile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Debug     => write!(f, "debug"),
-            Self::Release   => write!(f, "release"),
+            Self::Debug => write!(f, "debug"),
+            Self::Release => write!(f, "release"),
             Self::Custom(s) => write!(f, "{s}"),
         }
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lang {
@@ -299,13 +324,19 @@ impl Lang {
     pub fn src_ext(self) -> &'static str {
         match self {
             Self::Cpp(..) => "cpp",
-            Self::C(..)   => "c",
+            Self::C(..) => "c",
         }
     }
 
     pub fn numeric(self) -> u32 {
         match self {
-            Self::Cpp(n)|Self::C(n) => if n >= 100 { n - 100 } else { n },
+            Self::Cpp(n) | Self::C(n) => {
+                if n >= 100 {
+                    n - 100
+                } else {
+                    n
+                }
+            }
         }
     }
 }
@@ -314,7 +345,7 @@ impl Display for Lang {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::Cpp(_) => write!(f, "c++{}", self.numeric()),
-            Self::C(_)   => write!(f, "c{}",   self.numeric()),
+            Self::C(_) => write!(f, "c{}", self.numeric()),
         }
     }
 }
@@ -322,7 +353,7 @@ impl Display for Lang {
 impl Ord for Lang {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
-            (Lang::Cpp(a), Lang::Cpp(b))| (Lang::C(a), Lang::C(b)) => a.cmp(b),
+            (Lang::Cpp(a), Lang::Cpp(b)) | (Lang::C(a), Lang::C(b)) => a.cmp(b),
             (Lang::Cpp(_), Lang::C(_)) => 1.cmp(&0),
             (Lang::C(_), Lang::Cpp(_)) => 0.cmp(&1),
         }
@@ -341,7 +372,8 @@ impl FromStr for Lang {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let cpp = value.to_ascii_lowercase();
         if cpp.starts_with("c++") {
-            let num: u32 = cpp.strip_prefix("c++")
+            let num: u32 = cpp
+                .strip_prefix("c++")
                 .unwrap()
                 .parse()
                 .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
@@ -353,7 +385,8 @@ impl FromStr for Lang {
                 Ok(Lang::Cpp(num))
             }
         } else {
-            let num: u32 = cpp.strip_prefix("c")
+            let num: u32 = cpp
+                .strip_prefix("c")
                 .ok_or(Error::InvalidCppStd(cpp.to_string()))?
                 .parse()
                 .map_err(|_| Error::InvalidCppStd(cpp.to_string()))?;
@@ -367,7 +400,6 @@ impl FromStr for Lang {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -408,13 +440,13 @@ mod tests {
 
     #[test]
     pub fn lang_cmp() {
-        assert!(Lang::from_str("C99").unwrap() >  Lang::from_str("C89").unwrap());
-        assert!(Lang::from_str("C11").unwrap() >  Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C99").unwrap() > Lang::from_str("C89").unwrap());
+        assert!(Lang::from_str("C11").unwrap() > Lang::from_str("C89").unwrap());
         assert!(Lang::from_str("C89").unwrap() >= Lang::from_str("C89").unwrap());
         assert!(Lang::from_str("C99").unwrap() >= Lang::from_str("C89").unwrap());
         assert!(Lang::from_str("C11").unwrap() >= Lang::from_str("C99").unwrap());
-        assert!(Lang::from_str("C++03").unwrap() >  Lang::from_str("C++98").unwrap());
-        assert!(Lang::from_str("C++11").unwrap() >  Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++03").unwrap() > Lang::from_str("C++98").unwrap());
+        assert!(Lang::from_str("C++11").unwrap() > Lang::from_str("C++98").unwrap());
         assert!(Lang::from_str("C++98").unwrap() >= Lang::from_str("C++98").unwrap());
         assert!(Lang::from_str("C++03").unwrap() >= Lang::from_str("C++98").unwrap());
         assert!(Lang::from_str("C++11").unwrap() >= Lang::from_str("C++98").unwrap());

@@ -7,7 +7,7 @@ pub enum BuildLevel<'a> {
     CompileAndLink(Vec<(&'a Path, PathBuf)>),
 }
 
-pub fn get_build_level(info: &BuildInfo) -> BuildLevel {
+pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
     if info.changed {
         BuildLevel::CompileAndLink(
             info.sources

@@ -113,6 +113,42 @@ impl Default for ToolChain {
     }
 }
 
+impl FromStr for ToolChain {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_ascii_lowercase();
+        match s.as_str() {
+            "msvc" => {
+                if cfg!(windows) {
+                    Ok(ToolChain::Msvc)
+                } else {
+                    Err(Error::MsvcUnavailable)
+                }
+            }
+            "gcc" => Ok(ToolChain::Gcc),
+            "clang" => {
+                if cfg!(windows) {
+                    Ok(ToolChain::ClangMsvc)
+                } else {
+                    Ok(ToolChain::ClangGnu)
+                }
+            }
+            "clang-gnu" => Ok(ToolChain::ClangGnu),
+            "clang-msvc" => {
+                if cfg!(windows) {
+                    Ok(ToolChain::ClangMsvc)
+                } else {
+                    Err(Error::MsvcUnavailable)
+                }
+            }
+            "zig" => Ok(ToolChain::Zig),
+            "emcc" => Ok(ToolChain::Emcc),
+            _ => Err(Error::UnknownToolChain(s.to_string())),
+        }
+    }
+}
+
 impl ToolChain {
     pub fn system_default() -> Self {
         if cfg!(windows) {

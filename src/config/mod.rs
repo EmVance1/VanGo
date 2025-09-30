@@ -53,6 +53,7 @@ impl VangoFile {
 
 #[cfg(test)]
 mod tests {
+
     use super::{Lang, ProjKind, VangoFile, build::*, lib::*};
     use std::{collections::HashMap, str::FromStr};
 
@@ -122,6 +123,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 version: "0.1.0".parse().unwrap(),
                 lang: Lang::Cpp(120),
                 kind: ProjKind::App,
+                toolchain: None,
                 interface: Lang::Cpp(120),
                 runtime: None,
                 dependencies,

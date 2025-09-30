@@ -1,4 +1,4 @@
-use super::{Lang, Profile, ProjKind, Version};
+use super::{Lang, Profile, ProjKind, ToolChain, Version};
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
@@ -9,6 +9,7 @@ pub struct BuildFile {
     pub version: Version,
     pub lang: Lang,
     pub kind: ProjKind,
+    pub toolchain: Option<ToolChain>,
     pub interface: Lang,
     pub runtime: Option<String>,
     pub dependencies: Vec<Dependency>,
@@ -79,6 +80,12 @@ impl BuildFile {
             lang
         };
 
+        let toolchain = if let Some(tc) = file.package.toolchain {
+            Some(ToolChain::from_str(&tc)?)
+        } else {
+            None
+        };
+
         for (_, v) in file.dependencies {
             dependencies.push(v.try_into()?);
         }
@@ -88,6 +95,7 @@ impl BuildFile {
             version: Version::from_str(&file.package.version)?,
             lang,
             kind,
+            toolchain,
             interface,
             runtime: file.package.runtime,
             dependencies,
@@ -388,6 +396,7 @@ struct SerdeBuild {
     version: String,
     lang: String,
     kind: Option<String>,
+    toolchain: Option<String>,
     implib: Option<bool>,
     interface: Option<String>,
     runtime: Option<String>,

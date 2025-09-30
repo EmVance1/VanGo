@@ -38,14 +38,9 @@ pub fn run(name: &str, switches: &BuildSwitches, runargs: Vec<String>) -> Result
             .join(switches.toolchain.as_directory())
             .join(switches.profile.to_string())
     };
-    let outfile = outdir
-        .join(name)
-        .with_extension(switches.toolchain.app_ext());
+    let outfile = outdir.join(name).with_extension(switches.toolchain.app_ext());
 
-    log_info_ln!(
-        "{:=<80}",
-        format!("running application: {} ", outfile.display())
-    );
+    log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
     let code: u8 = std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())

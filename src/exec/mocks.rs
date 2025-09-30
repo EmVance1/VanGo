@@ -48,14 +48,7 @@ impl BuildInfo {
         }
     }
 
-    pub fn mock_debug(
-        outfile: &Path,
-        projkind: ProjKind,
-        lang: Lang,
-        toolchain: ToolChain,
-        pch: Option<PathBuf>,
-        crtstatic: bool,
-    ) -> Self {
+    pub fn mock_debug(outfile: &Path, projkind: ProjKind, lang: Lang, toolchain: ToolChain, pch: Option<PathBuf>, crtstatic: bool) -> Self {
         let base = Self::mock_base(outfile);
         Self {
             projkind,
@@ -63,11 +56,7 @@ impl BuildInfo {
             lang,
             pch,
             settings: BuildSettings {
-                runtime: if crtstatic {
-                    Runtime::StaticDebug
-                } else {
-                    Runtime::DynamicDebug
-                },
+                runtime: if crtstatic { Runtime::StaticDebug } else { Runtime::DynamicDebug },
                 ..base.settings
             },
             ..base

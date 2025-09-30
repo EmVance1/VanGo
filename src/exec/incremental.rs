@@ -31,12 +31,7 @@ pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
                     .map(|src| {
                         (
                             src.as_path(),
-                            transform_file(
-                                src,
-                                &info.srcdir,
-                                &info.outdir,
-                                info.toolchain.is_msvc(),
-                            ),
+                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
                         )
                     })
                     .collect(),
@@ -52,12 +47,7 @@ pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
                     if src.metadata().unwrap().modified().unwrap() > pivot {
                         Some((
                             src.as_path(),
-                            transform_file(
-                                src,
-                                &info.srcdir,
-                                &info.outdir,
-                                info.toolchain.is_msvc(),
-                            ),
+                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
                         ))
                     } else {
                         None
@@ -82,10 +72,7 @@ pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
             .iter()
             .filter_map(|src| {
                 let obj = transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc());
-                if !obj.exists()
-                    || (src.metadata().unwrap().modified().unwrap()
-                        > obj.metadata().unwrap().modified().unwrap())
-                {
+                if !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()) {
                     Some((src.as_path(), obj))
                 } else {
                     None
@@ -102,9 +89,7 @@ pub fn get_build_level<'a>(info: &'a BuildInfo) -> BuildLevel<'a> {
 }
 
 fn any_changed(sources: &[PathBuf], pivot: std::time::SystemTime) -> bool {
-    sources
-        .iter()
-        .any(|src| src.metadata().unwrap().modified().unwrap() > pivot)
+    sources.iter().any(|src| src.metadata().unwrap().modified().unwrap() > pivot)
 }
 
 fn transform_file(path: &Path, sdir: &Path, odir: &Path, msvc: bool) -> PathBuf {

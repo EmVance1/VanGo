@@ -100,22 +100,12 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
         }
         "build" | "b" => {
             let debug = args.remove_if(|s| *s == "--debug" || *s == "-d").is_some();
-            let release = args
-                .remove_if(|s| *s == "--release" || *s == "-r")
-                .is_some();
-            let toolchain = parse_toolchain(
-                args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")),
-            )?;
+            let release = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install = args.remove_if(|s| *s == "--install").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args
-                .remove_if(|s| *s == "--verbose" || *s == "-v")
-                .is_some();
-            let profile = parse_profile(
-                args.remove_if(|s| s.starts_with("--profile=")),
-                debug,
-                release,
-            )?;
+            let verbose = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
                 Ok(Action::Build {
                     switches: BuildSwitches {
@@ -140,22 +130,12 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                 vec![]
             };
             let debug = args.remove_if(|s| *s == "--debug" || *s == "-d").is_some();
-            let release = args
-                .remove_if(|s| *s == "--release" || *s == "-r")
-                .is_some();
-            let toolchain = parse_toolchain(
-                args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")),
-            )?;
+            let release = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install = args.remove_if(|s| *s == "--install").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args
-                .remove_if(|s| *s == "--verbose" || *s == "-v")
-                .is_some();
-            let profile = parse_profile(
-                args.remove_if(|s| s.starts_with("--profile=")),
-                debug,
-                release,
-            )?;
+            let verbose = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             if args.is_empty() {
                 Ok(Action::Run {
                     switches: BuildSwitches {
@@ -174,22 +154,12 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
         }
         "test" | "t" => {
             let debug = args.remove_if(|s| *s == "--debug" || *s == "-d").is_some();
-            let release = args
-                .remove_if(|s| *s == "--release" || *s == "-r")
-                .is_some();
-            let toolchain = parse_toolchain(
-                args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")),
-            )?;
+            let release = args.remove_if(|s| *s == "--release" || *s == "-r").is_some();
+            let toolchain = parse_toolchain(args.remove_if(|s| s.starts_with("--toolchain=") || s.starts_with("-t=")))?;
             let install = args.remove_if(|s| *s == "--install").is_some();
             let echo = args.remove_if(|s| *s == "--echo").is_some();
-            let verbose = args
-                .remove_if(|s| *s == "--verbose" || *s == "-v")
-                .is_some();
-            let profile = parse_profile(
-                args.remove_if(|s| s.starts_with("--profile=")),
-                debug,
-                release,
-            )?;
+            let verbose = args.remove_if(|s| *s == "--verbose" || *s == "-v").is_some();
+            let profile = parse_profile(args.remove_if(|s| s.starts_with("--profile=")), debug, release)?;
             Ok(Action::Test {
                 switches: BuildSwitches {
                     profile,
@@ -228,9 +198,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Action, Error> {
                     "new" | "init" | "clean" | "build" | "run" | "test" | "clangd" | "toolchains"
                 ) && args.is_empty()
                 {
-                    Ok(Action::Help {
-                        action: Some(action),
-                    })
+                    Ok(Action::Help { action: Some(action) })
                 } else {
                     Err(Error::BadAction(action))
                 }
@@ -259,9 +227,7 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
         let tc = if let Some(tc) = tc.strip_prefix("-t=") {
             tc.to_ascii_lowercase()
         } else {
-            tc.strip_prefix("--toolchain=")
-                .unwrap()
-                .to_ascii_lowercase()
+            tc.strip_prefix("--toolchain=").unwrap().to_ascii_lowercase()
         };
         if tc == "msvc" {
             if cfg!(windows) {
@@ -299,23 +265,14 @@ fn parse_toolchain(toolchain: Option<String>) -> Result<ToolChain, Error> {
 
 fn parse_profile(profile: Option<String>, debug: bool, release: bool) -> Result<Profile, Error> {
     if debug && release {
-        return Err(Error::ExtraArgs(
-            "build".to_string(),
-            vec!["--release".to_string()],
-        ));
+        return Err(Error::ExtraArgs("build".to_string(), vec!["--release".to_string()]));
     }
     if let Some(prof) = profile {
         if debug {
-            return Err(Error::ExtraArgs(
-                "build".to_string(),
-                vec!["--debug".to_string()],
-            ));
+            return Err(Error::ExtraArgs("build".to_string(), vec!["--debug".to_string()]));
         }
         if release {
-            return Err(Error::ExtraArgs(
-                "build".to_string(),
-                vec!["--release".to_string()],
-            ));
+            return Err(Error::ExtraArgs("build".to_string(), vec!["--release".to_string()]));
         }
 
         let prof = prof.strip_prefix("--profile=").unwrap();
@@ -391,12 +348,7 @@ mod tests {
     #[test]
     pub fn parse_action_new_4() {
         let name = "foo".to_string();
-        let action = vec![
-            "new".to_string(),
-            "--lib".to_string(),
-            name.clone(),
-            "--c".to_string(),
-        ];
+        let action = vec!["new".to_string(), "--lib".to_string(), name.clone(), "--c".to_string()];
         let result = parse_args(action);
         assert_eq!(
             result.unwrap(),
@@ -419,7 +371,7 @@ mod tests {
                 switches: BuildSwitches {
                     profile: Profile::Debug,
                     ..Default::default()
-                }
+                },
             }
         );
     }
@@ -433,18 +385,14 @@ mod tests {
                 switches: BuildSwitches {
                     profile: Profile::Release,
                     ..Default::default()
-                }
+                },
             }
         );
     }
 
     #[test]
     pub fn parse_action_build_3() {
-        let result = parse_args(vec![
-            "build".to_string(),
-            "-t=gcc".to_string(),
-            "--release".to_string(),
-        ]);
+        let result = parse_args(vec!["build".to_string(), "-t=gcc".to_string(), "--release".to_string()]);
         assert_eq!(
             result.unwrap(),
             Action::Build {
@@ -452,18 +400,14 @@ mod tests {
                     profile: Profile::Release,
                     toolchain: ToolChain::Gcc,
                     ..Default::default()
-                }
+                },
             }
         );
     }
 
     #[test]
     pub fn parse_action_build_4() {
-        let result = parse_args(vec![
-            "build".to_string(),
-            "-t=clang-gnu".to_string(),
-            "--release".to_string(),
-        ]);
+        let result = parse_args(vec!["build".to_string(), "-t=clang-gnu".to_string(), "--release".to_string()]);
         assert_eq!(
             result.unwrap(),
             Action::Build {
@@ -471,7 +415,7 @@ mod tests {
                     profile: Profile::Release,
                     toolchain: ToolChain::ClangGnu,
                     ..Default::default()
-                }
+                },
             }
         );
     }
@@ -483,7 +427,7 @@ mod tests {
             result.unwrap(),
             Action::Run {
                 switches: BuildSwitches::default(),
-                args: vec![]
+                args: vec![],
             }
         );
     }
@@ -498,7 +442,7 @@ mod tests {
                     profile: Profile::Release,
                     ..Default::default()
                 },
-                args: vec![]
+                args: vec![],
             }
         );
     }
@@ -510,7 +454,7 @@ mod tests {
             result.unwrap(),
             Action::Run {
                 switches: BuildSwitches::default(),
-                args: vec!["-r".to_string()]
+                args: vec!["-r".to_string()],
             }
         );
     }
@@ -529,21 +473,13 @@ mod tests {
 
     #[test]
     pub fn parse_action_error_3() {
-        let result = parse_args(vec![
-            "build".to_string(),
-            "--release".to_string(),
-            "dummy".to_string(),
-        ]);
+        let result = parse_args(vec!["build".to_string(), "--release".to_string(), "dummy".to_string()]);
         assert!(result.is_err());
     }
 
     #[test]
     pub fn parse_action_error_4() {
-        let result = parse_args(vec![
-            "build".to_string(),
-            "-d".to_string(),
-            "-r".to_string(),
-        ]);
+        let result = parse_args(vec!["build".to_string(), "-d".to_string(), "-r".to_string()]);
         assert!(result.is_err());
     }
 }

@@ -97,9 +97,7 @@ pub fn msvc_linker(output: &std::process::Output, clang: bool) -> bool {
 pub fn gnu_linker(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
-        if line.starts_with("collect2.exe")
-            || line.contains("linker command failed with exit code 1")
-        {
+        if line.starts_with("collect2.exe") || line.contains("linker command failed with exit code 1") {
             continue;
         }
         if let Some((_, err)) = line.split_once("ld.exe: ") {

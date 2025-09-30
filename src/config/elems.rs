@@ -100,13 +100,11 @@ impl Default for ToolChain {
                 "clang-msvc" => return ToolChain::ClangMsvc,
                 "zig" => return ToolChain::Zig,
                 "emcc" => return ToolChain::Emcc,
-                _ => log_warn_ln!(
-                    "'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"
-                ),
+                _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
             },
-            Err(std::env::VarError::NotUnicode(..)) => log_warn_ln!(
-                "'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"
-            ),
+            Err(std::env::VarError::NotUnicode(..)) => {
+                log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}")
+            }
             _ => (),
         }
         sysdef
@@ -181,17 +179,11 @@ impl ToolChain {
     }
     #[allow(dead_code)]
     pub fn is_clang(self) -> bool {
-        matches!(
-            self,
-            Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc
-        )
+        matches!(self, Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc)
     }
     #[allow(dead_code)]
     pub fn is_llvm(self) -> bool {
-        matches!(
-            self,
-            Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc
-        )
+        matches!(self, Self::ClangGnu | Self::ClangMsvc | Self::Zig | Self::Emcc)
     }
     #[allow(dead_code)]
     pub fn is_emcc(self) -> bool {

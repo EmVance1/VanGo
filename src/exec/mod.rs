@@ -60,9 +60,9 @@ fn on_compile_finish(tc: ToolChain, output: &std::process::Output) -> bool {
 
 fn msvc_check_iso(lang: Lang) {
     match lang {
-        Lang::Cpp(123) => log_warn_ln!(
-            "MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete"
-        ),
+        Lang::Cpp(123) => {
+            log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete")
+        }
         Lang::Cpp(n) if n < 114 => log_warn_ln!(
             "MSVC {}: no longer supported - defaulting to C++14",
             lang.to_string().to_ascii_uppercase()
@@ -70,9 +70,7 @@ fn msvc_check_iso(lang: Lang) {
         Lang::C(123) => {
             log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete")
         }
-        Lang::C(99) => log_warn_ln!(
-            "MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete"
-        ),
+        Lang::C(99) => log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete"),
         _ => (),
     }
 }
@@ -93,36 +91,21 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
         BuildLevel::LinkOnly => {
             if recursive {
-                log_info_ln!(
-                    "{:=<80}",
-                    format!("building dependency: {} ", info.outfile.display())
-                );
+                log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display()));
             } else {
-                log_info_ln!(
-                    "{:=<80}",
-                    format!("building project: {} ", info.outfile.display())
-                );
+                log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display()));
             }
         }
         BuildLevel::CompileAndLink(..) => {
             if recursive {
-                log_info_ln!(
-                    "{:=<80}",
-                    format!("building dependency: {} ", info.outfile.display())
-                );
+                log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display()));
             } else if info.changed {
                 log_info_ln!(
                     "{:=<80}",
-                    format!(
-                        "environment changed - rebuilding project: {} ",
-                        info.outfile.display()
-                    )
+                    format!("environment changed - rebuilding project: {} ", info.outfile.display())
                 );
             } else {
-                log_info_ln!(
-                    "{:=<80}",
-                    format!("building project: {} ", info.outfile.display())
-                );
+                log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display()));
             }
 
             // MSVC has sketchy ISO settings...
@@ -136,9 +119,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     let pch_use = if let Some(pch) = &info.pch {
         let _ = std::fs::create_dir(info.outdir.join("pch"));
         let inpch = info.srcdir.join(pch); // path/to/header
-        let incpp = info
-            .outdir
-            .join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
+        let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
         let outfile = if info.toolchain.is_msvc() {
             // output file
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.display()));
@@ -185,10 +166,8 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             } else {
                 gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
             };
-            if let Some(output) = queue.push(
-                comp.spawn()
-                    .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?,
-            ) && !on_compile_finish(info.toolchain, &output)
+            if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
+                && !on_compile_finish(info.toolchain, &output)
             {
                 failure = true;
             }

@@ -44,16 +44,11 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
-    deps.defines
-        .push(format!("VANGO_PKG_NAME=\"{}\"", build.name));
-    deps.defines
-        .push(format!("VANGO_PKG_VERSION=\"{}\"", build.version));
-    deps.defines
-        .push(format!("VANGO_PKG_VERSION_MAJOR={}", build.version.major));
-    deps.defines
-        .push(format!("VANGO_PKG_VERSION_MINOR={}", build.version.minor));
-    deps.defines
-        .push(format!("VANGO_PKG_VERSION_PATCH={}", build.version.patch));
+    deps.defines.push(format!("VANGO_PKG_NAME=\"{}\"", build.name));
+    deps.defines.push(format!("VANGO_PKG_VERSION=\"{}\"", build.version));
+    deps.defines.push(format!("VANGO_PKG_VERSION_MAJOR={}", build.version.major));
+    deps.defines.push(format!("VANGO_PKG_VERSION_MINOR={}", build.version.minor));
+    deps.defines.push(format!("VANGO_PKG_VERSION_PATCH={}", build.version.patch));
     deps.incdirs.extend(profile.include);
 
     // scope all output to correct directory
@@ -67,12 +62,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 
     // determine output filenames, depends on project type, toolchain and platform (see elems::{ToolChain, ProjKind})
     let (outfile, implib) = match build.kind {
-        ProjKind::App => (
-            outdir
-                .join(&build.name)
-                .with_extension(switches.toolchain.app_ext()),
-            None,
-        ),
+        ProjKind::App => (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None),
         ProjKind::SharedLib { implib: false } => (
             outdir
                 .join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
@@ -85,21 +75,13 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
                 .with_extension(ToolChain::shared_lib_ext()),
             Some(
                 outdir
-                    .join(format!(
-                        "{}{}",
-                        switches.toolchain.static_lib_prefix(),
-                        build.name
-                    ))
+                    .join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
                     .with_extension(switches.toolchain.static_lib_ext()),
             ),
         ),
         ProjKind::StaticLib => (
             outdir
-                .join(format!(
-                    "{}{}",
-                    switches.toolchain.static_lib_prefix(),
-                    build.name
-                ))
+                .join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
                 .with_extension(switches.toolchain.static_lib_ext()),
             None,
         ),
@@ -113,11 +95,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         projkind: build.kind,
         toolchain: switches.toolchain,
         lang: build.lang,
-        cpprt: build
-            .runtime
-            .as_ref()
-            .map(|rt| rt.eq_ignore_ascii_case("c++"))
-            .unwrap_or_default(),
+        cpprt: build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings: profile.settings,
 
         defines: deps.defines,
@@ -161,12 +139,7 @@ struct BuildCache {
     is_test: bool,
 }
 
-fn settings_cache_changed(
-    defines: Vec<String>,
-    settings: &BuildSettings,
-    switches: &BuildSwitches,
-    outdir: &std::path::Path,
-) -> bool {
+fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switches: &BuildSwitches, outdir: &std::path::Path) -> bool {
     let newcache = BuildCache {
         defines,
         opt_level: settings.opt_level,

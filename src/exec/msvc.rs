@@ -7,14 +7,7 @@ use crate::{
 };
 use std::path::{Path, PathBuf};
 
-pub(super) fn compile(
-    src: &Path,
-    obj: &Path,
-    info: &BuildInfo,
-    pch: &PreCompHead,
-    echo: bool,
-    _verbose: bool,
-) -> std::process::Command {
+pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
@@ -118,34 +111,16 @@ pub(super) fn compile(
             cmd.arg("/EHsc"); // default C++ exception handling, extern "C" -> noexcept
         }
     }
-    cmd.args(
-        info.incdirs
-            .iter()
-            .map(|inc| format!("/I{}", inc.display())),
-    );
+    cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
     match pch {
         PreCompHead::Create(h) => {
             cmd.arg(format!("/Yc{}", h.display()));
-            cmd.arg(format!(
-                "/Fp:{}",
-                info.outdir
-                    .join("pch")
-                    .join(h)
-                    .with_extension("h.pch")
-                    .display()
-            ));
+            cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
         PreCompHead::Use(h) => {
             cmd.arg(format!("/Yu{}", h.display()));
-            cmd.arg(format!(
-                "/Fp:{}",
-                info.outdir
-                    .join("pch")
-                    .join(h)
-                    .with_extension("h.pch")
-                    .display()
-            ));
+            cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
         PreCompHead::None => (),
     }
@@ -161,12 +136,7 @@ pub(super) fn compile(
     cmd
 }
 
-pub(super) fn link(
-    objs: Vec<PathBuf>,
-    info: BuildInfo,
-    echo: bool,
-    _verbose: bool,
-) -> Result<(), Error> {
+pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<(), Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp());
 
     cmd.args(info.link_args);
@@ -192,11 +162,7 @@ pub(super) fn link(
         cmd.arg("/WX");
     }
     cmd.args(objs);
-    cmd.args(
-        info.libdirs
-            .iter()
-            .map(|l| format!("/LIBPATH:{}", l.display())),
-    );
+    cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l.display())));
     cmd.args(info.archives);
     cmd.args(DEFAULT_LIBS);
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
@@ -205,8 +171,7 @@ pub(super) fn link(
         print_command(&cmd);
     }
     if output::msvc_linker(
-        &cmd.output()
-            .map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?,
+        &cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?,
         info.toolchain.is_clang(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
@@ -216,12 +181,7 @@ pub(super) fn link(
     }
 }
 
-pub(super) fn archive(
-    objs: Vec<PathBuf>,
-    info: BuildInfo,
-    echo: bool,
-    _verbose: bool,
-) -> Result<(), Error> {
+pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<(), Error> {
     let mut cmd = info.toolchain.archiver();
 
     cmd.args(info.link_args);
@@ -240,8 +200,7 @@ pub(super) fn archive(
         print_command(&cmd);
     }
     if output::msvc_archiver(
-        &cmd.output()
-            .map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?,
+        &cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?,
         info.toolchain.is_clang(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
@@ -289,14 +248,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(120),
-                ToolChain::Msvc,
-                None,
-                false,
-            ),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(120), ToolChain::Msvc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -339,14 +291,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(123),
-                ToolChain::ClangMsvc,
-                None,
-                true,
-            ),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(123), ToolChain::ClangMsvc, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -388,14 +333,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(123),
-                ToolChain::Msvc,
-                None,
-                false,
-            ),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -435,14 +373,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(123),
-                ToolChain::Msvc,
-                None,
-                true,
-            ),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, true),
             &PreCompHead::None,
             false,
             false,

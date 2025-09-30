@@ -28,9 +28,7 @@ fn cull_zombies_rec(root: &Path, sdir: &Path, odir: &Path, ext: &str) {
             if e.path().to_string_lossy().ends_with(".h.obj") {
                 continue;
             }
-            let src = sdir
-                .join(e.path().strip_prefix(odir).unwrap())
-                .with_extension(ext);
+            let src = sdir.join(e.path().strip_prefix(odir).unwrap()).with_extension(ext);
             if !src.exists() {
                 let _ = std::fs::remove_file(e.path());
             }

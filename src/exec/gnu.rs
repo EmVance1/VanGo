@@ -6,14 +6,7 @@ use crate::{
 };
 use std::path::{Path, PathBuf};
 
-pub(super) fn compile(
-    src: &Path,
-    obj: &Path,
-    info: &BuildInfo,
-    pch: &PreCompHead,
-    echo: bool,
-    verbose: bool,
-) -> std::process::Command {
+pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
     let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
     cmd.args(&info.comp_args);
@@ -106,18 +99,11 @@ pub(super) fn compile(
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    cmd.args(
-        info.incdirs
-            .iter()
-            .map(|inc| format!("-I{}", inc.display())),
-    );
+    cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
     match pch {
         PreCompHead::Create(_) => {
-            cmd.arg(format!(
-                "-x{}-header",
-                if info.lang.is_cpp() { "c++" } else { "c" }
-            ));
+            cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
         }
         PreCompHead::Use(_) => {
             if info.toolchain.is_clang() {
@@ -145,12 +131,7 @@ pub(super) fn compile(
     cmd
 }
 
-pub(super) fn link(
-    objs: Vec<PathBuf>,
-    info: BuildInfo,
-    echo: bool,
-    verbose: bool,
-) -> Result<(), Error> {
+pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
     let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt); // use g++/clang++ etc. when combining C and C++
 
     cmd.args(info.link_args);
@@ -161,10 +142,7 @@ pub(super) fn link(
             cmd.arg("-shared");
         }
         if implib {
-            cmd.arg(format!(
-                "-Wl,--out-implib,{}",
-                info.implib.unwrap().display()
-            )); // forward to LINK.exe
+            cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display())); // forward to LINK.exe
         }
     }
     if !info.toolchain.is_emcc() {
@@ -181,10 +159,7 @@ pub(super) fn link(
             cmd.arg("-Wl,-no_pie"); // forward -no_pie to ld
         }
     }
-    if matches!(
-        info.settings.runtime,
-        Runtime::StaticDebug | Runtime::StaticRelease
-    ) {
+    if matches!(info.settings.runtime, Runtime::StaticDebug | Runtime::StaticRelease) {
         if info.lang.is_cpp() || info.cpprt {
             cmd.arg("-static-libstdc++");
         }
@@ -211,10 +186,7 @@ pub(super) fn link(
     if echo {
         print_command(&cmd);
     }
-    if output::gnu_linker(
-        &cmd.output()
-            .map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?,
-    ) {
+    if output::gnu_linker(&cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(())
     } else {
@@ -222,12 +194,7 @@ pub(super) fn link(
     }
 }
 
-pub(super) fn archive(
-    objs: Vec<PathBuf>,
-    info: BuildInfo,
-    echo: bool,
-    verbose: bool,
-) -> Result<(), Error> {
+pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
     let mut cmd = info.toolchain.archiver();
 
     if verbose {
@@ -242,10 +209,7 @@ pub(super) fn archive(
     if echo {
         print_command(&cmd);
     }
-    if output::gnu_archiver(
-        &cmd.output()
-            .map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?,
-    ) {
+    if output::gnu_archiver(&cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(())
     } else {
@@ -276,14 +240,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(20),
-                ToolChain::Gcc,
-                None,
-                false,
-            ),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -335,14 +292,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(23),
-                ToolChain::ClangGnu,
-                None,
-                true,
-            ),
+            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(23), ToolChain::ClangGnu, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -395,14 +345,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(20),
-                ToolChain::Gcc,
-                None,
-                false,
-            ),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -454,14 +397,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(
-                &out,
-                ProjKind::App,
-                Lang::Cpp(23),
-                ToolChain::Gcc,
-                None,
-                true,
-            ),
+            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Gcc, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -513,14 +449,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(
-                &out,
-                ProjKind::StaticLib,
-                Lang::Cpp(20),
-                ToolChain::Gcc,
-                None,
-                true,
-            ),
+            &BuildInfo::mock_debug(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
             &PreCompHead::None,
             false,
             false,

@@ -27,19 +27,11 @@ impl VangoFile {
     }
 
     pub fn get_build(self) -> Option<BuildFile> {
-        if let Self::Build(b) = self {
-            Some(b)
-        } else {
-            None
-        }
+        if let Self::Build(b) = self { Some(b) } else { None }
     }
 
     pub fn get_lib(self) -> Option<LibFile> {
-        if let Self::Lib(l) = self {
-            Some(l)
-        } else {
-            None
-        }
+        if let Self::Lib(l) = self { Some(l) } else { None }
     }
 
     pub fn unwrap_build(self) -> BuildFile {

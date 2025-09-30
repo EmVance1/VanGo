@@ -23,50 +23,24 @@ impl BuildFile {
         let mut dependencies: Vec<Dependency> = Vec::new();
 
         if let Some(d) = file.profile.remove("debug") {
-            profiles.insert(
-                "debug".to_string(),
-                BuildProfile::debug(&file.package.defaults)
-                    .merge(d)
-                    .finish(),
-            );
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).merge(d).finish());
         } else {
-            profiles.insert(
-                "debug".to_string(),
-                BuildProfile::debug(&file.package.defaults).finish(),
-            );
+            profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).finish());
         }
         if let Some(r) = file.profile.remove("release") {
             profiles.insert(
                 "release".to_string(),
-                BuildProfile::release(&file.package.defaults)
-                    .merge(r)
-                    .finish(),
+                BuildProfile::release(&file.package.defaults).merge(r).finish(),
             );
         } else {
-            profiles.insert(
-                "release".to_string(),
-                BuildProfile::release(&file.package.defaults).finish(),
-            );
+            profiles.insert("release".to_string(), BuildProfile::release(&file.package.defaults).finish());
         }
         for (k, p) in file.profile {
-            let inherits = p
-                .inherits
-                .clone()
-                .ok_or(Error::InvalidCustomProfile(k.clone()))?;
+            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
             if inherits == "debug" {
-                profiles.insert(
-                    k,
-                    BuildProfile::debug(&file.package.defaults)
-                        .merge(p)
-                        .finish(),
-                );
+                profiles.insert(k, BuildProfile::debug(&file.package.defaults).merge(p).finish());
             } else if inherits == "release" {
-                profiles.insert(
-                    k,
-                    BuildProfile::release(&file.package.defaults)
-                        .merge(p)
-                        .finish(),
-                );
+                profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p).finish());
             }
         }
         let lang = Lang::from_str(&file.package.lang)?;
@@ -109,10 +83,7 @@ impl BuildFile {
             Profile::Release => self.profiles.get("release"),
             Profile::Custom(s) => self.profiles.get(s),
         }
-        .ok_or(Error::ProfileUnavailable(
-            self.name.clone(),
-            profile.to_string(),
-        ))
+        .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn take(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
@@ -121,10 +92,7 @@ impl BuildFile {
             Profile::Release => self.profiles.remove("release"),
             Profile::Custom(s) => self.profiles.remove(s),
         }
-        .ok_or(Error::ProfileUnavailable(
-            self.name.clone(),
-            profile.to_string(),
-        ))
+        .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 }
 
@@ -193,12 +161,7 @@ impl BuildProfile {
         Self {
             baseprof: Profile::Debug,
             defines,
-            include: defaults
-                .include
-                .iter()
-                .flatten()
-                .map(PathBuf::to_owned)
-                .collect(),
+            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -207,34 +170,18 @@ impl BuildProfile {
                 opt_speed: defaults.build_settings.opt_speed.unwrap_or(false),
                 opt_linktime: defaults.build_settings.opt_linktime.unwrap_or(false),
                 iso_compliant: defaults.build_settings.iso_compliant.unwrap_or(false),
-                warn_level: defaults
-                    .build_settings
-                    .warn_level
-                    .unwrap_or(WarnLevel::Basic),
+                warn_level: defaults.build_settings.warn_level.unwrap_or(WarnLevel::Basic),
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info: defaults.build_settings.debug_info.unwrap_or(true),
-                runtime: defaults
-                    .build_settings
-                    .runtime
-                    .unwrap_or(Runtime::DynamicDebug),
+                runtime: defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
                 pthreads: defaults.build_settings.pthreads.unwrap_or(false),
                 aslr: defaults.build_settings.aslr.unwrap_or(true),
                 no_rtti: defaults.build_settings.no_rtti.unwrap_or(false),
                 no_except: defaults.build_settings.no_except.unwrap_or(false),
             },
 
-            compiler_options: defaults
-                .compiler_options
-                .iter()
-                .flatten()
-                .map(String::to_owned)
-                .collect(),
-            linker_options: defaults
-                .linker_options
-                .iter()
-                .flatten()
-                .map(String::to_owned)
-                .collect(),
+            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
+            linker_options: defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
         }
     }
 
@@ -246,12 +193,7 @@ impl BuildProfile {
         Self {
             baseprof: Profile::Release,
             defines,
-            include: defaults
-                .include
-                .iter()
-                .flatten()
-                .map(PathBuf::to_owned)
-                .collect(),
+            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -260,34 +202,18 @@ impl BuildProfile {
                 opt_speed: defaults.build_settings.opt_speed.unwrap_or(false),
                 opt_linktime: defaults.build_settings.opt_linktime.unwrap_or(true),
                 iso_compliant: defaults.build_settings.iso_compliant.unwrap_or(false),
-                warn_level: defaults
-                    .build_settings
-                    .warn_level
-                    .unwrap_or(WarnLevel::Basic),
+                warn_level: defaults.build_settings.warn_level.unwrap_or(WarnLevel::Basic),
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info: defaults.build_settings.debug_info.unwrap_or(false),
-                runtime: defaults
-                    .build_settings
-                    .runtime
-                    .unwrap_or(Runtime::DynamicRelease),
+                runtime: defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
                 pthreads: defaults.build_settings.pthreads.unwrap_or(false),
                 aslr: defaults.build_settings.aslr.unwrap_or(true),
                 no_rtti: defaults.build_settings.no_rtti.unwrap_or(false),
                 no_except: defaults.build_settings.no_except.unwrap_or(false),
             },
 
-            compiler_options: defaults
-                .compiler_options
-                .iter()
-                .flatten()
-                .map(String::to_owned)
-                .collect(),
-            linker_options: defaults
-                .linker_options
-                .iter()
-                .flatten()
-                .map(String::to_owned)
-                .collect(),
+            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
+            linker_options: defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
         }
     }
 
@@ -298,63 +224,22 @@ impl BuildProfile {
             self.pch = Some(pch);
         }
 
-        other
-            .build_settings
-            .opt_level
-            .inspect(|s| self.settings.opt_level = *s);
-        other
-            .build_settings
-            .opt_size
-            .inspect(|s| self.settings.opt_size = *s);
-        other
-            .build_settings
-            .opt_speed
-            .inspect(|s| self.settings.opt_speed = *s);
-        other
-            .build_settings
-            .opt_linktime
-            .inspect(|s| self.settings.opt_linktime = *s);
-        other
-            .build_settings
-            .iso_compliant
-            .inspect(|s| self.settings.iso_compliant = *s);
-        other
-            .build_settings
-            .warn_level
-            .inspect(|s| self.settings.warn_level = *s);
-        other
-            .build_settings
-            .warn_as_error
-            .inspect(|s| self.settings.warn_as_error = *s);
-        other
-            .build_settings
-            .debug_info
-            .inspect(|s| self.settings.debug_info = *s);
-        other
-            .build_settings
-            .runtime
-            .inspect(|s| self.settings.runtime = *s);
-        other
-            .build_settings
-            .pthreads
-            .inspect(|s| self.settings.pthreads = *s);
-        other
-            .build_settings
-            .aslr
-            .inspect(|s| self.settings.aslr = *s);
-        other
-            .build_settings
-            .no_rtti
-            .inspect(|s| self.settings.no_rtti = *s);
-        other
-            .build_settings
-            .no_except
-            .inspect(|s| self.settings.no_except = *s);
+        other.build_settings.opt_level.inspect(|s| self.settings.opt_level = *s);
+        other.build_settings.opt_size.inspect(|s| self.settings.opt_size = *s);
+        other.build_settings.opt_speed.inspect(|s| self.settings.opt_speed = *s);
+        other.build_settings.opt_linktime.inspect(|s| self.settings.opt_linktime = *s);
+        other.build_settings.iso_compliant.inspect(|s| self.settings.iso_compliant = *s);
+        other.build_settings.warn_level.inspect(|s| self.settings.warn_level = *s);
+        other.build_settings.warn_as_error.inspect(|s| self.settings.warn_as_error = *s);
+        other.build_settings.debug_info.inspect(|s| self.settings.debug_info = *s);
+        other.build_settings.runtime.inspect(|s| self.settings.runtime = *s);
+        other.build_settings.pthreads.inspect(|s| self.settings.pthreads = *s);
+        other.build_settings.aslr.inspect(|s| self.settings.aslr = *s);
+        other.build_settings.no_rtti.inspect(|s| self.settings.no_rtti = *s);
+        other.build_settings.no_except.inspect(|s| self.settings.no_except = *s);
 
-        self.compiler_options
-            .extend(other.compiler_options.unwrap_or_default());
-        self.linker_options
-            .extend(other.linker_options.unwrap_or_default());
+        self.compiler_options.extend(other.compiler_options.unwrap_or_default());
+        self.linker_options.extend(other.linker_options.unwrap_or_default());
         self
     }
 

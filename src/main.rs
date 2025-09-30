@@ -65,8 +65,7 @@ fn main() -> ExitCode {
         name,
     } = &cmd
     {
-        action::new(*library, *strict, *is_c, *clangd, name)
-            .unwrap_or_else(|e| exit_failure!("{}", e));
+        action::new(*library, *strict, *is_c, *clangd, name).unwrap_or_else(|e| exit_failure!("{}", e));
     } else if let input::Action::Init {
         library,
         strict,
@@ -80,9 +79,7 @@ fn main() -> ExitCode {
         let build = config::VangoFile::from_str(&bfile)
             .unwrap_or_else(|e| exit_failure!("{}", e))
             .get_build()
-            .unwrap_or_else(|| {
-                exit_failure!("action requires source code ([package]) type manifest")
-            });
+            .unwrap_or_else(|| exit_failure!("action requires source code ([package]) type manifest"));
 
         match cmd {
             input::Action::Build { switches } => {
@@ -93,13 +90,11 @@ fn main() -> ExitCode {
                     exit_failure!("{}", Error::LibNotExe(build.name));
                 }
                 action::build(&build, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
-                return action::run(&build.name, &switches, args)
-                    .unwrap_or_else(|e| exit_failure!("{}", e));
+                return action::run(&build.name, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Test { switches, args } => {
                 action::build(&build, &switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
-                return action::test(build, &switches, args)
-                    .unwrap_or_else(|e| exit_failure!("{}", e));
+                return action::test(build, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
             }
             input::Action::Clean => {
                 action::clean(&build).unwrap_or_else(|e| exit_failure!("{}", e));

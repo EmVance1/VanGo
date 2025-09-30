@@ -44,9 +44,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     for lib in &build.dependencies {
         let path = match lib {
             Dependency::Local { path, .. } => path.clone(),
-            Dependency::Git {
-                git, tag, recipe, ..
-            } => {
+            Dependency::Git { git, tag, recipe, .. } => {
                 let git = std::path::Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
@@ -74,12 +72,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         };
         std::env::set_current_dir(&save).unwrap();
         let profile = library.take(&Profile::Debug)?;
-        defines.extend(
-            profile
-                .defines
-                .into_iter()
-                .filter(|d| !d.starts_with("VANGO_")),
-        );
+        defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
         incdirs.push(path.join(profile.include));
     }
 

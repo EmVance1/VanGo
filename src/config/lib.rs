@@ -17,32 +17,17 @@ impl LibFile {
         let mut profiles: HashMap<String, LibProfile> = HashMap::new();
 
         if let Some(d) = file.profile.remove("debug") {
-            profiles.insert(
-                "debug".to_string(),
-                LibProfile::debug(&file.staticlib.defaults).merge(d),
-            );
+            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults).merge(d));
         } else {
-            profiles.insert(
-                "debug".to_string(),
-                LibProfile::debug(&file.staticlib.defaults),
-            );
+            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults));
         }
         if let Some(r) = file.profile.remove("release") {
-            profiles.insert(
-                "release".to_string(),
-                LibProfile::release(&file.staticlib.defaults).merge(r),
-            );
+            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults).merge(r));
         } else {
-            profiles.insert(
-                "release".to_string(),
-                LibProfile::release(&file.staticlib.defaults),
-            );
+            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults));
         }
         for (k, p) in file.profile {
-            let inherits = p
-                .inherits
-                .clone()
-                .ok_or(Error::InvalidCustomProfile(k.clone()))?;
+            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
             if inherits == "debug" {
                 profiles.insert(k, LibProfile::debug(&file.staticlib.defaults).merge(p));
             } else if inherits == "release" {
@@ -64,20 +49,12 @@ impl LibFile {
             Profile::Release => self.profiles.remove("release"),
             Profile::Custom(s) => self.profiles.remove(s),
         }
-        .ok_or(Error::ProfileUnavailable(
-            self.name.clone(),
-            profile.to_string(),
-        ))
+        .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn validate(self, other_name: &str, other_lang: Lang) -> Result<Self, Error> {
         if self.lang > other_lang {
-            Err(Error::IncompatibleCppStd(
-                self.name,
-                self.lang,
-                other_name.to_string(),
-                other_lang,
-            ))
+            Err(Error::IncompatibleCppStd(self.name, self.lang, other_name.to_string(), other_lang))
         } else {
             Ok(self)
         }
@@ -103,11 +80,7 @@ impl LibFile {
                 let prof = LibProfile {
                     include: "include".into(),
                     libdir: libbase.join(&k),
-                    binaries: if haslib {
-                        vec![name.clone().into()]
-                    } else {
-                        Vec::new()
-                    },
+                    binaries: if haslib { vec![name.clone().into()] } else { Vec::new() },
                     defines: p.defines,
                 };
                 (k, prof)
@@ -140,12 +113,7 @@ impl LibProfile {
         Self {
             include: defaults.include.clone().unwrap_or("include".into()),
             libdir: defaults.libdir.clone().unwrap_or("bin/debug".into()),
-            binaries: defaults
-                .binaries
-                .iter()
-                .flatten()
-                .map(PathBuf::to_owned)
-                .collect(),
+            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
             defines,
         }
     }
@@ -158,12 +126,7 @@ impl LibProfile {
         Self {
             include: defaults.include.clone().unwrap_or("include".into()),
             libdir: defaults.libdir.clone().unwrap_or("bin/release".into()),
-            binaries: defaults
-                .binaries
-                .iter()
-                .flatten()
-                .map(PathBuf::to_owned)
-                .collect(),
+            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
             defines,
         }
     }

@@ -8,17 +8,8 @@ pub fn new(library: bool, strict: bool, is_c: bool, clangd: bool, name: &str) ->
 }
 
 pub fn init(library: bool, strict: bool, is_c: bool, gen_clangd: bool) -> Result<(), Error> {
-    let name = std::env::current_dir()
-        .unwrap()
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-    log_info_ln!(
-        "creating new {} project: {}",
-        if library { "library" } else { "application" },
-        name
-    );
+    let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
+    log_info_ln!("creating new {} project: {}", if library { "library" } else { "application" }, name);
     let ext = if is_c { "c" } else { "cpp" };
     let lang = if is_c { "C11" } else { "C++17" };
     let header = if is_c { "stdio.h" } else { "cstdio" };

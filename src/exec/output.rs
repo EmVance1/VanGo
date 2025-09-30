@@ -1,6 +1,5 @@
-use std::{io::BufRead, path::PathBuf};
 use crate::{log_error_ln, log_warn_ln};
-
+use std::{io::BufRead, path::PathBuf};
 
 pub fn msvc_compiler(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
@@ -31,7 +30,6 @@ pub fn msvc_compiler(output: &std::process::Output) -> bool {
     output.status.success()
 }
 
-
 fn gnu_is_sys_include(path: &str) -> bool {
     if cfg!(windows) {
         path.starts_with("C:/msys64")
@@ -46,7 +44,7 @@ pub fn gnu_compiler(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
         if line.contains("In function") {
-            continue
+            continue;
         }
         if line.starts_with('.') {
             let inc = line.trim_start_matches('.').trim();
@@ -68,7 +66,6 @@ pub fn gnu_compiler(output: &std::process::Output) -> bool {
     // println!("{:?}", includes);
     output.status.success()
 }
-
 
 pub fn msvc_linker(output: &std::process::Output, clang: bool) -> bool {
     if clang {
@@ -100,8 +97,10 @@ pub fn msvc_linker(output: &std::process::Output, clang: bool) -> bool {
 pub fn gnu_linker(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
-        if line.starts_with("collect2.exe") || line.contains("linker command failed with exit code 1") {
-            continue
+        if line.starts_with("collect2.exe")
+            || line.contains("linker command failed with exit code 1")
+        {
+            continue;
         }
         if let Some((_, err)) = line.split_once("ld.exe: ") {
             log_error_ln!("ld.exe: {err}");
@@ -111,7 +110,6 @@ pub fn gnu_linker(output: &std::process::Output) -> bool {
     }
     output.status.success()
 }
-
 
 pub fn msvc_archiver(output: &std::process::Output, clang: bool) -> bool {
     if clang {
@@ -145,4 +143,3 @@ pub fn gnu_archiver(output: &std::process::Output) -> bool {
     }
     output.status.success()
 }
-

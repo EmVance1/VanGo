@@ -1,7 +1,6 @@
-use thiserror::Error;
-use std::path::PathBuf;
 use crate::config::Lang;
-
+use std::path::PathBuf;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -17,7 +16,9 @@ pub enum Error {
     TomlParse(#[from] toml::de::Error),
     #[error("toml parse error: `{0}` is not a valid semver string")]
     MimicTomlSemver(String),
-    #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
+    #[error(
+        "toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n"
+    )]
     MimicTomlProjkind(String),
     #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
     InvalidPkgHeader(PathBuf),
@@ -69,4 +70,3 @@ pub enum Error {
     #[deprecated(note = "use of catch-all default error is discouraged")]
     Unknown,
 }
-

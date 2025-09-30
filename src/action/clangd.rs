@@ -1,10 +1,9 @@
-use std::io::Write;
 use crate::{
     config::{BuildFile, Dependency, LibFile, Profile, ProjKind, ToolChain, VangoFile, WarnLevel},
     error::Error,
     log_info_ln,
 };
-
+use std::io::Write;
 
 pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if !block_output {
@@ -18,9 +17,11 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
 
     let profile = build.get(&Profile::Debug)?;
     match profile.settings.warn_level {
-        WarnLevel::None  => writeln!(file, "-w")?,
+        WarnLevel::None => writeln!(file, "-w")?,
         WarnLevel::Basic => writeln!(file, "-Wall")?,
-        WarnLevel::High  => writeln!(file, "\
+        WarnLevel::High => writeln!(
+            file,
+            "\
 -Wall
 -Wextra
 -Wconversion
@@ -29,7 +30,8 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
 -Wformat=2
 -Wnull-dereference
 -Wdouble-promotion
--Wimplicit-fallthrough")?,
+-Wimplicit-fallthrough"
+        )?,
     }
     if profile.settings.iso_compliant {
         writeln!(file, "-Wpedantic")?;
@@ -42,7 +44,9 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     for lib in &build.dependencies {
         let path = match lib {
             Dependency::Local { path, .. } => path.clone(),
-            Dependency::Git { git, tag, recipe, .. } => {
+            Dependency::Git {
+                git, tag, recipe, ..
+            } => {
                 let git = std::path::Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
@@ -55,11 +59,11 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
                 incdirs.push(headers.clone());
                 continue;
             }
-            Dependency::System{..} => continue,
+            Dependency::System { .. } => continue,
         };
 
         if !std::fs::exists(&path).unwrap() {
-            return Err(Error::DirectoryNotFound(path))
+            return Err(Error::DirectoryNotFound(path));
         }
 
         let save = std::env::current_dir().unwrap();
@@ -70,7 +74,12 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         };
         std::env::set_current_dir(&save).unwrap();
         let profile = library.take(&Profile::Debug)?;
-        defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+        defines.extend(
+            profile
+                .defines
+                .into_iter()
+                .filter(|d| !d.starts_with("VANGO_")),
+        );
         incdirs.push(path.join(profile.include));
     }
 
@@ -80,7 +89,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if cfg!(windows) {
         writeln!(file, "-DUNICODE")?;
         writeln!(file, "-D_UNICODE")?;
-        if let ProjKind::SharedLib{..} = build.kind {
+        if let ProjKind::SharedLib { .. } = build.kind {
             writeln!(file, "-DVANGO_EXPORT_SHARED")?;
         }
     }
@@ -99,15 +108,18 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if build.kind.is_lib() {
         writeln!(file, "-Iinclude")?;
     }
-    writeln!(file, "-I{}", std::env::current_exe()?
-        .parent()
-        .unwrap()
-        .to_owned()
-        .join("testframework")
-        .display())?;
+    writeln!(
+        file,
+        "-I{}",
+        std::env::current_exe()?
+            .parent()
+            .unwrap()
+            .to_owned()
+            .join("testframework")
+            .display()
+    )?;
 
     file.flush()?;
 
     Ok(())
 }
-

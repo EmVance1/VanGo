@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! log_info {
     () => { {
@@ -82,4 +81,3 @@ macro_rules! log_error_ln {
         writeln!(&mut termcolor_stderr, $($arg)*).unwrap();
     } };
 }
-

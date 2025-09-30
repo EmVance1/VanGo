@@ -1,14 +1,13 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
-use serde::Deserialize;
+use super::{Lang, Profile, Version, build::BuildFile};
 use crate::{config::ToolChain, error::Error};
-use super::{build::BuildFile, Version, Profile, Lang};
-
+use serde::Deserialize;
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibFile {
-    pub name:     String,
-    pub version:  Version,
-    pub lang:     Lang,
+    pub name: String,
+    pub version: Version,
+    pub lang: Lang,
     pub profiles: HashMap<String, LibProfile>,
 }
 
@@ -18,17 +17,32 @@ impl LibFile {
         let mut profiles: HashMap<String, LibProfile> = HashMap::new();
 
         if let Some(d) = file.profile.remove("debug") {
-            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults).merge(d));
+            profiles.insert(
+                "debug".to_string(),
+                LibProfile::debug(&file.staticlib.defaults).merge(d),
+            );
         } else {
-            profiles.insert("debug".to_string(), LibProfile::debug(&file.staticlib.defaults));
+            profiles.insert(
+                "debug".to_string(),
+                LibProfile::debug(&file.staticlib.defaults),
+            );
         }
         if let Some(r) = file.profile.remove("release") {
-            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults).merge(r));
+            profiles.insert(
+                "release".to_string(),
+                LibProfile::release(&file.staticlib.defaults).merge(r),
+            );
         } else {
-            profiles.insert("release".to_string(), LibProfile::release(&file.staticlib.defaults));
+            profiles.insert(
+                "release".to_string(),
+                LibProfile::release(&file.staticlib.defaults),
+            );
         }
         for (k, p) in file.profile {
-            let inherits = p.inherits.clone().ok_or(Error::InvalidCustomProfile(k.clone()))?;
+            let inherits = p
+                .inherits
+                .clone()
+                .ok_or(Error::InvalidCustomProfile(k.clone()))?;
             if inherits == "debug" {
                 profiles.insert(k, LibProfile::debug(&file.staticlib.defaults).merge(p));
             } else if inherits == "release" {
@@ -36,10 +50,10 @@ impl LibFile {
             }
         }
 
-        Ok(LibFile{
-            name:    file.staticlib.name,
+        Ok(LibFile {
+            name: file.staticlib.name,
             version: Version::from_str(&file.staticlib.version)?,
-            lang:    Lang::from_str(&file.staticlib.lang)?,
+            lang: Lang::from_str(&file.staticlib.lang)?,
             profiles,
         })
     }
@@ -49,12 +63,21 @@ impl LibFile {
             Profile::Debug => self.profiles.remove("debug"),
             Profile::Release => self.profiles.remove("release"),
             Profile::Custom(s) => self.profiles.remove(s),
-        }.ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
+        }
+        .ok_or(Error::ProfileUnavailable(
+            self.name.clone(),
+            profile.to_string(),
+        ))
     }
 
     pub fn validate(self, other_name: &str, other_lang: Lang) -> Result<Self, Error> {
         if self.lang > other_lang {
-            Err(Error::IncompatibleCppStd(self.name, self.lang, other_name.to_string(), other_lang))
+            Err(Error::IncompatibleCppStd(
+                self.name,
+                self.lang,
+                other_name.to_string(),
+                other_lang,
+            ))
         } else {
             Ok(self)
         }
@@ -73,20 +96,28 @@ impl LibFile {
             PathBuf::from("bin").join(toolchain.as_directory())
         };
         let haslib = value.kind.has_lib();
-        let profiles: HashMap<_, _> = value.profiles.into_iter().map(|(k, p)| {
-            let prof = LibProfile{
-                include: "include".into(),
-                libdir: libbase.join(&k),
-                binaries: if haslib { vec![ name.clone().into() ] } else { Vec::new() },
-                defines: p.defines,
-            };
-            (k, prof)
-        }).collect();
+        let profiles: HashMap<_, _> = value
+            .profiles
+            .into_iter()
+            .map(|(k, p)| {
+                let prof = LibProfile {
+                    include: "include".into(),
+                    libdir: libbase.join(&k),
+                    binaries: if haslib {
+                        vec![name.clone().into()]
+                    } else {
+                        Vec::new()
+                    },
+                    defines: p.defines,
+                };
+                (k, prof)
+            })
+            .collect();
 
-        Ok(Self{
+        Ok(Self {
             name,
             version: value.version,
-            lang:    value.interface,
+            lang: value.interface,
             profiles,
         })
     }
@@ -94,48 +125,61 @@ impl LibFile {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibProfile {
-    pub include:  PathBuf,
-    pub libdir:   PathBuf,
+    pub include: PathBuf,
+    pub libdir: PathBuf,
     pub binaries: Vec<PathBuf>,
-    pub defines:  Vec<String>,
+    pub defines: Vec<String>,
 }
 
 impl LibProfile {
     fn debug(defaults: &SerdeLibProfile) -> Self {
-        let mut defines = vec![ "VANGO_DEBUG".to_string() ];
+        let mut defines = vec!["VANGO_DEBUG".to_string()];
         if let Some(def) = &defaults.defines {
             defines.extend(def.iter().map(String::to_owned));
         }
-        Self{
-            include:  defaults.include.clone().unwrap_or("include".into()),
-            libdir:   defaults.libdir.clone().unwrap_or("bin/debug".into()),
-            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
+        Self {
+            include: defaults.include.clone().unwrap_or("include".into()),
+            libdir: defaults.libdir.clone().unwrap_or("bin/debug".into()),
+            binaries: defaults
+                .binaries
+                .iter()
+                .flatten()
+                .map(PathBuf::to_owned)
+                .collect(),
             defines,
         }
     }
 
     fn release(defaults: &SerdeLibProfile) -> Self {
-        let mut defines = vec![ "VANGO_RELEASE".to_string() ];
+        let mut defines = vec!["VANGO_RELEASE".to_string()];
         if let Some(def) = &defaults.defines {
             defines.extend(def.iter().map(String::to_owned));
         }
-        Self{
-            include:  defaults.include.clone().unwrap_or("include".into()),
-            libdir:   defaults.libdir.clone().unwrap_or("bin/release".into()),
-            binaries: defaults.binaries.iter().flatten().map(PathBuf::to_owned).collect(),
+        Self {
+            include: defaults.include.clone().unwrap_or("include".into()),
+            libdir: defaults.libdir.clone().unwrap_or("bin/release".into()),
+            binaries: defaults
+                .binaries
+                .iter()
+                .flatten()
+                .map(PathBuf::to_owned)
+                .collect(),
             defines,
         }
     }
 
     fn merge(mut self, other: SerdeLibProfile) -> Self {
-        if let Some(inc) = other.include { self.include = inc; }
-        if let Some(dir) = other.libdir { self.libdir = dir; }
+        if let Some(inc) = other.include {
+            self.include = inc;
+        }
+        if let Some(dir) = other.libdir {
+            self.libdir = dir;
+        }
         self.binaries.extend(other.binaries.unwrap_or_default());
         self.defines.extend(other.defines.unwrap_or_default());
         self
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct SerdeLibFile {
@@ -146,9 +190,9 @@ struct SerdeLibFile {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct SerdeLibrary {
-    name:    String,
+    name: String,
     version: String,
-    lang:    String,
+    lang: String,
 
     #[serde(flatten)]
     defaults: SerdeLibProfile,
@@ -158,12 +202,11 @@ struct SerdeLibrary {
 #[serde(default)]
 struct SerdeLibProfile {
     inherits: Option<String>,
-    include:  Option<PathBuf>,
-    libdir:   Option<PathBuf>,
+    include: Option<PathBuf>,
+    libdir: Option<PathBuf>,
     binaries: Option<Vec<PathBuf>>,
-    defines:  Option<Vec<String>>,
+    defines: Option<Vec<String>>,
 }
-
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
@@ -172,4 +215,3 @@ pub struct SerdeFeature {
     requires: Vec<String>,
     binaries: Option<Vec<PathBuf>>,
 }
-

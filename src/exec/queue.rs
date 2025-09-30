@@ -1,7 +1,6 @@
 use std::num::NonZero;
 use std::process::{Child, Output};
 
-
 pub struct ProcQueue {
     buffer: Vec<Option<Child>>,
     count: usize,
@@ -12,8 +11,10 @@ const BACKOFF_TIME: u64 = 10;
 impl ProcQueue {
     pub fn new() -> Self {
         // preallocate vector with #threads child process slots
-        let threads = std::thread::available_parallelism().unwrap_or(NonZero::new(1).unwrap()).get();
-        let mut result = Self{
+        let threads = std::thread::available_parallelism()
+            .unwrap_or(NonZero::new(1).unwrap())
+            .get();
+        let mut result = Self {
             buffer: Vec::with_capacity(threads),
             count: 0,
         };
@@ -33,13 +34,16 @@ impl ProcQueue {
                 if handle.is_none() {
                     self.buffer[i] = Some(elem);
                     self.count += 1;
-                    return None
+                    return None;
 
                 // IF subprocess finishes, enqueue new process, return output from completed
-                } else if handle.as_mut().is_some_and(|p| p.try_wait().unwrap().is_some()) {
+                } else if handle
+                    .as_mut()
+                    .is_some_and(|p| p.try_wait().unwrap().is_some())
+                {
                     let proc = std::mem::take(handle).unwrap();
                     self.buffer[i] = Some(elem);
-                    return Some(proc.wait_with_output().unwrap())
+                    return Some(proc.wait_with_output().unwrap());
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(BACKOFF_TIME));
@@ -85,13 +89,15 @@ impl ProcQueue {
         // 'hot' loop acceptable as queue is polled only 100x per second, not actually hot
         loop {
             for handle in &mut self.buffer {
-                if handle.as_mut().is_some_and(|p| p.try_wait().unwrap().is_some()) {
+                if handle
+                    .as_mut()
+                    .is_some_and(|p| p.try_wait().unwrap().is_some())
+                {
                     self.count -= 1;
-                    return std::mem::take(handle).unwrap().wait_with_output().unwrap()
+                    return std::mem::take(handle).unwrap().wait_with_output().unwrap();
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(BACKOFF_TIME));
         }
     }
 }
-

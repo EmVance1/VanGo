@@ -51,7 +51,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg("/MD");
         }
         Runtime::StaticDebug => {
-            if info.settings.asan && info.toolchain.is_clang()  {
+            if info.settings.asan && info.toolchain.is_clang() {
                 cmd.arg("/MT");
             } else {
                 cmd.arg("/MTd");

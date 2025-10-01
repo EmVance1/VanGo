@@ -1,4 +1,4 @@
-use crate::{log_error_ln, log_warn_ln, Error};
+use crate::{Error, log_error_ln, log_warn_ln};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 

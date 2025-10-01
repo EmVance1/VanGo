@@ -5,6 +5,11 @@ All platforms have a compiler toolchain they default to - MSVC on windows, GCC o
 
 To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the 6 valid values: `gcc`, `clang`, `clang-gnu`, `clang-msvc`, `msvc`, `zig`.
 
+The toolchain is chosen from the following list in order of decreasing priority, with additional usage hints:
+- Commandline           (per build)
+- Environment variable  (per user)
+- Platform default
+
 ### Clang/Zig Cross-Compilation
 If you're familiar with the Clang toolchain, you already know that these tools support cross-compilation out of the box via its LLVM backend. If you don't need these features or you're used to the clang cross workflow, then plain clang is a fine way to go, specifying the `--target` and `--sysroot` options directly via the toml `*-options` fields whenever necessary. However, one headache this can often cause is that clang does not bundle in the default libraries for the targets it compiles to, and these can be non-trivial to set up, depending on the OS you want to target. Luckily, the brilliant developers of zig have solved this problem for us.
 

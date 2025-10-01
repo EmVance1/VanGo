@@ -41,13 +41,23 @@ pub fn run(name: &str, switches: &BuildSwitches, runargs: Vec<String>) -> Result
     let outfile = outdir.join(name).with_extension(switches.toolchain.app_ext());
 
     log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
-    let code: u8 = std::process::Command::new(PathBuf::from(".").join(&outfile))
+    let code = std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(runargs)
         .current_dir(std::env::current_dir().unwrap())
         .status()
         .map_err(|_| Error::InvalidExe(outfile.clone()))?
         .code()
-        .ok_or(Error::ExeKilled(outfile))?
+        .ok_or(Error::ExeKilled(outfile.clone()))?;
+
+    const WIN_KILLPROC: i32 = -0x3FFFFEC6;
+    const WIN_SEGFAULT: i32 = -0x3FFFFFFB;
+    const WIN_OVERFLOW: i32 = -0x3FFFFBF7;
+
+    if cfg!(windows) && (code == WIN_KILLPROC || code == WIN_SEGFAULT || code == WIN_OVERFLOW) {
+        return Err(Error::ExeKilled(outfile));
+    }
+
+    let code: u8 = code
         .try_into()
         .unwrap_or(1);
 

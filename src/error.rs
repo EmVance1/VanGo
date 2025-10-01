@@ -58,8 +58,8 @@ pub enum Error {
     InvalidExe(PathBuf),
     #[error("project '{0}' does not build an executable")]
     LibNotExe(String),
-    #[error("executable '{0}' was killed by the host OS (potential segfault)")]
-    ExeKilled(PathBuf),
+    #[error("process '{0}' was killed by the OS ({1})")]
+    ExeKilled(PathBuf, String),
     #[error("OS error: {0}")]
     FileSystem(#[from] std::io::Error),
 

@@ -85,14 +85,11 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     };
     exec::run_build(info, switches.echo, false, false)?;
     log_info_ln!("{:=<80}", format!("running tests for project: {} ", build.name));
-    let code: u8 = std::process::Command::new(PathBuf::from(".").join(&outfile))
+    let status = std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
-        .unwrap()
-        .code()
-        .ok_or(Error::ExeKilled(outfile))?
-        .try_into()
-        .unwrap_or(1);
-    Ok(code.into())
+        .map_err(|_| Error::InvalidExe(outfile.to_owned()))?;
+
+    crate::action::run::graceful_crash(outfile, status)
 }

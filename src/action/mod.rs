@@ -57,9 +57,7 @@ pub fn run(name: &str, switches: &BuildSwitches, runargs: Vec<String>) -> Result
         return Err(Error::ExeKilled(outfile));
     }
 
-    let code: u8 = code
-        .try_into()
-        .unwrap_or(1);
+    let code: u8 = code.try_into().unwrap_or(1);
 
     Ok(code.into())
 }

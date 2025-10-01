@@ -52,7 +52,7 @@ To customize build profiles or define your own that inherites one of the builtin
     * `no-rtti`: (C++ only) disable RTTI (`true|false*`)
     * `no-except`: (C++ only) disable exceptions (`true|false*`)
     * `pthreads`: (GNU only) enable pthreads (`true|false*`)
-- **sanitizers**: sanitizer settings work like any other, but their applicability is highly platform dependent. On UNIX systems, all sanitizers are available, while windows only universally supports AddressSanitizer. Others like UndefinedBehaviorSanitizer have partial support when using clang. It is however always safe to turn on a sanitizer, as options turning on unsupported sanitizers will simply be ignored.
+- **sanitizers**: sanitizer settings work like any other, but their applicability is highly platform dependent. On UNIX systems, all sanitizers are always available. Windows is trickier. Windows only universally supports AddressSanitizer, while UndefinedBehaviorSanitizer has partial support when using clang. Options turning on unsupported sanitizers will simply be ignored, however there is one annoying edge-case that GNU/Clang on windows *does* support ASan, but does not ship with the required libraries bundled in, and will fail to link if you haven't installed them (MSVC/Clang does not have this problem). The following options are provided for enabling sanitizers:
     * `sanitize.address`: compile with AddressSanitizer (`true|false*`)
     * `sanitize.thread`: compile with ThreadSanitizer (`true|false*`)
     * `sanitize.leak`: compile with LeakSanitizer (`true|false*`)

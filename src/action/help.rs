@@ -35,7 +35,7 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
-                println!("    --strict  Include  options 'warn-level=\"high\"' and 'iso-compliat=true'");
+                println!("    --strict  Include  options 'warn-level=\"high\"' and 'iso-compliant=true'");
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
@@ -46,7 +46,7 @@ pub fn help(action: Option<&String>) {
                 println!();
                 println!("Options:");
                 println!("    --lib     Generate library boilerplate instead of application");
-                println!("    --strict  Include options 'warn-level=\"high\"' and 'iso-compliat=true'");
+                println!("    --strict  Include options 'warn-level=\"high\"' and 'iso-compliant=true'");
                 println!("    --c       Generate C boilerplate instead of C++");
                 println!("    --clangd  Generate 'compile_flags.txt' based on default settings");
             }
@@ -75,7 +75,7 @@ pub fn help(action: Option<&String>) {
                 print_build_details();
             }
             "test" => {
-                println!("Build the current project and run all (or select) tests in 'test' directory. Defines 'VANGO_TEST'.");
+                println!("Build the current project and run all (or select) tests in 'test' directory. Defines 'VANGO_TEST'");
                 println!();
                 println!("Usage: vango test [OPTIONS] [TESTS]");
                 println!();

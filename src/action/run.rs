@@ -31,15 +31,15 @@ pub(super) fn graceful_crash(outfile: PathBuf, status: ExitStatus) -> Result<Exi
     let code = status.code().unwrap() as u32;
 
     let sig_str = match code {
-        0xC0000005 => "STATUS_ACCESS_VIOLATION",
-        0xC0000017 => "STATUS_NO_MEMORY",
-        0xC000001D => "STATUS_ILLEGAL_INSTRUCTION",
-        0xC000008E => "STATUS_FLOAT_DIVIDE_BY_ZERO",
-        0xC0000094 => "STATUS_INTEGER_DIVIDE_BY_ZERO",
-        0xC0000096 => "STATUS_PRIVILEGED_INSTRUCTION",
-        0xC00000FD => "STATUS_STACK_OVERFLOW",
-        0xC000013A => "STATUS_CONTROL_C_EXIT",
-        0xC0000409 => "STATUS_STACK_BUFFER_OVERRUN",
+        0xC000_0005 => "STATUS_ACCESS_VIOLATION",
+        0xC000_0017 => "STATUS_NO_MEMORY",
+        0xC000_001D => "STATUS_ILLEGAL_INSTRUCTION",
+        0xC000_008E => "STATUS_FLOAT_DIVIDE_BY_ZERO",
+        0xC000_0094 => "STATUS_INTEGER_DIVIDE_BY_ZERO",
+        0xC000_0096 => "STATUS_PRIVILEGED_INSTRUCTION",
+        0xC000_00FD => "STATUS_STACK_OVERFLOW",
+        0xC000_013A => "STATUS_CONTROL_C_EXIT",
+        0xC000_0409 => "STATUS_STACK_BUFFER_OVERRUN",
         _ => {
             let code: u8 = code.try_into().unwrap_or(1);
             return Ok(code.into());

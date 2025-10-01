@@ -101,7 +101,7 @@ impl Default for ToolChain {
                 }
             },
             Err(std::env::VarError::NotUnicode(..)) => {
-                log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}")
+                log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}");
             }
             _ => (),
         }
@@ -269,14 +269,13 @@ impl ToolChain {
         match self {
             Self::Msvc => std::process::Command::new("LIB.exe"),
             Self::Gcc => std::process::Command::new("ar"),
-            Self::ClangGnu => std::process::Command::new("llvm-ar"),
+            Self::ClangGnu | Self::Emcc => std::process::Command::new("llvm-ar"),
             Self::ClangMsvc => std::process::Command::new("llvm-lib"),
             Self::Zig => {
                 let mut cmd = std::process::Command::new("zig");
                 cmd.arg("ar");
                 cmd
             }
-            Self::Emcc => std::process::Command::new("llvm-ar"),
         }
     }
 }

@@ -61,16 +61,20 @@ fn on_compile_finish(tc: ToolChain, output: &std::process::Output) -> bool {
 fn msvc_check_iso(lang: Lang) {
     match lang {
         Lang::Cpp(123) => {
-            log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete")
+            log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete");
         }
-        Lang::Cpp(n) if n < 114 => log_warn_ln!(
-            "MSVC {}: no longer supported - defaulting to C++14",
-            lang.to_string().to_ascii_uppercase()
-        ),
+        Lang::Cpp(n) if n < 114 => {
+            log_warn_ln!(
+                "MSVC {}: no longer supported - defaulting to C++14",
+                lang.to_string().to_ascii_uppercase()
+            );
+        }
         Lang::C(123) => {
-            log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete")
+            log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete");
         }
-        Lang::C(99) => log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete"),
+        Lang::C(99) => {
+            log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete");
+        }
         _ => (),
     }
 }
@@ -189,7 +193,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
     match info.projkind {
         ProjKind::App | ProjKind::SharedLib { .. } => {
-            log_info_ln!("linking:   {: <30}", info.outfile.display())
+            log_info_ln!("linking:   {: <30}", info.outfile.display());
         }
         ProjKind::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
     }

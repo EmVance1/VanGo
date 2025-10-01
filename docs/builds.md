@@ -86,5 +86,5 @@ The defines array will contain a number of vango specific preprocessor definitio
 
 - Windows builds
     * `VANGO_EXPORT_SHARED` defined for `sharedlib` projects, intended for use with `__declspec(dll*)`, though not required.
-    * `UNICODE`, `_UNICODE` can be ignored, makes unicode the default mode for system functions.
+    * `UNICODE`, `_UNICODE` can be ignored, makes unicode the default mode for windows API calls.
 

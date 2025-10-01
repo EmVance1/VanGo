@@ -2,7 +2,7 @@
 
 A build system designed with rusts cargo philosophy in mind. You can have a million options, but there is nothing wrong with sensible defaults. Vango uses project file structure as a component of its project configuration, minimizing the need for a build script. `./src` is the source file directory and added to the include path. `./bin` holds any incremental build files (usually object files). `./test` is for source files that contain tests. All manual configuration is done via the `Vango.toml` manifest file in the project root.
 
-The system supports most popular toolchains, specifically: GNU and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see the docs chapter on [cross-compilation](docs/toolchains.md).
+The system supports most popular toolchains, specifically: GCC and Clang/LLVM on all platforms, as well as MSVC on windows. It does of course assume that you have all relevant compiler tools installed, as it is not in itself a compiler. For easier cross compilation, vango also supports zig as a target, which wraps clang. To read why this is useful, see the docs chapter on [cross-compilation](docs/toolchains.md).
 
 For a more in-depth explanation, see the [documentation](docs/README.md).
 
@@ -15,7 +15,7 @@ VanGo currently only releases as source code.
 
 ## Features Available So Far
 - Subcommands for creating, building, running, testing, and cleaning C/C++ projects. Some usage examples are as follows, but for a more complete list see the help action.
-    * `vango new     [--lib] [--c] [--clangd] <name>`
+    * `vango new     [--lib] [--c] <name>`
     * `vango b[uild] [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>]`
     * `vango r[un]   [-r|--release] [-t|--toolchain=<msvc|gnu|clang|zig>] [-- args*]`
     * `vango c[lean]`

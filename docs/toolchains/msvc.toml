@@ -39,6 +39,10 @@ no-rtti = [ "/GR-" ]
 no-except = [ "/EHsc-" ]
 
 pthread = [] # UNAVAILABLE
+sanitize.address   = [ "/fsanitize=address" ]
+sanitize.thread    = [] # UNAVAILABLE
+sanitize.leak      = [] # UNAVAILABLE
+sanitize.undefined = [ "/fsanitize=undefined" ] # clang-cl only
 
 warn-none =     [ "/w" ]
 warn-basic =    [ "/W1" ]

@@ -1,4 +1,4 @@
-use crate::{Error, log_warn_ln};
+use crate::{log_error_ln, log_warn_ln, Error};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 
@@ -93,14 +93,12 @@ impl Default for ToolChain {
     fn default() -> Self {
         let sysdef = Self::system_default();
         match std::env::var("VANGO_DEFAULT_TOOLCHAIN") {
-            Ok(var) => match var.as_str() {
-                "msvc" => return ToolChain::Msvc,
-                "gcc" => return ToolChain::Gcc,
-                "clang-gnu" => return ToolChain::ClangGnu,
-                "clang-msvc" => return ToolChain::ClangMsvc,
-                "zig" => return ToolChain::Zig,
-                "emcc" => return ToolChain::Emcc,
-                _ => log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}"),
+            Ok(var) => match Self::from_str(&var) {
+                Ok(tc) => return tc,
+                Err(e) => {
+                    log_error_ln!("{}", e);
+                    log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}");
+                }
             },
             Err(std::env::VarError::NotUnicode(..)) => {
                 log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}")

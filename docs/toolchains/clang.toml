@@ -54,6 +54,10 @@ no-rtti = [ "-fno-rtti" ]
 no-except = [ "-fno-exceptions" ]
 
 pthread = [ "-pthread" ]
+sanitize.address   = [ "-fsanitize=address" ]
+sanitize.thread    = [ "-fsanitize=thread" ]
+sanitize.leak      = [ "-fsanitize=leak" ]
+sanitize.undefined = [ "-fsanitize=undefined" ]
 
 warn-none =     [ "-w" ]
 warn-basic =    [ "-Wall" ]

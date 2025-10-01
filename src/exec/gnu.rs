@@ -99,6 +99,18 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_clang()) {
+        cmd.arg("-fsanitize=address");
+    }
+    if info.settings.tsan && !cfg!(windows) {
+        cmd.arg("-fsanitize=thread");
+    }
+    if info.settings.lsan && !cfg!(windows) {
+        cmd.arg("-fsanitize=leak");
+    }
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_clang()) {
+        cmd.arg("-fsanitize=undefined");
+    }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
     match pch {
@@ -170,6 +182,18 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     }
     if info.settings.pthreads {
         cmd.arg("-pthread");
+    }
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_clang()) {
+        cmd.arg("-fsanitize=address");
+    }
+    if info.settings.tsan && !cfg!(windows) {
+        cmd.arg("-fsanitize=thread");
+    }
+    if info.settings.lsan && !cfg!(windows) {
+        cmd.arg("-fsanitize=leak");
+    }
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_clang()) {
+        cmd.arg("-fsanitize=undefined");
     }
     if info.toolchain.is_emcc() {
         cmd.arg("-sUSE_SDL=2");

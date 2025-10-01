@@ -174,10 +174,15 @@ impl BuildProfile {
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info: defaults.build_settings.debug_info.unwrap_or(true),
                 runtime: defaults.build_settings.runtime.unwrap_or(Runtime::DynamicDebug),
-                pthreads: defaults.build_settings.pthreads.unwrap_or(false),
                 aslr: defaults.build_settings.aslr.unwrap_or(true),
                 no_rtti: defaults.build_settings.no_rtti.unwrap_or(false),
                 no_except: defaults.build_settings.no_except.unwrap_or(false),
+
+                pthreads: defaults.build_settings.pthreads.unwrap_or(false),
+                asan: defaults.build_settings.sanitize.address.unwrap_or(false),
+                tsan: defaults.build_settings.sanitize.thread.unwrap_or(false),
+                lsan: defaults.build_settings.sanitize.leak.unwrap_or(false),
+                ubsan: defaults.build_settings.sanitize.undefined.unwrap_or(false),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
@@ -206,10 +211,15 @@ impl BuildProfile {
                 warn_as_error: defaults.build_settings.warn_as_error.unwrap_or(false),
                 debug_info: defaults.build_settings.debug_info.unwrap_or(false),
                 runtime: defaults.build_settings.runtime.unwrap_or(Runtime::DynamicRelease),
-                pthreads: defaults.build_settings.pthreads.unwrap_or(false),
                 aslr: defaults.build_settings.aslr.unwrap_or(true),
                 no_rtti: defaults.build_settings.no_rtti.unwrap_or(false),
                 no_except: defaults.build_settings.no_except.unwrap_or(false),
+
+                pthreads: defaults.build_settings.pthreads.unwrap_or(false),
+                asan: defaults.build_settings.sanitize.address.unwrap_or(false),
+                tsan: defaults.build_settings.sanitize.thread.unwrap_or(false),
+                lsan: defaults.build_settings.sanitize.leak.unwrap_or(false),
+                ubsan: defaults.build_settings.sanitize.undefined.unwrap_or(false),
             },
 
             compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
@@ -233,10 +243,15 @@ impl BuildProfile {
         other.build_settings.warn_as_error.inspect(|s| self.settings.warn_as_error = *s);
         other.build_settings.debug_info.inspect(|s| self.settings.debug_info = *s);
         other.build_settings.runtime.inspect(|s| self.settings.runtime = *s);
-        other.build_settings.pthreads.inspect(|s| self.settings.pthreads = *s);
         other.build_settings.aslr.inspect(|s| self.settings.aslr = *s);
         other.build_settings.no_rtti.inspect(|s| self.settings.no_rtti = *s);
         other.build_settings.no_except.inspect(|s| self.settings.no_except = *s);
+
+        other.build_settings.pthreads.inspect(|s| self.settings.pthreads = *s);
+        other.build_settings.sanitize.address.inspect(|s| self.settings.asan = *s);
+        other.build_settings.sanitize.thread.inspect(|s| self.settings.tsan = *s);
+        other.build_settings.sanitize.leak.inspect(|s| self.settings.lsan = *s);
+        other.build_settings.sanitize.undefined.inspect(|s| self.settings.ubsan = *s);
 
         self.compiler_options.extend(other.compiler_options.unwrap_or_default());
         self.linker_options.extend(other.linker_options.unwrap_or_default());
@@ -261,10 +276,15 @@ pub struct BuildSettings {
     pub warn_as_error: bool,
     pub debug_info: bool,
     pub runtime: Runtime,
-    pub pthreads: bool,
     pub aslr: bool,
     pub no_rtti: bool,
     pub no_except: bool,
+
+    pub pthreads: bool,
+    pub asan: bool,
+    pub tsan: bool,
+    pub lsan: bool,
+    pub ubsan: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -319,8 +339,21 @@ struct SerdeBuildSettings {
     warn_as_error: Option<bool>,
     debug_info: Option<bool>,
     runtime: Option<Runtime>,
-    pthreads: Option<bool>,
+
     aslr: Option<bool>,
     no_rtti: Option<bool>,
     no_except: Option<bool>,
+
+    pthreads: Option<bool>,
+    #[serde(default)]
+    sanitize: SerdeSanitizer,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct SerdeSanitizer {
+    address: Option<bool>,
+    thread: Option<bool>,
+    leak: Option<bool>,
+    undefined: Option<bool>,
 }

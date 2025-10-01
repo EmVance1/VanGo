@@ -41,13 +41,21 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     match info.settings.runtime {
         Runtime::DynamicDebug => {
-            cmd.arg("/MDd");
+            if info.settings.asan && info.toolchain.is_clang() {
+                cmd.arg("/MD");
+            } else {
+                cmd.arg("/MDd");
+            }
         }
         Runtime::DynamicRelease => {
             cmd.arg("/MD");
         }
         Runtime::StaticDebug => {
-            cmd.arg("/MTd");
+            if info.settings.asan && info.toolchain.is_clang()  {
+                cmd.arg("/MT");
+            } else {
+                cmd.arg("/MTd");
+            }
         }
         Runtime::StaticRelease => {
             cmd.arg("/MT");
@@ -111,6 +119,21 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg("/EHsc"); // default C++ exception handling, extern "C" -> noexcept
         }
     }
+    if info.settings.asan {
+        cmd.arg("-fsanitize=address");
+    }
+    // most sanitizers not supported by MSVC
+    /*
+    if info.settings.tsan {
+        cmd.arg("-fsanitize=thread");
+    }
+    if info.settings.lsan {
+        cmd.arg("-fsanitize=leak");
+    }
+    */
+    if info.settings.ubsan && info.toolchain.is_clang() {
+        cmd.arg("-fsanitize=undefined");
+    }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
     match pch {
@@ -164,6 +187,10 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     cmd.args(objs);
     cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l.display())));
     cmd.args(info.archives);
+    if info.settings.asan && info.toolchain.is_clang() {
+        cmd.arg("clang_rt.asan_dynamic-x86_64.lib");
+        cmd.arg("clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
+    }
     cmd.args(DEFAULT_LIBS);
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
 

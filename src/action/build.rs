@@ -132,11 +132,16 @@ struct BuildCache {
     warn_as_error: bool,
     debug_info: bool,
     runtime: crate::config::Runtime,
-    pthreads: bool,
     aslr: bool,
     no_rtti: bool,
     no_except: bool,
     is_test: bool,
+
+    pthreads: bool,
+    asan: bool,
+    tsan: bool,
+    lsan: bool,
+    ubsan: bool,
 }
 
 fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switches: &BuildSwitches, outdir: &std::path::Path) -> bool {
@@ -151,11 +156,16 @@ fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switch
         warn_as_error: settings.warn_as_error,
         debug_info: settings.debug_info,
         runtime: settings.runtime,
-        pthreads: settings.pthreads,
         aslr: settings.aslr,
         no_rtti: settings.no_rtti,
         no_except: settings.no_except,
         is_test: switches.is_test,
+
+        pthreads: settings.pthreads,
+        asan: settings.asan,
+        tsan: settings.tsan,
+        lsan: settings.lsan,
+        ubsan: settings.ubsan,
     };
     let cachepath = outdir.join("build_cache.json");
     if let Ok(cachefile) = std::fs::read_to_string(&cachepath) {
@@ -175,11 +185,15 @@ fn settings_cache_changed(defines: Vec<String>, settings: &BuildSettings, switch
             || (newcache.warn_as_error && !oldcache.warn_as_error)
             || newcache.debug_info != oldcache.debug_info
             || newcache.runtime != oldcache.runtime
-            || newcache.pthreads != oldcache.pthreads
             || newcache.aslr != oldcache.aslr
             || newcache.no_rtti != oldcache.no_rtti
             || newcache.no_except != oldcache.no_except
             || newcache.is_test != oldcache.is_test
+            || newcache.pthreads != oldcache.pthreads
+            || newcache.asan != oldcache.asan
+            || newcache.tsan != oldcache.tsan
+            || newcache.lsan != oldcache.lsan
+            || newcache.ubsan != oldcache.ubsan
     } else {
         let _ = std::fs::write(&cachepath, serde_json::to_string(&newcache).unwrap());
         true

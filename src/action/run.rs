@@ -71,3 +71,9 @@ pub(super) fn graceful_crash(outfile: PathBuf, status: ExitStatus) -> Result<Exi
     let code: u8 = status.code().unwrap().try_into().unwrap_or(1);
     Ok(code.into())
 }
+
+#[cfg(not(any(windows, unix)))]
+pub(super) fn graceful_crash(outfile: PathBuf, status: ExitStatus) -> Result<ExitCode, Error> {
+    let code: u8 = status.code().unwrap().try_into().unwrap_or(1);
+    Ok(code.into())
+}

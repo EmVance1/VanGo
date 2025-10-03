@@ -178,7 +178,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
         cmd.arg("/DEBUG");
     }
     if info.settings.opt_linktime && !info.is_testexe {
-        cmd.arg("/LTCG");    // link-time codegen, iff /GL
+        cmd.arg("/LTCG"); // link-time codegen, iff /GL
         cmd.arg("/OPT:REF"); // strip unreferenced symbols
     }
     if info.settings.warn_as_error {

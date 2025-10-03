@@ -167,7 +167,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
                 cmd.arg("-pie");
             }
         } else if cfg!(target_os = "linux") {
-            cmd.arg("-no-pie");     // ASLR often on by default
+            cmd.arg("-no-pie"); // ASLR often on by default
         } else if cfg!(target_os = "macos") {
             // ASLR on by default since macos 10.7 (2011)
             cmd.arg("-Wl,-no_pie"); // forward -no_pie to ld

@@ -18,8 +18,11 @@ vango_test(basic_math) {
 ```
 As you can see, a test is essentially a pure void function. Tests can be run all at once, or on a case by case basis by specifying the test names on the command line.
 
-### Important Note for MSVC
-The '*2.h' family of assert headers is currently experimental on MSVC (including clang-msvc), due to some awkard pointer hacks it performs to make automatic discovery work. If MSVC users prefer, the old, more stable headers are still available (`asserts.h`, `casserts.h`). These behave identically for C++, albeit with some ordering quirks. In C however, some automation features are unavailable, and in addition to the code seen above, you must forward declare and include your tests into the test root, and register them like so:
+### Note for Clang on Windows
+When compiling on windows using the MinGW/GNU toolchain, the '*2.h' family of headers will not work, due to some emulation features being missing from the lld linker. See below for how to use the older more universal API.
+
+### Old API (asserts.h)
+If some users prefer, the old headers are still available (`asserts.h`, `casserts.h`). These behave identically for C++, albeit with some ordering quirks. In C however, some automation features are unavailable, and in addition to the code seen above, you must forward declare and include your tests into the test root, and register them like so:
 ```c
 // basic.h ====================
 #ifndef BASIC_H
@@ -47,3 +50,4 @@ vango_test_main(
     vango_test_reg(basic_math);
 )
 ```
+

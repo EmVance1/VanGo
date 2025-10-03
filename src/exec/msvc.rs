@@ -82,7 +82,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.opt_speed {
         cmd.arg("/Ot");
     }
-    if info.settings.opt_linktime {
+    if info.settings.opt_linktime && !info.is_testexe {
         cmd.arg("/GL");
     }
     if info.settings.debug_info {
@@ -177,8 +177,8 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     if info.settings.debug_info {
         cmd.arg("/DEBUG");
     }
-    if info.settings.opt_linktime {
-        cmd.arg("/LTCG"); // link-time codegen, iff /GL
+    if info.settings.opt_linktime && !info.is_testexe {
+        cmd.arg("/LTCG");    // link-time codegen, iff /GL
         cmd.arg("/OPT:REF"); // strip unreferenced symbols
     }
     if info.settings.warn_as_error {

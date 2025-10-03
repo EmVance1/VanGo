@@ -64,6 +64,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         cpprt: build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings: profile.settings,
         changed: false,
+        is_testexe: true,
 
         defines: inherited.defines,
 

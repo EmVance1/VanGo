@@ -23,6 +23,7 @@ pub struct BuildInfo {
     pub cpprt: bool,
     pub settings: BuildSettings,
     pub changed: bool,
+    pub is_testexe: bool,
 
     pub defines: Vec<String>,
 

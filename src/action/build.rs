@@ -97,6 +97,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         lang: build.lang,
         cpprt: build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings: profile.settings,
+        is_testexe: false,
 
         defines: deps.defines,
 

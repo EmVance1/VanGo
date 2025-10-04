@@ -88,3 +88,12 @@ The defines array will contain a number of vango specific preprocessor definitio
     * `VANGO_EXPORT_SHARED` defined for `sharedlib` projects, intended for use with `__declspec(dll*)`, though not required.
     * `UNICODE`, `_UNICODE` can be ignored, makes unicode the default mode for windows API calls.
 
+
+### Running Your Build
+To automatically run the executable once your build is complete, use the `vango run` command. This takes all the same arguments as `vango build`, as well as the ability to specify arguments to your built application. To do this, place a '--' separator between VanGo's args and your own.
+
+The run command has some limitations and advantages with regards to cross-platform exit codes. Most notably, it catches and reports hardware exceptions on all platforms. Linux users will be used to receiving the classic "segmentation fault (core dumped)" error messages, but on windows, you are rewarded with a freeze followed by an opaque crash. VanGo will to the best of its ability report the NTSTATUS name of whatever exception occurred, to better debug your program.
+This is done by capturing the exit code of the running program, however it comes with some caveats, most notable of which being that users should avoid using exit codes above 255, as `vango run` will potentially report them as hardware errors. A windows user should not misuse for example exit code 0xC0000005 for their own purposes, given that windows uses it to report access violations. This is a choice to conform to the platform of highest restriction, which in this case is linux, and as an added benefit will make your programs more cross-platform by default.
+
+In general, `run` builds will forward the user programs exit code, and `test` builds will always return the number of tests that failed.
+

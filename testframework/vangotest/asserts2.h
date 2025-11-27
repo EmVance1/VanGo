@@ -107,6 +107,9 @@ int main(int argc, char** argv) {
             } catch (const ::vango::AssertionFail& e) {
                 fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %u: \033[m%s\n", _vg_f->id, e.failline, e.msg.c_str());
                 _vg_failures++;
+            } catch (const ::std::exception& e) {
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' threw: \033[m%s\n", _vg_f->id, e.what());
+                _vg_failures++;
             }
             _vg_begin++;
         }
@@ -139,6 +142,9 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "\033[32m[VanGo:  info] passed: '%s'\033[m\n", _vg_f->id);
             } catch (const ::vango::AssertionFail& e) {
                 fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' on line %u: \033[m%s\n", _vg_f->id, e.failline, e.msg.c_str());
+                _vg_failures++;
+            } catch (const ::std::exception& e) {
+                fprintf(stderr, "\033[32m[VanGo:  info] \033[31mfailed: '%s' threw: \033[m%s\n", _vg_f->id, e.what());
                 _vg_failures++;
             }
         }

@@ -74,10 +74,14 @@ struct TestFunc {
 
 #ifdef VANGO_TEST_ROOT
 
+#if defined(_MSC_VER)
+#ifdef VANGO_TEST_MEMORY_LEAKS
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
-
-#if defined(_MSC_VER)
 
 __declspec(allocate("vgtest$a")) ::vango::TestFunc _start_vgtest = {};
 __declspec(allocate("vgtest$z")) ::vango::TestFunc _stop_vgtest = {};
@@ -119,6 +123,9 @@ int main(int argc, char** argv) {
 }
 
 #elif defined(__clang__) || defined(__GNUC__)
+
+#include <cstdio>
+#include <cstring>
 
 extern ::vango::TestFunc __start_vgtest[];
 extern ::vango::TestFunc __stop_vgtest[];

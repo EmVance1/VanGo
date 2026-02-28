@@ -46,15 +46,25 @@ struct VangoTestFunc {
 
 #ifdef VANGO_TEST_ROOT
 
+#if defined(_MSC_VER)
+#ifdef VANGO_TEST_MEMORY_LEAKS
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#if defined(_MSC_VER)
 
 __declspec(allocate("vgtest$a")) struct VangoTestFunc _start_vgtest = {};
 __declspec(allocate("vgtest$z")) struct VangoTestFunc _stop_vgtest = {};
 
 int main(int argc, char** argv) {
+#ifdef VANGO_TEST_MEMORY_LEAKS
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
     char** _vg_begin = (char**)(&_start_vgtest+1);
     char** _vg_end = (char**)&_stop_vgtest;
 
@@ -90,6 +100,9 @@ int main(int argc, char** argv) {
 }
 
 #elif defined(__clang__) || defined(__GNUC__)
+
+#include <stdio.h>
+#include <string.h>
 
 extern struct VangoTestFunc __start_vgtest[];
 extern struct VangoTestFunc __stop_vgtest[];

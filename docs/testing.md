@@ -21,6 +21,25 @@ As you can see, a test is essentially a pure void function. Tests can be run all
 ### Note for Clang on Windows
 When compiling on windows using the MinGW/GNU toolchain, the '*2.h' family of headers will not work, due to some emulation features being missing from the lld linker. See below for how to use the older more universal API.
 
+### Benchmarking
+Vango provides the option to automate simple benchmarking for your code and functions, alongside any needed setup and teardown code. Just provide a number of iterations, and a scope with the code you want to loop. By default, the code is warmed up with 100 runs, but this can be changed by defining the `VANGO_BENCH_WARMUP` macro. In the end, the average of all non-warmup runs is printed to stdout. Benchmarks have no dependency on the test framework and may be included in any code, but the two do pair nicely. Example below:
+```cpp
+#define VANGO_TEST_ROOT
+#define VANGO_BENCH_WARMUP 1000
+#include <vangotest/asserts2.h>
+#include <vangotest/bench.h>
+#include <math.h>
+
+vango_test(how_fast) {
+    double myinput = 256.0;
+    double myoutput = 0.0;
+
+    vango_bench(10000, {
+        myoutput = sqrt(myinput);
+    })
+}
+```
+
 ### Old API (asserts.h)
 If some users prefer, the old headers are still available (`asserts.h`, `casserts.h`). These behave identically for C++, albeit with some ordering quirks. In C however, some automation features are unavailable, and in addition to the code seen above, you must forward declare and include your tests into the test root, and register them like so:
 ```c

@@ -1,9 +1,12 @@
 #include <stdio.h>
 
+#ifndef VANGO_BENCH_WARMUP
+#define VANGO_BENCH_WARMUP 100
+#endif
+
 #ifdef _WIN32
 #include <Windows.h>
 
-#define VANGO_BENCH_WARMUP 100
 #define vango_bench(runs, code) do { \
         LARGE_INTEGER _vango_bench_freq, _vango_bench_t1, _vango_bench_t2; \
         QueryPerformanceFrequency(&_vango_bench_freq); \

@@ -21,6 +21,8 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     let profile = build.take(&switches.profile)?;
     let mut headers = fetch::source_files(Path::new("include"), "h")?;
     headers.extend(fetch::source_files(Path::new("include"), "hpp")?);
+    headers.extend(fetch::source_files(Path::new("src"), "h")?);
+    headers.extend(fetch::source_files(Path::new("src"), "hpp")?);
     headers.push(include.join("vangotest/asserts.h"));
     headers.push(include.join("vangotest/casserts.h"));
     headers.push(include.join("vangotest/asserts2.h"));
@@ -32,7 +34,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         inherited.defines.push("UNICODE".to_string());
         inherited.defines.push("_UNICODE".to_string());
     }
-    inherited.incdirs.extend(["test".into(), include, "include".into()]);
+    inherited.incdirs.extend(["test".into(), include, "src".into(), "include".into()]);
 
     let base_outdir = if switches.toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())

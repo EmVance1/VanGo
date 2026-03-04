@@ -7,6 +7,8 @@ struct VangoTestResult {
     unsigned int failline;
 };
 
+#define VANGO_TEST_PARAMS struct VangoTestResult* _vango_test_result
+
 
 #define vg_assert(a)          do { if (!(a))       { _vango_test_result->failline=__LINE__; \
     _vango_test_result->msg="assertion fail: expression expected to be 'true' was 'false'"; return; } } while (0)
@@ -20,8 +22,8 @@ struct VangoTestResult {
     _vango_test_result->msg="assertion fail: expected valid pointer, received 'NULL'"; return; } } while (0)
 
 
-#define vango_test(name) void name(struct VangoTestResult* _vango_test_result)
-#define vango_test_decl(name) void name(struct VangoTestResult* _vango_test_result)
+#define vango_test(name) void name(VANGO_TEST_PARAMS)
+#define vango_test_decl(name) void name(VANGO_TEST_PARAMS)
 
 
 #ifdef VANGO_TEST_ROOT

@@ -7,7 +7,9 @@ struct VangoTestResult {
     unsigned int failline;
 };
 
-typedef void(*VangoTestFuncImpl)(struct VangoTestResult*);
+#define VANGO_TEST_PARAMS struct VangoTestResult* _vango_test_result
+
+typedef void(*VangoTestFuncImpl)(VANGO_TEST_PARAMS);
 
 struct VangoTestFunc {
     const char* id;
@@ -39,9 +41,9 @@ struct VangoTestFunc {
 #endif
 
 #define vango_test(name) \
-    void name(struct VangoTestResult* _vango_test_result); \
+    void name(VANGO_TEST_PARAMS); \
     VANGO_SECTION_TESTS struct VangoTestFunc _vango_test_##name = { .fn=name, .id=#name }; \
-    void name(struct VangoTestResult* _vango_test_result)
+    void name(VANGO_TEST_PARAMS)
 
 
 #ifdef VANGO_TEST_ROOT

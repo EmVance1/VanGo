@@ -36,12 +36,13 @@ pub enum Error {
     InvalidCustomProfile(String),
     #[error("project dependency '{0}' is not a library")]
     InvalidDependency(String),
-    #[error("toolchain '{0}' compiler is unavailable")]
-    MissingCompiler(String),
+    #[error("toolchain '{0}' compiler is unavailable{help}",
+        help = if let crate::config::ToolChain::Msvc = .0 { " (make sure you are using a developer terminal)" } else { "" })]
+    CompilerNotFound(crate::config::ToolChain),
     #[error("toolchain '{0}' archiver is unavailable")]
-    MissingArchiver(String),
+    ArchiverNotFound(crate::config::ToolChain),
     #[error("toolchain '{0}' linker is unavailable")]
-    MissingLinker(String),
+    LinkerNotFound(crate::config::ToolChain),
     #[error("failed to compile project '{0}'")]
     CompilerFail(PathBuf),
     #[error("failed to archive project '{0}'")]

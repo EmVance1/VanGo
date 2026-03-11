@@ -198,7 +198,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
         print_command(&cmd);
     }
     if output::msvc_linker(
-        &cmd.output().map_err(|_| Error::MissingLinker(info.toolchain.to_string()))?,
+        &cmd.output().map_err(|_| Error::LinkerNotFound(info.toolchain))?,
         info.toolchain.is_clang(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
@@ -227,7 +227,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
         print_command(&cmd);
     }
     if output::msvc_archiver(
-        &cmd.output().map_err(|_| Error::MissingArchiver(info.toolchain.to_string()))?,
+        &cmd.output().map_err(|_| Error::ArchiverNotFound(info.toolchain))?,
         info.toolchain.is_clang(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());

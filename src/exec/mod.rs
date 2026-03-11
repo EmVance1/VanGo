@@ -147,7 +147,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             };
             let output = comp
                 .spawn()
-                .map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?
+                .map_err(|_| Error::CompilerNotFound(info.toolchain))?
                 .wait_with_output()
                 .unwrap();
             if !on_compile_finish(info.toolchain, &output) {
@@ -171,7 +171,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             } else {
                 gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
             };
-            if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::MissingCompiler(info.toolchain.to_string()))?)
+            if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::CompilerNotFound(info.toolchain))?)
                 && !on_compile_finish(info.toolchain, &output)
             {
                 failure = true;

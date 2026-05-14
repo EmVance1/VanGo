@@ -11,7 +11,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.args(&info.comp_args);
     if !info.toolchain.is_emcc() {
-        cmd.arg("-H"); // output configuration (see output parser)
+        // breaks miniaudio
+        // cmd.arg("-H"); // output configuration (see output parser)
     }
     cmd.arg(format!("-std={}", info.lang));
     if !cfg!(windows) && !info.toolchain.is_emcc() {
@@ -117,11 +118,13 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         PreCompHead::Create(_) => {
             cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
         }
-        PreCompHead::Use(_) => {
+        PreCompHead::Use(header) => {
             if info.toolchain.is_clang() {
                 cmd.arg("-include-pch");
+                cmd.arg(format!("{}/pch/{}.gch", info.outdir.display(), header.display()));
+            } else {
+                cmd.arg(format!("-I{}/pch", info.outdir.display()));
             }
-            cmd.arg(format!("-I{}/pch", info.outdir.display()));
         }
         PreCompHead::None => (),
     }
@@ -203,6 +206,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     }
     cmd.args(objs);
     cmd.args(info.libdirs.iter().map(|l| format!("-L{}", l.display())));
+    cmd.args(info.rpaths.iter().map(|l| format!("-Wl,-rpath,{}", l.display())));
     cmd.args(info.archives.iter().map(|l| format!("-l{}", l.display())));
     cmd.arg(format!("-o{}", info.outfile.display()));
     if verbose {

@@ -69,26 +69,26 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 "#;
 
         let mut dependencies = Vec::new();
-        dependencies.push(Dependency::Local {
-            path: "../engine".into(),
+        dependencies.push((String::new(), Dependency::Package {
+            src: "../engine".into(),
+            targets: vec![],
             features: vec![],
-        });
-        dependencies.push(Dependency::Local {
-            path: "../../NavMesh".into(),
+        }));
+        dependencies.push((String::new(), Dependency::Package {
+            src: "../../NavMesh".into(),
+            targets: vec![],
             features: vec![],
-        });
-        dependencies.push(Dependency::Git {
+        }));
+        dependencies.push((String::new(), Dependency::Git {
             git: "https://github.com/SFML/SFML.git".into(),
             tag: None,
-            recipe: Some("recipes/SFML.bat".into()),
             features: vec!["graphics".into()],
-        });
-        dependencies.push(Dependency::Git {
+        }));
+        dependencies.push((String::new(), Dependency::Git {
             git: "https://github.com/LuaJIT/LuaJIT.git".into(),
             tag: None,
-            recipe: Some("recipes/LuaJIT.bat".into()),
             features: vec![],
-        });
+        }));
 
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
         profiles.insert(
@@ -118,6 +118,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 toolchain: None,
                 interface: Lang::Cpp(120),
                 runtime: None,
+                vcpkg: VcpkgConfig{ triplet: "x64-linux".to_string() },
                 dependencies,
                 profiles,
             })

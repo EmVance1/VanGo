@@ -40,16 +40,24 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     let home = std::env::home_dir().unwrap();
     let mut defines = Vec::new();
     let mut incdirs = Vec::new();
+    let mut vcpkg = false;
 
     for lib in &build.dependencies {
-        let path = match lib {
-            Dependency::Local { path, .. } => path.clone(),
-            Dependency::Git { git, tag, recipe, .. } => {
+        let path = match &lib.1 {
+            Dependency::Package { src, .. } => {
+                if src == "vcpkg" {
+                    vcpkg = true;
+                    continue;
+                } else {
+                    src.clone()
+                }
+            }
+            Dependency::Git { git, tag, .. } => {
                 let git = std::path::Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&path).unwrap() {
-                    crate::fetch::pull_git_repo(git, tag, recipe, &path);
+                    crate::fetch::pull_git_repo(git, tag, &path);
                 }
                 path.clone()
             }
@@ -94,6 +102,9 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     writeln!(file, "-DVANGO_PKG_VERSION_PATCH={}", build.version.patch)?;
     for inc in incdirs {
         writeln!(file, "-I{}", inc.display())?;
+    }
+    if vcpkg {
+        writeln!(file, "-Ibin/vcpkg_installed/{}/include", build.vcpkg.triplet)?;
     }
     for inc in &profile.include {
         writeln!(file, "-I{}", inc.display())?;

@@ -4,9 +4,11 @@ use crate::{
     input::BuildSwitches,
     log_info_ln,
 };
+use serde::Serialize;
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},
+    collections::HashMap,
 };
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -24,7 +26,7 @@ pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
     Ok(res)
 }
 
-pub fn pull_git_repo(url: &Path, tag: &Option<String>, recipe: &Option<PathBuf>, install_loc: &Path) {
+pub fn pull_git_repo(url: &Path, tag: &Option<String>, install_loc: &Path) {
     let branch: Vec<PathBuf> = if let Some(tag) = tag {
         vec!["--branch".into(), tag.into(), "--depth".into(), "1".into(), url.into()]
     } else {
@@ -37,19 +39,42 @@ pub fn pull_git_repo(url: &Path, tag: &Option<String>, recipe: &Option<PathBuf>,
         .arg(install_loc)
         .output()
         .unwrap();
-    if let Some(recipe) = recipe {
-        log_info_ln!("building project dependency according to '{}'", recipe.display());
-        std::process::Command::new(PathBuf::from(".").join(recipe))
-            .current_dir(install_loc)
-            .output()
-            .unwrap();
-    }
+}
+
+#[derive(Serialize)]
+struct VcpkgDependency {
+    name: String,
+    features: Vec<String>,
+}
+
+fn pull_vcpkg(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut Dependencies) {
+    if packages.is_empty() { return; }
+    let _ = std::fs::create_dir("bin");
+    std::env::set_current_dir("bin").unwrap();
+    let mut data = HashMap::new();
+    data.insert("dependencies".to_string(), packages);
+    std::fs::write("vcpkg.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
+
+    log_info_ln!("{:-<80}", format!("pulling vcpkg dependencies"));
+    std::process::Command::new("vcpkg")
+        .arg("install")
+        .arg("--triplet")
+        .arg(triplet)
+        .output()
+        .unwrap();
+
+    std::env::set_current_dir("..").unwrap();
+
+    deps.incdirs.push(format!("bin/vcpkg_installed/{}/include", triplet).into());
+    deps.libdirs.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
+    deps.rpaths.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct Dependencies {
     pub incdirs: Vec<PathBuf>,
     pub libdirs: Vec<PathBuf>,
+    pub rpaths: Vec<PathBuf>,
     pub archives: Vec<PathBuf>,
     pub relink: Vec<PathBuf>,
     pub defines: Vec<String>,
@@ -69,37 +94,44 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         switches.clone()
     };
 
+    let mut vcpkg = Vec::new();
+
     for lib in &info.dependencies {
         // get path to library root, pull repo if necessary
-        let path = match lib {
+        let path = match &lib.1 {
             Dependency::Git {
                 git,
                 tag,
-                recipe,
                 features: _,
             } => {
                 let git = Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&path).unwrap() {
-                    pull_git_repo(git, tag, recipe, &path);
+                    pull_git_repo(git, tag, &path);
                 }
                 path
             }
-            Dependency::Local { path, features: _ } => path.clone(),
+            Dependency::Package { src, targets, features } => {
+                if src == "vcpkg" {
+                    vcpkg.push(VcpkgDependency{ name: lib.0.to_ascii_lowercase(), features: features.clone() });
+                    for tar in targets {
+                        if switches.toolchain.is_msvc() {
+                            deps.archives.push(tar.with_extension("lib"));
+                        } else {
+                            deps.archives.push(tar.clone());
+                        }
+                    }
+                    continue;
+                } else {
+                    src.clone()
+                }
+            }
             Dependency::Headers { headers, features: _ } => {
                 deps.incdirs.push(headers.clone());
                 continue;
             }
-            Dependency::System { system, target } => {
-                if let Some(target) = target
-                    && (target == "windows" && !cfg!(windows)
-                        || target == "unix" && !cfg!(unix)
-                        || target == "linux" && !cfg!(target_os = "linux")
-                        || target == "macos" && !cfg!(target_os = "macos"))
-                {
-                    continue;
-                }
+            Dependency::System { system } => {
                 if switches.toolchain.is_msvc() {
                     deps.archives.push(system.with_extension("lib"));
                 } else {
@@ -155,6 +187,8 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         deps.defines
             .extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
+
+    pull_vcpkg(vcpkg, &info.vcpkg.triplet, &mut deps);
 
     Ok(deps)
 }

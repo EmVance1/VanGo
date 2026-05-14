@@ -12,7 +12,8 @@ pub struct BuildFile {
     pub toolchain: Option<ToolChain>,
     pub interface: Lang,
     pub runtime: Option<String>,
-    pub dependencies: Vec<Dependency>,
+    pub vcpkg: VcpkgConfig,
+    pub dependencies: Vec<(String, Dependency)>,
     pub profiles: HashMap<String, BuildProfile>,
 }
 
@@ -20,7 +21,7 @@ impl BuildFile {
     pub fn from_table(value: toml::Table) -> Result<Self, Error> {
         let mut file: SerdeBuildFile = value.try_into()?;
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
-        let mut dependencies: Vec<Dependency> = Vec::new();
+        let mut dependencies: Vec<(String, Dependency)> = Vec::new();
 
         if let Some(d) = file.profile.remove("debug") {
             profiles.insert("debug".to_string(), BuildProfile::debug(&file.package.defaults).merge(d).finish());
@@ -60,8 +61,8 @@ impl BuildFile {
             None
         };
 
-        for (_, v) in file.dependencies {
-            dependencies.push(v.try_into()?);
+        for (k, v) in file.dependencies {
+            dependencies.push((k, v.try_into()?));
         }
 
         Ok(BuildFile {
@@ -72,6 +73,7 @@ impl BuildFile {
             toolchain,
             interface,
             runtime: file.package.runtime,
+            vcpkg: file.vcpkg.unwrap_or(VcpkgConfig{ triplet: "x64-linux".to_string() }),
             dependencies,
             profiles,
         })
@@ -99,8 +101,10 @@ impl BuildFile {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum Dependency {
-    Local {
-        path: PathBuf,
+    Package {
+        src: PathBuf,
+        #[serde(default)]
+        targets: Vec<PathBuf>,
         #[serde(default)]
         features: Vec<String>,
     },
@@ -112,14 +116,17 @@ pub enum Dependency {
     Git {
         git: String,
         tag: Option<String>,
-        recipe: Option<PathBuf>,
         #[serde(default)]
         features: Vec<String>,
     },
     System {
         system: PathBuf,
-        target: Option<String>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VcpkgConfig {
+    pub triplet: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -290,6 +297,7 @@ pub struct BuildSettings {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 struct SerdeBuildFile {
     package: SerdeBuild,
+    vcpkg: Option<VcpkgConfig>,
     dependencies: toml::Table,
     #[serde(default)]
     profile: HashMap<String, SerdeBuildProfile>,

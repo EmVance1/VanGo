@@ -73,6 +73,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
         srcdir: "test".into(),
         incdirs: inherited.incdirs,
         libdirs: inherited.libdirs,
+        rpaths: inherited.rpaths,
         outdir,
 
         pch: None,

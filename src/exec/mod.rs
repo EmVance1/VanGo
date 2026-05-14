@@ -30,6 +30,7 @@ pub struct BuildInfo {
     pub srcdir: PathBuf,
     pub incdirs: Vec<PathBuf>,
     pub libdirs: Vec<PathBuf>,
+    pub rpaths: Vec<PathBuf>,
     pub outdir: PathBuf,
 
     pub pch: Option<PathBuf>,

@@ -104,6 +104,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
         srcdir: PathBuf::from("src"),
         incdirs: deps.incdirs,
         libdirs: deps.libdirs,
+        rpaths: deps.rpaths,
         outdir,
 
         pch: profile.pch,

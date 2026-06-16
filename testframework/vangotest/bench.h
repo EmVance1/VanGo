@@ -35,7 +35,6 @@
 
 double _vango_posix_get_clock();
 
-#define VANGO_BENCH_WARMUP 100
 #define vango_bench(runs, code) do { \
         double _vango_bench_t_total = 0; \
         for (size_t _vango_i = 0; _vango_i < VANGO_BENCH_WARMUP; _vango_i++) { \
@@ -45,7 +44,7 @@ double _vango_posix_get_clock();
             const double _vango_bench_t1 = _vango_posix_get_clock(); \
             do code while (0); \
             const double _vango_bench_t2 = _vango_posix_get_clock(); \
-            _vango_bench_t_total += (double)(_vango_bench_t2 - _vango_bench_t1) * 1000; \
+            _vango_bench_t_total += (double)(_vango_bench_t2 - _vango_bench_t1); \
         } \
         double _vango_bench_result = _vango_bench_t_total / (runs); \
         if (_vango_bench_result >= 0.1) { \

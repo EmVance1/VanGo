@@ -1,9 +1,9 @@
-mod error;
+mod action;
 mod cli;
 mod config;
-mod action;
-mod fetch;
+mod error;
 mod exec;
+mod fetch;
 
 use error::Error;
 use std::process::ExitCode;
@@ -33,7 +33,7 @@ fn read_manifest() -> Result<String, Error> {
     } else if std::fs::exists("Vango.toml").unwrap() {
         Ok(std::fs::read_to_string("Vango.toml")?)
     } else if std::fs::exists("vango.toml").unwrap() {
-        Ok(std::fs::read_to_string("Vango.toml")?)
+        Ok(std::fs::read_to_string("vango.toml")?)
     } else {
         Err(Error::MissingBuildScript(
             std::env::current_dir().unwrap().file_name().unwrap().into(),
@@ -81,7 +81,10 @@ fn main() -> ExitCode {
                 cli::Action::Clean => {
                     action::clean(&manifest).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
-                cli::Action::Gen{ #[allow(unused)] target } => {
+                cli::Action::Gen {
+                    #[allow(unused)]
+                    target,
+                } => {
                     action::clangd(&manifest, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 _ => unreachable!(),

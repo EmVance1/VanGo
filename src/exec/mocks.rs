@@ -10,9 +10,9 @@ impl BuildInfo {
         };
 
         Self {
-            projkind: ProjKind::App,
-            toolchain: ToolChain::Msvc,
-            lang: Lang::Cpp(120),
+            artefact: Artefact::Executable,
+            toolchain: Toolchain::Msvc,
+            lang: Language::Cpp(120),
             cpprt: false,
             changed: false,
             is_testexe: false,
@@ -55,10 +55,17 @@ impl BuildInfo {
         }
     }
 
-    pub fn mock_debug(outfile: &Path, projkind: ProjKind, lang: Lang, toolchain: ToolChain, pch: Option<PathBuf>, crtstatic: bool) -> Self {
+    pub fn mock_debug(
+        outfile: &Path,
+        artefact: Artefact,
+        lang: Language,
+        toolchain: Toolchain,
+        pch: Option<PathBuf>,
+        crtstatic: bool,
+    ) -> Self {
         let base = Self::mock_base(outfile);
         Self {
-            projkind,
+            artefact,
             toolchain,
             lang,
             pch,
@@ -71,15 +78,15 @@ impl BuildInfo {
     }
     pub fn mock_release(
         outfile: &Path,
-        projkind: ProjKind,
-        lang: Lang,
-        toolchain: ToolChain,
+        artefact: Artefact,
+        lang: Language,
+        toolchain: Toolchain,
         pch: Option<PathBuf>,
         crtstatic: bool,
     ) -> Self {
         let base = Self::mock_base(outfile);
         Self {
-            projkind,
+            artefact,
             toolchain,
             lang,
             pch,

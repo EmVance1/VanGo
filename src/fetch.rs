@@ -1,14 +1,14 @@
 use crate::{
-    error::Error,
-    config::{VangoFile, BuildFile, LibFile, Dependency, Profile, ToolChain},
     cli::BuildSwitches,
+    config::{BuildFile, Dependency, LibFile, Profile, Toolchain, VangoFile},
+    error::Error,
     log_info_ln,
 };
 use serde::Serialize;
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     path::{Path, PathBuf},
-    collections::HashMap,
 };
 
 pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
@@ -48,7 +48,9 @@ struct VcpkgDependency {
 }
 
 fn pull_vcpkg(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut Dependencies) {
-    if packages.is_empty() { return; }
+    if packages.is_empty() {
+        return;
+    }
     let _ = std::fs::create_dir("bin");
     std::env::set_current_dir("bin").unwrap();
     let mut data = HashMap::new();
@@ -95,18 +97,14 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
     };
 
     // select toolchain in order of descending priority
-    let toolchain = switches.toolchain.or(info.toolchain).unwrap_or(ToolChain::default());
+    let toolchain = switches.toolchain.or(info.toolchain).unwrap_or(Toolchain::user_default()?);
 
     let mut vcpkg = Vec::new();
 
     for lib in &info.dependencies {
         // get path to library root, pull repo if necessary
         let path = match &lib.1 {
-            Dependency::Git {
-                git,
-                tag,
-                features: _,
-            } => {
+            Dependency::Git { git, tag, features: _ } => {
                 let git = Path::new(&git);
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
@@ -117,9 +115,12 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
             }
             Dependency::Package { src, targets, features } => {
                 if src == "vcpkg" {
-                    vcpkg.push(VcpkgDependency{ name: lib.0.to_ascii_lowercase(), features: features.clone() });
+                    vcpkg.push(VcpkgDependency {
+                        name: lib.0.to_ascii_lowercase(),
+                        features: features.clone(),
+                    });
                     for tar in targets {
-                        if toolchain.is_msvc() {
+                        if toolchain.is_msvc_compatible() {
                             deps.archives.push(tar.with_extension("lib"));
                         } else {
                             deps.archives.push(tar.clone());
@@ -135,7 +136,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 continue;
             }
             Dependency::System { system } => {
-                if toolchain.is_msvc() {
+                if toolchain.is_msvc_compatible() {
                     deps.archives.push(system.with_extension("lib"));
                 } else {
                     deps.archives.push(system.clone());
@@ -169,7 +170,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         let profile = library.take(&switches.profile)?;
         deps.incdirs.push(path.join(profile.include));
         deps.libdirs.push(path.join(&profile.libdir));
-        if toolchain.is_msvc() {
+        if toolchain.is_msvc_compatible() {
             for l in profile.binaries {
                 if srcpkg {
                     deps.relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));

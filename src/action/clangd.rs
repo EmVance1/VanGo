@@ -1,5 +1,5 @@
 use crate::{
-    config::{BuildFile, Dependency, LibFile, Profile, ProjKind, ToolChain, VangoFile, WarnLevel},
+    config::{Artefact, BuildFile, Dependency, LibFile, Profile, Toolchain, VangoFile, WarnLevel},
     error::Error,
     log_info_ln,
 };
@@ -75,7 +75,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
-            VangoFile::Build(build) => LibFile::from_build(build, ToolChain::system_default())?,
+            VangoFile::Build(build) => LibFile::from_build(build, Toolchain::system_default()?)?,
             VangoFile::Lib(lib) => lib,
         };
         std::env::set_current_dir(&save).unwrap();
@@ -90,7 +90,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if cfg!(windows) {
         writeln!(file, "-DUNICODE")?;
         writeln!(file, "-D_UNICODE")?;
-        if let ProjKind::SharedLib { .. } = build.kind {
+        if let Artefact::SharedLib { .. } = build.kind {
             writeln!(file, "-DVANGO_EXPORT_SHARED")?;
         }
     }

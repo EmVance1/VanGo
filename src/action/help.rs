@@ -22,11 +22,11 @@ fn toolchains() {
     println!("Toolchains currently installed on this system:");
     println!();
     let probes = [
-        ("gcc",   "gcc",      "--version", false),
-        ("clang", "clang",    "--version", false),
-        ("msvc",  "cl.exe",   "--version", true),
-        ("zig",   "zig",        "version", false),
-        ("emcc",  "emcc.bat", "--version", false),
+        ("gcc", "gcc", "--version", false),
+        ("clang", "clang", "--version", false),
+        ("msvc", "cl.exe", "--version", true),
+        ("zig", "zig", "version", false),
+        ("emcc", "emcc.bat", "--version", false),
     ];
     for (label, exe, arg, use_stderr) in probes {
         let line = std::process::Command::new(exe).arg(arg).output().ok().and_then(|out| {

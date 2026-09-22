@@ -1,16 +1,14 @@
 #[macro_use]
 mod log;
 
+use crate::config::{Profile, Toolchain};
 use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::str::FromStr;
-use crate::config::{Profile, ToolChain};
-
 
 const PROFILES_HELP: &str = "\
 Profiles:
     debug    No optimization; Generate debugging information; 'VANGO_DEBUG' macro defined; Generally faster compile times
     release  High optimization; 'VANGO_RELEASE' macro defined; Generally slower compile times";
-
 
 #[derive(Parser, Debug)]
 #[command(
@@ -152,7 +150,7 @@ pub struct BuildArgs {
     #[arg(short, long, value_name = "PROF", require_equals = true)]
     profile: Option<String>,
     #[arg(short, long, value_name = "TOOL", require_equals = true, value_parser = parse_toolchain, help = toolchain_help())]
-    toolchain: Option<ToolChain>,
+    toolchain: Option<Toolchain>,
     /// On unix-like systems: installs headers and binaries into /usr/local/* on build
     #[arg(long, hide = true)]
     install: bool,
@@ -168,7 +166,7 @@ pub struct BuildArgs {
 #[allow(clippy::struct_excessive_bools)]
 pub struct BuildSwitches {
     pub profile: Profile,
-    pub toolchain: Option<ToolChain>,
+    pub toolchain: Option<Toolchain>,
     pub install: bool,
     pub echo: bool,
     pub verbose: bool,
@@ -196,13 +194,12 @@ impl BuildArgs {
 }
 
 fn toolchain_help() -> String {
-    // let default = ToolChain::user_default().map(|t| t.to_string()).unwrap_or_default();
-    let default = ToolChain::default();
+    let default = Toolchain::user_default().map(|t| t.to_string()).unwrap_or_default();
     format!("Specify a toolchain for compilation (user default: {default})")
 }
 
-fn parse_toolchain(s: &str) -> Result<ToolChain, String> {
-    ToolChain::from_str(s).map_err(|e| e.to_string())
+fn parse_toolchain(s: &str) -> Result<Toolchain, String> {
+    Toolchain::from_str(s).map_err(|e| e.to_string())
 }
 
 pub fn command() -> clap::Command {
@@ -216,7 +213,6 @@ pub fn collect_args() -> Action {
     }
     cli.action.unwrap_or(Action::Help { action: None })
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -245,4 +241,3 @@ mod tests {
         assert_eq!(cli.action, None);
     }
 }
-

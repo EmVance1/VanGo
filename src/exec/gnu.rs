@@ -1,7 +1,7 @@
 use super::{BuildInfo, PreCompHead, output};
 use crate::{
     Error,
-    config::{ProjKind, Runtime, WarnLevel},
+    config::{Artefact, Runtime, WarnLevel},
     log_info_ln,
 };
 use std::path::{Path, PathBuf};
@@ -16,15 +16,15 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     cmd.arg(format!("-std={}", info.lang));
     if !cfg!(windows) && !info.toolchain.is_emcc() {
-        match info.projkind {
-            ProjKind::App => {
+        match info.artefact {
+            Artefact::Executable => {
                 if info.settings.aslr {
                     cmd.arg("-fpie");
                 } else {
                     cmd.arg("-fno-pie"); // explicitly disable ASLR on macos 10.7 (2011)
                 }
             }
-            ProjKind::StaticLib | ProjKind::SharedLib { .. } => {
+            Artefact::StaticLib | Artefact::SharedLib { .. } => {
                 if info.settings.aslr {
                     cmd.arg("-fPIC");
                 } else {
@@ -100,7 +100,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_clang()) {
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
     if info.settings.tsan && !cfg!(windows) {
@@ -109,7 +109,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.lsan && !cfg!(windows) {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_clang()) {
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
@@ -119,7 +119,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
         }
         PreCompHead::Use(header) => {
-            if info.toolchain.is_clang() {
+            if info.toolchain.is_llvm() {
                 cmd.arg("-include-pch");
                 cmd.arg(format!("{}/pch/{}.gch", info.outdir.display(), header.display()));
             } else {
@@ -150,7 +150,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt); // use g++/clang++ etc. when combining C and C++
 
     cmd.args(info.link_args);
-    if let ProjKind::SharedLib { implib } = info.projkind {
+    if let Artefact::SharedLib { implib } = info.artefact {
         if cfg!(target_os = "macos") {
             cmd.arg("-dynamiclib");
         } else {
@@ -164,7 +164,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
         if info.settings.aslr {
             if cfg!(windows) {
                 cmd.arg("-Wl,--dynamicbase"); // forward --dynamicbase to LINK.exe
-            } else if let ProjKind::App = info.projkind
+            } else if let Artefact::Executable = info.artefact
                 && cfg!(target_os = "linux")
             {
                 cmd.arg("-pie");
@@ -188,7 +188,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_clang()) {
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
     if info.settings.tsan && !cfg!(windows) {
@@ -197,7 +197,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.lsan && !cfg!(windows) {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_clang()) {
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     if info.toolchain.is_emcc() {
@@ -258,7 +258,7 @@ fn print_command(cmd: &std::process::Command) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Lang, ProjKind, ToolChain};
+    use crate::config::{Artefact, Language, Toolchain};
     use std::path::PathBuf;
 
     #[test]
@@ -270,7 +270,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
+            &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -322,7 +322,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(23), ToolChain::ClangGnu, None, true),
+            &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(23), Toolchain::ClangMingw, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -375,7 +375,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(20), ToolChain::Gcc, None, false),
+            &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -427,7 +427,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(23), ToolChain::Gcc, None, true),
+            &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(23), Toolchain::Gcc, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -479,7 +479,7 @@ mod tests {
         let cmd = super::compile(
             &src,
             &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::StaticLib, Lang::Cpp(20), ToolChain::Gcc, None, true),
+            &BuildInfo::mock_debug(&out, Artefact::StaticLib, Language::Cpp(20), Toolchain::Gcc, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -533,9 +533,9 @@ mod tests {
             &obj,
             &BuildInfo::mock_debug(
                 &out,
-                ProjKind::SharedLib { implib: true },
-                Lang::Cpp(20),
-                ToolChain::Gcc,
+                Artefact::SharedLib { implib: true },
+                Language::Cpp(20),
+                Toolchain::Gcc,
                 None,
                 true,
             ),

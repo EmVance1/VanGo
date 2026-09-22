@@ -1,10 +1,13 @@
 use super::clangd;
 use crate::{config::VangoFile, error::Error, log_info_ln};
 
-
 pub fn init(opts: crate::cli::ProjectOpts) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    log_info_ln!("creating new {} project: {}", if opts.library { "library" } else { "application" }, name);
+    log_info_ln!(
+        "creating new {} project: {}",
+        if opts.library { "library" } else { "application" },
+        name
+    );
     let ext = if opts.is_c { "c" } else { "cpp" };
     let lang = if opts.is_c { "C11" } else { "C++17" };
     let header = if opts.is_c { "stdio.h" } else { "cstdio" };

@@ -1,4 +1,4 @@
-use crate::config::Lang;
+use crate::config::Language;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -14,16 +14,16 @@ pub enum Error {
     MimicTomlProjkind(String),
     #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
     InvalidPkgHeader(PathBuf),
-    #[error("toolchain 'MSVC' is unavailable on non-windows platforms")]
-    MsvcUnavailable,
+    #[error("platform not yet supported by VanGo")]
+    PlatformUnavailable,
     #[error("toolchain '{0}' is unavailable")]
-    UnknownToolChain(String),
+    UnknownToolchain(String),
     #[error("directory '{0}' was not found")]
     DirectoryNotFound(PathBuf),
     #[error("'{0}' is not a valid C/C++ standard")]
     InvalidCppStd(String),
     #[error("library '{0}' uses {1}, incompatible with project '{2}' ({3})")]
-    IncompatibleCppStd(String, Lang, String, Lang),
+    IncompatibleCppStd(String, Language, String, Language),
     #[error("project '{0}' does not contain profile '{1}'")]
     ProfileUnavailable(String, String),
     #[error("custom profile '{0}' must inherit from a builtin profile")]
@@ -31,12 +31,12 @@ pub enum Error {
     #[error("project dependency '{0}' is not a library")]
     InvalidDependency(String),
     #[error("toolchain '{0}' compiler is unavailable{help}",
-        help = if let crate::config::ToolChain::Msvc = .0 { " (make sure you are using a developer terminal)" } else { "" })]
-    CompilerNotFound(crate::config::ToolChain),
+        help = if let crate::config::Toolchain::Msvc = .0 { " (make sure you are using a developer terminal)" } else { "" })]
+    CompilerNotFound(crate::config::Toolchain),
     #[error("toolchain '{0}' archiver is unavailable")]
-    ArchiverNotFound(crate::config::ToolChain),
+    ArchiverNotFound(crate::config::Toolchain),
     #[error("toolchain '{0}' linker is unavailable")]
-    LinkerNotFound(crate::config::ToolChain),
+    LinkerNotFound(crate::config::Toolchain),
     #[error("failed to compile project '{0}'")]
     CompilerFail(PathBuf),
     #[error("failed to archive project '{0}'")]

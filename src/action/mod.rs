@@ -6,10 +6,10 @@ mod run;
 mod test;
 
 use crate::{config::BuildFile, error::Error, log_info_ln};
+pub use build::build;
+pub use clangd::clangd;
 pub use help::{help, version};
 pub use new::init;
-pub use clangd::clangd;
-pub use build::build;
 pub use run::run;
 pub use test::test;
 

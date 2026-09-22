@@ -8,7 +8,7 @@ pub mod prep;
 mod queue;
 
 use crate::{
-    config::{BuildSettings, Lang, ProjKind, ToolChain},
+    config::{Artefact, BuildSettings, Language, Toolchain},
     error::Error,
     log_info_ln, log_warn_ln,
 };
@@ -17,9 +17,9 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct BuildInfo {
-    pub projkind: ProjKind,
-    pub toolchain: ToolChain,
-    pub lang: Lang,
+    pub artefact: Artefact,
+    pub toolchain: Toolchain,
+    pub lang: Language,
     pub cpprt: bool,
     pub settings: BuildSettings,
     pub changed: bool,
@@ -53,28 +53,28 @@ enum PreCompHead<'a> {
     Use(&'a Path),
 }
 
-fn on_compile_finish(tc: ToolChain, output: &std::process::Output) -> bool {
+fn on_compile_finish(tc: Toolchain, output: &std::process::Output) -> bool {
     match tc {
-        ToolChain::Msvc => output::msvc_compiler(output),
+        Toolchain::Msvc => output::msvc_compiler(output),
         _ => output::gnu_compiler(output),
     }
 }
 
-fn msvc_check_iso(lang: Lang) {
+fn msvc_check_iso(lang: Language) {
     match lang {
-        Lang::Cpp(123) => {
+        Language::Cpp(123) => {
             log_warn_ln!("MSVC C++23: using latest working draft (/std:c++latest) - may be incomplete");
         }
-        Lang::Cpp(n) if n < 114 => {
+        Language::Cpp(n) if n < 114 => {
             log_warn_ln!(
                 "MSVC {}: no longer supported - defaulting to C++14",
                 lang.to_string().to_ascii_uppercase()
             );
         }
-        Lang::C(123) => {
+        Language::C(123) => {
             log_warn_ln!("MSVC C23: using latest working draft (/std:clatest) - may be incomplete");
         }
-        Lang::C(99) => {
+        Language::C(99) => {
             log_warn_ln!("MSVC C99: not officially supported - defaulting to C89 with extensions, may be incomplete");
         }
         _ => (),
@@ -115,7 +115,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             }
 
             // MSVC has sketchy ISO settings...
-            if info.toolchain.is_msvc() {
+            if info.toolchain.is_msvc_compatible() {
                 msvc_check_iso(info.lang);
             }
         }
@@ -126,7 +126,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         let _ = std::fs::create_dir(info.outdir.join("pch"));
         let inpch = info.srcdir.join(pch); // path/to/header
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
-        let outfile = if info.toolchain.is_msvc() {
+        let outfile = if info.toolchain.is_msvc_compatible() {
             // output file
             let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.display()));
             info.outdir.join("obj").join(pch).with_extension("h.obj") // MSVC internally reates a .obj and .pch
@@ -141,7 +141,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         {
             log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
-            let mut comp = if info.toolchain.is_msvc() {
+            let mut comp = if info.toolchain.is_msvc_compatible() {
                 msvc::compile(&incpp, &outfile, &info, &var, echo, verbose)
             } else {
                 gnu::compile(&inpch, &outfile, &info, &var, echo, verbose)
@@ -167,7 +167,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
         for (src, obj) in jobs {
             log_info_ln!("compiling: {}", src.to_string_lossy());
-            let mut comp = if info.toolchain.is_msvc() {
+            let mut comp = if info.toolchain.is_msvc_compatible() {
                 msvc::compile(src, &obj, &info, &pch_use, echo, verbose)
             } else {
                 gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
@@ -190,26 +190,23 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
     }
 
-    // remove all objects created from sources that no longer exist
-    // prep::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
-
-    match info.projkind {
-        ProjKind::App | ProjKind::SharedLib { .. } => {
+    match info.artefact {
+        Artefact::Executable | Artefact::SharedLib { .. } => {
             log_info_ln!("linking:   {: <30}", info.outfile.display());
         }
-        ProjKind::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
+        Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
     }
-    if info.toolchain.is_msvc() {
+    if info.toolchain.is_msvc_compatible() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
-        match info.projkind {
-            ProjKind::App | ProjKind::SharedLib { .. } => msvc::link(all_objs, info, echo, verbose),
-            ProjKind::StaticLib => msvc::archive(all_objs, info, echo, verbose),
+        match info.artefact {
+            Artefact::Executable | Artefact::SharedLib { .. } => msvc::link(all_objs, info, echo, verbose),
+            Artefact::StaticLib => msvc::archive(all_objs, info, echo, verbose),
         }
     } else {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
-        match info.projkind {
-            ProjKind::App | ProjKind::SharedLib { .. } => gnu::link(all_objs, info, echo, verbose),
-            ProjKind::StaticLib => gnu::archive(all_objs, info, echo, verbose),
+        match info.artefact {
+            Artefact::Executable | Artefact::SharedLib { .. } => gnu::link(all_objs, info, echo, verbose),
+            Artefact::StaticLib => gnu::archive(all_objs, info, echo, verbose),
         }
     }
 }

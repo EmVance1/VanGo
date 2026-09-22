@@ -1,4 +1,9 @@
-use crate::{error::Error, cli::BuildSwitches, config::{BuildFile, ToolChain}, log_info_ln};
+use crate::{
+    cli::BuildSwitches,
+    config::{BuildFile, Toolchain},
+    error::Error,
+    log_info_ln,
+};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::{
@@ -8,16 +13,16 @@ use std::{
 
 pub fn run(build: &BuildFile, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
     // select toolchain in order of descending priority
-    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(Toolchain::user_default()?);
 
-    let outdir = if toolchain == ToolChain::system_default() {
+    let outdir = if toolchain == Toolchain::system_default()? {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
             .join(toolchain.as_directory())
             .join(switches.profile.to_string())
     };
-    let outfile = outdir.join(&build.name).with_extension(toolchain.app_ext());
+    let outfile = outdir.join(toolchain.fmt_executable(&build.name));
 
     log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
     let status = std::process::Command::new(PathBuf::from(".").join(&outfile))

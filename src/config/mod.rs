@@ -46,7 +46,7 @@ impl VangoFile {
 #[cfg(test)]
 mod tests {
 
-    use super::{Lang, ProjKind, VangoFile, build::*, lib::*};
+    use super::{Artefact, Language, VangoFile, build::*, lib::*};
     use std::{collections::HashMap, str::FromStr};
 
     #[test]
@@ -69,26 +69,38 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
 "#;
 
         let mut dependencies = Vec::new();
-        dependencies.push((String::new(), Dependency::Package {
-            src: "../engine".into(),
-            targets: vec![],
-            features: vec![],
-        }));
-        dependencies.push((String::new(), Dependency::Package {
-            src: "../../NavMesh".into(),
-            targets: vec![],
-            features: vec![],
-        }));
-        dependencies.push((String::new(), Dependency::Git {
-            git: "https://github.com/SFML/SFML.git".into(),
-            tag: None,
-            features: vec!["graphics".into()],
-        }));
-        dependencies.push((String::new(), Dependency::Git {
-            git: "https://github.com/LuaJIT/LuaJIT.git".into(),
-            tag: None,
-            features: vec![],
-        }));
+        dependencies.push((
+            String::new(),
+            Dependency::Package {
+                src: "../engine".into(),
+                targets: vec![],
+                features: vec![],
+            },
+        ));
+        dependencies.push((
+            String::new(),
+            Dependency::Package {
+                src: "../../NavMesh".into(),
+                targets: vec![],
+                features: vec![],
+            },
+        ));
+        dependencies.push((
+            String::new(),
+            Dependency::Git {
+                git: "https://github.com/SFML/SFML.git".into(),
+                tag: None,
+                features: vec!["graphics".into()],
+            },
+        ));
+        dependencies.push((
+            String::new(),
+            Dependency::Git {
+                git: "https://github.com/LuaJIT/LuaJIT.git".into(),
+                tag: None,
+                features: vec![],
+            },
+        ));
 
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
         profiles.insert(
@@ -113,12 +125,14 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
             VangoFile::Build(BuildFile {
                 name: "Shimmy".to_string(),
                 version: "0.1.0".parse().unwrap(),
-                lang: Lang::Cpp(120),
-                kind: ProjKind::App,
+                lang: Language::Cpp(120),
+                kind: Artefact::Executable,
                 toolchain: None,
-                interface: Lang::Cpp(120),
+                interface: Language::Cpp(120),
                 runtime: None,
-                vcpkg: VcpkgConfig{ triplet: "x64-linux".to_string() },
+                vcpkg: VcpkgConfig {
+                    triplet: "x64-linux".to_string()
+                },
                 dependencies,
                 profiles,
             })
@@ -181,7 +195,7 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
             VangoFile::Lib(LibFile {
                 name: "SFML".to_string(),
                 version: "3.0.1".parse().unwrap(),
-                lang: Lang::from_str("C++17").unwrap(),
+                lang: Language::from_str("C++17").unwrap(),
                 profiles,
             })
         );

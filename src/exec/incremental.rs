@@ -15,7 +15,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel<'_> {
                 .map(|src| {
                     (
                         src.as_path(),
-                        transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
+                        transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc_compatible()),
                     )
                 })
                 .collect(),
@@ -31,7 +31,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel<'_> {
                     .map(|src| {
                         (
                             src.as_path(),
-                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
+                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc_compatible()),
                         )
                     })
                     .collect(),
@@ -47,7 +47,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel<'_> {
                     if src.metadata().unwrap().modified().unwrap() > pivot {
                         Some((
                             src.as_path(),
-                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc()),
+                            transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc_compatible()),
                         ))
                     } else {
                         None
@@ -71,7 +71,7 @@ pub fn get_build_level(info: &BuildInfo) -> BuildLevel<'_> {
             .sources
             .iter()
             .filter_map(|src| {
-                let obj = transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc());
+                let obj = transform_file(src, &info.srcdir, &info.outdir, info.toolchain.is_msvc_compatible());
                 if !obj.exists() || (src.metadata().unwrap().modified().unwrap() > obj.metadata().unwrap().modified().unwrap()) {
                     Some((src.as_path(), obj))
                 } else {

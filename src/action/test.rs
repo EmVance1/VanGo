@@ -1,10 +1,9 @@
 use crate::{
     Error,
-    config::{BuildFile, ToolChain},
     cli::BuildSwitches,
-    fetch,
+    config::{BuildFile, Toolchain},
     exec::{self, BuildInfo, prep},
-    log_info_ln,
+    fetch, log_info_ln,
 };
 use std::{
     path::{Path, PathBuf},
@@ -17,7 +16,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     }
 
     // select toolchain in order of descending priority
-    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(Toolchain::user_default()?);
 
     let include = std::env::current_exe()?.parent().unwrap().to_owned().join("testframework");
 
@@ -39,7 +38,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     }
     inherited.incdirs.extend(["test".into(), include, "src".into(), "include".into()]);
 
-    let base_outdir = if toolchain == ToolChain::system_default() {
+    let base_outdir = if toolchain == Toolchain::system_default()? {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
@@ -51,7 +50,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     let outdir = base_outdir.join("test");
     let outfile = outdir.join(format!("test_{}.exe", build.name));
     let mut relink = Vec::new();
-    if toolchain.is_msvc() {
+    if toolchain.is_msvc_compatible() {
         inherited.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
         relink.push(base_outdir.join(&build.name).with_extension("lib"));
     } else {
@@ -63,7 +62,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     prep::ensure_out_dirs(Path::new("test"), &outdir);
 
     let info = BuildInfo {
-        projkind: crate::config::ProjKind::App,
+        artefact: crate::config::Artefact::Executable,
         toolchain,
         lang: build.lang,
         cpprt: build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),

@@ -1,9 +1,9 @@
 use crate::{
-    error::Error,
-    config::{BuildFile, BuildSettings, ProjKind, ToolChain, WarnLevel},
     cli::BuildSwitches,
-    fetch,
+    config::{Artefact, BuildFile, BuildSettings, Platform, Toolchain, WarnLevel},
+    error::Error,
     exec::{self, BuildInfo, prep},
+    fetch,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     }
 
     // select toolchain in order of descending priority
-    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(Toolchain::user_default()?);
 
     // extract settings for current profile
     let mut profile = build.get(&switches.profile)?.to_owned();
@@ -43,7 +43,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     if cfg!(windows) {
         deps.defines.push("UNICODE".to_string());
         deps.defines.push("_UNICODE".to_string());
-        if let ProjKind::SharedLib { .. } = build.kind {
+        if let Artefact::SharedLib { .. } = build.kind {
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
@@ -55,7 +55,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     deps.incdirs.extend(profile.include);
 
     // scope all output to correct directory
-    let outdir = if toolchain == ToolChain::system_default() {
+    let outdir = if toolchain == Toolchain::system_default()? {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
@@ -63,31 +63,15 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
             .join(switches.profile.to_string())
     };
 
-    // determine output filenames, depends on project type, toolchain and platform (see elems::{ToolChain, ProjKind})
+    // determine output filenames, depends on project type, toolchain and platform (see elems::{Toolchain, Artefact})
     let (outfile, implib) = match build.kind {
-        ProjKind::App => (outdir.join(&build.name).with_extension(toolchain.app_ext()), None),
-        ProjKind::SharedLib { implib: false } => (
-            outdir
-                .join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
-                .with_extension(ToolChain::shared_lib_ext()),
-            None,
+        Artefact::Executable => (outdir.join(toolchain.fmt_executable(&build.name)), None),
+        Artefact::SharedLib { implib: false } => (outdir.join(Platform::current()?.fmt_shared_lib(&build.name)), None),
+        Artefact::SharedLib { implib: true } => (
+            outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
+            Some(outdir.join(toolchain.fmt_static_lib(&build.name))),
         ),
-        ProjKind::SharedLib { implib: true } => (
-            outdir
-                .join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
-                .with_extension(ToolChain::shared_lib_ext()),
-            Some(
-                outdir
-                    .join(format!("{}{}", toolchain.static_lib_prefix(), build.name))
-                    .with_extension(toolchain.static_lib_ext()),
-            ),
-        ),
-        ProjKind::StaticLib => (
-            outdir
-                .join(format!("{}{}", toolchain.static_lib_prefix(), build.name))
-                .with_extension(toolchain.static_lib_ext()),
-            None,
-        ),
+        Artefact::StaticLib => (outdir.join(toolchain.fmt_static_lib(&build.name)), None),
     };
 
     // replicate source directory hierarchy in output directory
@@ -95,7 +79,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 
     let info = BuildInfo {
         changed: settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),
-        projkind: build.kind,
+        artefact: build.kind,
         toolchain,
         lang: build.lang,
         cpprt: build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),

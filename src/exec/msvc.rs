@@ -1,7 +1,7 @@
 use super::{BuildInfo, PreCompHead};
 use crate::{
     Error,
-    config::{Lang, ProjKind, Runtime, WarnLevel},
+    config::{Artefact, Language, Runtime, WarnLevel},
     exec::output,
     log_info_ln,
 };
@@ -17,20 +17,20 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     // /WL (one line diagnostics)   // "
     cmd.arg("/c");
     match info.lang {
-        Lang::Cpp(123) => {
+        Language::Cpp(123) => {
             cmd.arg("/std:c++latest");
         }
-        Lang::Cpp(n) if n < 114 => {
+        Language::Cpp(n) if n < 114 => {
             cmd.arg("/std:c++14");
         }
-        Lang::C(120) => {
+        Language::C(120) => {
             cmd.arg("/std:clatest");
         }
-        Lang::C(99) => {} // extensions on by default
-        Lang::C(89) => {
+        Language::C(99) => {} // extensions on by default
+        Language::C(89) => {
             cmd.arg("/Za"); // disable MS pseudo C99 extensions
         }
-        Lang::Cpp(_) | Lang::C(_) => {
+        Language::Cpp(_) | Language::C(_) => {
             cmd.arg(format!("/std:{}", info.lang));
         }
     }
@@ -41,7 +41,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     match info.settings.runtime {
         Runtime::DynamicDebug => {
-            if info.settings.asan && info.toolchain.is_clang() {
+            if info.settings.asan && info.toolchain.is_llvm() {
                 cmd.arg("/MD");
             } else {
                 cmd.arg("/MDd");
@@ -51,7 +51,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
             cmd.arg("/MD");
         }
         Runtime::StaticDebug => {
-            if info.settings.asan && info.toolchain.is_clang() {
+            if info.settings.asan && info.toolchain.is_llvm() {
                 cmd.arg("/MT");
             } else {
                 cmd.arg("/MTd");
@@ -88,7 +88,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.debug_info {
         cmd.args(["/Zi", "/FS", "/sdl"]); // debug info, thread safe, extra security
         cmd.arg(format!("/Fd:{}\\", info.outdir.display())); // PDB output dir
-        if !info.toolchain.is_clang() {
+        if !info.toolchain.is_llvm() {
             cmd.arg("/Zf");
         } // faster PDB gen??
     }
@@ -131,7 +131,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         cmd.arg("-fsanitize=leak");
     }
     */
-    if info.settings.ubsan && info.toolchain.is_clang() {
+    if info.settings.ubsan && info.toolchain.is_llvm() {
         cmd.arg("-fsanitize=undefined");
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
@@ -165,7 +165,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     cmd.args(info.link_args);
     cmd.arg("/NOLOGO");
     cmd.arg("/MACHINE:X64");
-    if let ProjKind::SharedLib { implib } = info.projkind {
+    if let Artefact::SharedLib { implib } = info.artefact {
         cmd.arg("/DLL");
         if implib {
             cmd.arg(format!("/IMPLIB:{}", info.implib.unwrap().display()));
@@ -187,7 +187,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     cmd.args(objs);
     cmd.args(info.libdirs.iter().map(|l| format!("/LIBPATH:{}", l.display())));
     cmd.args(info.archives);
-    if info.settings.asan && info.toolchain.is_clang() {
+    if info.settings.asan && info.toolchain.is_llvm() {
         cmd.arg("clang_rt.asan_dynamic-x86_64.lib");
         cmd.arg("clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
     }
@@ -199,7 +199,7 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     }
     if output::msvc_linker(
         &cmd.output().map_err(|_| Error::LinkerNotFound(info.toolchain))?,
-        info.toolchain.is_clang(),
+        info.toolchain.is_llvm(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(())
@@ -228,7 +228,7 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
     }
     if output::msvc_archiver(
         &cmd.output().map_err(|_| Error::ArchiverNotFound(info.toolchain))?,
-        info.toolchain.is_clang(),
+        info.toolchain.is_llvm(),
     ) {
         log_info_ln!("successfully built project: {}\n", info.outfile.display());
         Ok(())
@@ -260,22 +260,22 @@ fn print_command(cmd: &std::process::Command) {
     println!();
 }
 
-#[cfg(all(test, windows))]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Lang, ProjKind, ToolChain};
-    use std::path::PathBuf;
+    use crate::config::{Artefact, Language, Toolchain};
+    use std::path::Path;
 
     #[test]
     pub fn compile_cmd_msvc_dbg() {
-        let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/debug");
-        let obj = PathBuf::from("bin/debug/obj/main.obj");
+        let src = Path::new("src/main.cpp");
+        let out = Path::new("bin/debug");
+        let obj = Path::new("bin/debug/obj/main.obj");
 
         let cmd = super::compile(
-            &src,
-            &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(120), ToolChain::Msvc, None, false),
+            src,
+            obj,
+            &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(120), Toolchain::Msvc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -311,14 +311,14 @@ mod tests {
 
     #[test]
     pub fn compile_cmd_msvc_dbg2() {
-        let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/debug");
-        let obj = PathBuf::from("bin/debug/obj/main.obj");
+        let src = Path::new("src/main.cpp");
+        let out = Path::new("bin/debug");
+        let obj = Path::new("bin/debug/obj/main.obj");
 
         let cmd = super::compile(
-            &src,
-            &obj,
-            &BuildInfo::mock_debug(&out, ProjKind::App, Lang::Cpp(123), ToolChain::ClangMsvc, None, true),
+            src,
+            obj,
+            &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(123), Toolchain::ClangMsvc, None, true),
             &PreCompHead::None,
             false,
             false,
@@ -353,14 +353,14 @@ mod tests {
 
     #[test]
     pub fn compile_cmd_msvc_rel1() {
-        let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/debug");
-        let obj = PathBuf::from("bin/debug/obj/main.obj");
+        let src = Path::new("src/main.cpp");
+        let out = Path::new("bin/debug");
+        let obj = Path::new("bin/debug/obj/main.obj");
 
         let cmd = super::compile(
-            &src,
-            &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, false),
+            src,
+            obj,
+            &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, None, false),
             &PreCompHead::None,
             false,
             false,
@@ -393,14 +393,14 @@ mod tests {
 
     #[test]
     pub fn compile_cmd_msvc_rel2() {
-        let src = PathBuf::from("src/main.cpp");
-        let out = PathBuf::from("bin/debug");
-        let obj = PathBuf::from("bin/debug/obj/main.obj");
+        let src = Path::new("src/main.cpp");
+        let out = Path::new("bin/debug");
+        let obj = Path::new("bin/debug/obj/main.obj");
 
         let cmd = super::compile(
-            &src,
-            &obj,
-            &BuildInfo::mock_release(&out, ProjKind::App, Lang::Cpp(123), ToolChain::Msvc, None, true),
+            src,
+            obj,
+            &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, None, true),
             &PreCompHead::None,
             false,
             false,

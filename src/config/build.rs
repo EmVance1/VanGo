@@ -1,4 +1,4 @@
-use super::{Lang, Profile, ProjKind, ToolChain, Version};
+use super::{Artefact, Language, Profile, Toolchain, Version};
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
@@ -7,10 +7,10 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 pub struct BuildFile {
     pub name: String,
     pub version: Version,
-    pub lang: Lang,
-    pub kind: ProjKind,
-    pub toolchain: Option<ToolChain>,
-    pub interface: Lang,
+    pub lang: Language,
+    pub kind: Artefact,
+    pub toolchain: Option<Toolchain>,
+    pub interface: Language,
     pub runtime: Option<String>,
     pub vcpkg: VcpkgConfig,
     pub dependencies: Vec<(String, Dependency)>,
@@ -44,19 +44,19 @@ impl BuildFile {
                 profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p).finish());
             }
         }
-        let lang = Lang::from_str(&file.package.lang)?;
-        let mut kind = ProjKind::from_str(&file.package.kind.unwrap_or("app".to_string()))?;
-        if let ProjKind::SharedLib { implib } = &mut kind {
+        let lang = Language::from_str(&file.package.lang)?;
+        let mut kind = Artefact::from_str(&file.package.kind.unwrap_or("app".to_string()))?;
+        if let Artefact::SharedLib { implib } = &mut kind {
             *implib = file.package.implib.unwrap_or(true);
         }
         let interface = if let Some(interface) = file.package.interface {
-            Lang::from_str(&interface)?
+            Language::from_str(&interface)?
         } else {
             lang
         };
 
         let toolchain = if let Some(tc) = file.package.toolchain {
-            Some(ToolChain::from_str(&tc)?)
+            Some(Toolchain::from_str(&tc)?)
         } else {
             None
         };
@@ -73,7 +73,9 @@ impl BuildFile {
             toolchain,
             interface,
             runtime: file.package.runtime,
-            vcpkg: file.vcpkg.unwrap_or(VcpkgConfig{ triplet: "x64-linux".to_string() }),
+            vcpkg: file.vcpkg.unwrap_or(VcpkgConfig {
+                triplet: "x64-linux".to_string(),
+            }),
             dependencies,
             profiles,
         })

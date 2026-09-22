@@ -1,5 +1,5 @@
-use super::{Lang, Profile, Version, build::BuildFile};
-use crate::{config::ToolChain, error::Error};
+use super::{Language, Profile, Version, build::BuildFile};
+use crate::{config::Toolchain, error::Error};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 pub struct LibFile {
     pub name: String,
     pub version: Version,
-    pub lang: Lang,
+    pub lang: Language,
     pub profiles: HashMap<String, LibProfile>,
 }
 
@@ -38,7 +38,7 @@ impl LibFile {
         Ok(LibFile {
             name: file.staticlib.name,
             version: Version::from_str(&file.staticlib.version)?,
-            lang: Lang::from_str(&file.staticlib.lang)?,
+            lang: Language::from_str(&file.staticlib.lang)?,
             profiles,
         })
     }
@@ -52,7 +52,7 @@ impl LibFile {
         .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
-    pub fn validate(self, other_name: &str, other_lang: Lang) -> Result<Self, Error> {
+    pub fn validate(self, other_name: &str, other_lang: Language) -> Result<Self, Error> {
         if self.lang > other_lang {
             Err(Error::IncompatibleCppStd(self.name, self.lang, other_name.to_string(), other_lang))
         } else {
@@ -62,12 +62,12 @@ impl LibFile {
 }
 
 impl LibFile {
-    pub fn from_build(value: BuildFile, toolchain: ToolChain) -> Result<Self, Error> {
+    pub fn from_build(value: BuildFile, toolchain: Toolchain) -> Result<Self, Error> {
         let name = value.name;
         if !value.kind.is_lib() {
             return Err(Error::InvalidDependency(name));
         }
-        let libbase = if toolchain == ToolChain::system_default() {
+        let libbase = if toolchain == Toolchain::system_default()? {
             PathBuf::from("bin")
         } else {
             PathBuf::from("bin").join(toolchain.as_directory())

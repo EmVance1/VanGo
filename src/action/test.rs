@@ -1,9 +1,9 @@
 use crate::{
     Error,
     config::{BuildFile, ToolChain},
-    exec::{self, BuildInfo, prep},
+    cli::BuildSwitches,
     fetch,
-    input::BuildSwitches,
+    exec::{self, BuildInfo, prep},
     log_info_ln,
 };
 use std::{
@@ -15,6 +15,9 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     if !std::fs::exists("test").unwrap_or_default() {
         return Err(Error::MissingTests(build.name));
     }
+
+    // select toolchain in order of descending priority
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
 
     let include = std::env::current_exe()?.parent().unwrap().to_owned().join("testframework");
 
@@ -36,11 +39,11 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     }
     inherited.incdirs.extend(["test".into(), include, "src".into(), "include".into()]);
 
-    let base_outdir = if switches.toolchain == ToolChain::system_default() {
+    let base_outdir = if toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
-            .join(switches.toolchain.as_directory())
+            .join(toolchain.as_directory())
             .join(switches.profile.to_string())
     };
     inherited.libdirs.push(base_outdir.clone());
@@ -48,7 +51,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
     let outdir = base_outdir.join("test");
     let outfile = outdir.join(format!("test_{}.exe", build.name));
     let mut relink = Vec::new();
-    if switches.toolchain.is_msvc() {
+    if toolchain.is_msvc() {
         inherited.archives.insert(0, PathBuf::from(&build.name).with_extension("lib"));
         relink.push(base_outdir.join(&build.name).with_extension("lib"));
     } else {
@@ -61,7 +64,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
 
     let info = BuildInfo {
         projkind: crate::config::ProjKind::App,
-        toolchain: switches.toolchain,
+        toolchain,
         lang: build.lang,
         cpprt: build.runtime.map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings: profile.settings,

@@ -1,29 +1,24 @@
 use super::clangd;
 use crate::{config::VangoFile, error::Error, log_info_ln};
 
-pub fn new(library: bool, strict: bool, is_c: bool, clangd: bool, name: &str) -> Result<(), Error> {
-    std::fs::create_dir(name)?;
-    std::env::set_current_dir(name)?;
-    init(library, strict, is_c, clangd)
-}
 
-pub fn init(library: bool, strict: bool, is_c: bool, gen_clangd: bool) -> Result<(), Error> {
+pub fn init(opts: crate::cli::ProjectOpts) -> Result<(), Error> {
     let name = std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    log_info_ln!("creating new {} project: {}", if library { "library" } else { "application" }, name);
-    let ext = if is_c { "c" } else { "cpp" };
-    let lang = if is_c { "C11" } else { "C++17" };
-    let header = if is_c { "stdio.h" } else { "cstdio" };
-    let warns = if strict {
+    log_info_ln!("creating new {} project: {}", if opts.library { "library" } else { "application" }, name);
+    let ext = if opts.is_c { "c" } else { "cpp" };
+    let lang = if opts.is_c { "C11" } else { "C++17" };
+    let header = if opts.is_c { "stdio.h" } else { "cstdio" };
+    let warns = if opts.strict {
         "warn-level = \"high\"\niso-compliant = true\n"
     } else {
         ""
     };
     std::fs::create_dir("src")?;
-    if library {
+    if opts.library {
         std::fs::create_dir_all(format!("include/{name}"))?;
         std::fs::write(
             format!("include/{name}/lib.h"),
-            if is_c {
+            if opts.is_c {
                 "\
 #ifndef LIB_H
 #define LIB_H
@@ -64,7 +59,7 @@ int func(int a, int b) {{
             ),
         )?;
         std::fs::write("Vango.toml", &toml)?;
-        if gen_clangd {
+        if opts.clangd {
             let build = VangoFile::from_str(&toml).unwrap();
             clangd(&build.unwrap_build(), true)?;
         }
@@ -93,7 +88,7 @@ int main() {{
             ),
         )?;
         std::fs::write("Vango.toml", &toml)?;
-        if gen_clangd {
+        if opts.clangd {
             let build = VangoFile::from_str(&toml).unwrap();
             clangd(&build.unwrap_build(), true)?;
         }

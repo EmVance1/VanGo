@@ -1,7 +1,7 @@
 use crate::{
-    config::{BuildFile, Dependency, LibFile, Profile, VangoFile},
     error::Error,
-    input::BuildSwitches,
+    config::{VangoFile, BuildFile, LibFile, Dependency, Profile, ToolChain},
+    cli::BuildSwitches,
     log_info_ln,
 };
 use serde::Serialize;
@@ -94,6 +94,9 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         switches.clone()
     };
 
+    // select toolchain in order of descending priority
+    let toolchain = switches.toolchain.or(info.toolchain).unwrap_or(ToolChain::default());
+
     let mut vcpkg = Vec::new();
 
     for lib in &info.dependencies {
@@ -116,7 +119,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 if src == "vcpkg" {
                     vcpkg.push(VcpkgDependency{ name: lib.0.to_ascii_lowercase(), features: features.clone() });
                     for tar in targets {
-                        if switches.toolchain.is_msvc() {
+                        if toolchain.is_msvc() {
                             deps.archives.push(tar.with_extension("lib"));
                         } else {
                             deps.archives.push(tar.clone());
@@ -132,7 +135,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 continue;
             }
             Dependency::System { system } => {
-                if switches.toolchain.is_msvc() {
+                if toolchain.is_msvc() {
                     deps.archives.push(system.with_extension("lib"));
                 } else {
                     deps.archives.push(system.clone());
@@ -156,7 +159,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 }
                 srcpkg = true;
                 crate::action::build(&build, &switches, true)?;
-                LibFile::from_build(build, switches.toolchain)?
+                LibFile::from_build(build, toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };
@@ -166,7 +169,7 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
         let profile = library.take(&switches.profile)?;
         deps.incdirs.push(path.join(profile.include));
         deps.libdirs.push(path.join(&profile.libdir));
-        if switches.toolchain.is_msvc() {
+        if toolchain.is_msvc() {
             for l in profile.binaries {
                 if srcpkg {
                     deps.relink.push(path.join(&profile.libdir).join(&l).with_extension("lib"));

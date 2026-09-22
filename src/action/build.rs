@@ -1,9 +1,9 @@
 use crate::{
-    config::{BuildFile, BuildSettings, ProjKind, ToolChain, WarnLevel},
     error::Error,
-    exec::{self, BuildInfo, prep},
+    config::{BuildFile, BuildSettings, ProjKind, ToolChain, WarnLevel},
+    cli::BuildSwitches,
     fetch,
-    input::BuildSwitches,
+    exec::{self, BuildInfo, prep},
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -12,6 +12,9 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     if !std::fs::exists("src").unwrap_or_default() {
         return Err(Error::MissingSource(build.name.clone()));
     }
+
+    // select toolchain in order of descending priority
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
 
     // extract settings for current profile
     let mut profile = build.get(&switches.profile)?.to_owned();
@@ -52,17 +55,17 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     deps.incdirs.extend(profile.include);
 
     // scope all output to correct directory
-    let outdir = if switches.toolchain == ToolChain::system_default() {
+    let outdir = if toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
-            .join(switches.toolchain.as_directory())
+            .join(toolchain.as_directory())
             .join(switches.profile.to_string())
     };
 
     // determine output filenames, depends on project type, toolchain and platform (see elems::{ToolChain, ProjKind})
     let (outfile, implib) = match build.kind {
-        ProjKind::App => (outdir.join(&build.name).with_extension(switches.toolchain.app_ext()), None),
+        ProjKind::App => (outdir.join(&build.name).with_extension(toolchain.app_ext()), None),
         ProjKind::SharedLib { implib: false } => (
             outdir
                 .join(format!("{}{}", ToolChain::shared_lib_prefix(), build.name))
@@ -75,14 +78,14 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
                 .with_extension(ToolChain::shared_lib_ext()),
             Some(
                 outdir
-                    .join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
-                    .with_extension(switches.toolchain.static_lib_ext()),
+                    .join(format!("{}{}", toolchain.static_lib_prefix(), build.name))
+                    .with_extension(toolchain.static_lib_ext()),
             ),
         ),
         ProjKind::StaticLib => (
             outdir
-                .join(format!("{}{}", switches.toolchain.static_lib_prefix(), build.name))
-                .with_extension(switches.toolchain.static_lib_ext()),
+                .join(format!("{}{}", toolchain.static_lib_prefix(), build.name))
+                .with_extension(toolchain.static_lib_ext()),
             None,
         ),
     };
@@ -93,7 +96,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     let info = BuildInfo {
         changed: settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),
         projkind: build.kind,
-        toolchain: switches.toolchain,
+        toolchain,
         lang: build.lang,
         cpprt: build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),
         settings: profile.settings,

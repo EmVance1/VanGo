@@ -1,4 +1,4 @@
-use crate::{config::ToolChain, error::Error, input::BuildSwitches, log_info_ln};
+use crate::{error::Error, cli::BuildSwitches, config::{BuildFile, ToolChain}, log_info_ln};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::{
@@ -6,15 +6,18 @@ use std::{
     process::{ExitCode, ExitStatus},
 };
 
-pub fn run(name: &str, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
-    let outdir = if switches.toolchain == ToolChain::system_default() {
+pub fn run(build: &BuildFile, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
+    // select toolchain in order of descending priority
+    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(ToolChain::default());
+
+    let outdir = if toolchain == ToolChain::system_default() {
         PathBuf::from("bin").join(switches.profile.to_string())
     } else {
         PathBuf::from("bin")
-            .join(switches.toolchain.as_directory())
+            .join(toolchain.as_directory())
             .join(switches.profile.to_string())
     };
-    let outfile = outdir.join(name).with_extension(switches.toolchain.app_ext());
+    let outfile = outdir.join(&build.name).with_extension(toolchain.app_ext());
 
     log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
     let status = std::process::Command::new(PathBuf::from(".").join(&outfile))

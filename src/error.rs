@@ -4,12 +4,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("action '{0}' is not valid - see 'help' for list of actions")]
-    BadAction(String),
-    // #[error("not enough arguments provided to '{0}' action")]
-    // MissingArgs(String),
-    #[error("unexpected arguments provided to '{0}' action: '{1:?}'")]
-    ExtraArgs(String, Vec<String>),
     #[error("directory '{0}' does not contain a build manifest (Vango.toml)")]
     MissingBuildScript(PathBuf),
     #[error("toml parse error: {0}")]

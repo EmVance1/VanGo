@@ -1,14 +1,14 @@
+pub mod fsutil;
 mod gnu;
 mod incremental;
 mod msvc;
 mod output;
-pub mod prep;
 mod queue;
 #[cfg(test)]
 mod test;
 
 use crate::{
-    config::{Artefact, BuildSettings, Language, Toolchain},
+    config::{Artefact, BuildSettings, Language, PrecompiledHeader, Toolchain},
     error::Error,
     log_info_ln, log_warn_ln,
 };
@@ -33,7 +33,7 @@ pub struct BuildInfo {
     pub rpaths: Vec<PathBuf>,
     pub outdir: PathBuf,
 
-    pub pch: Option<PathBuf>,
+    pub pch: Vec<PrecompiledHeader>,
     pub sources: Vec<PathBuf>,
     pub headers: Vec<PathBuf>,
     pub archives: Vec<PathBuf>,
@@ -83,7 +83,7 @@ fn msvc_check_iso(lang: Language) {
 
 pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<(), Error> {
     // remove all objects created from sources that no longer exist
-    prep::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
+    fsutil::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
 
     // incremental build, compute outdated files
     let jobs = incremental::get_build_level(&info);
@@ -122,7 +122,8 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     }
 
     // precompiled headers must finish before compilation can begin
-    let pch_use = if let Some(pch) = &info.pch {
+    let pch_use = if let Some(pch) = &info.pch.first() {
+        let pch = &pch.header;
         let _ = std::fs::create_dir(info.outdir.join("pch"));
         let inpch = info.srcdir.join(pch); // path/to/header
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
@@ -197,16 +198,16 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
     }
     if info.toolchain.is_msvc_compatible() {
-        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
+        let objects = fsutil::scan_for_filetype(&PathBuf::from(&info.outdir), &["obj".into()])?;
         match info.artefact {
-            Artefact::Executable | Artefact::SharedLib => msvc::link(all_objs, info, echo, verbose),
-            Artefact::StaticLib => msvc::archive(all_objs, info, echo, verbose),
+            Artefact::Executable | Artefact::SharedLib => msvc::link(objects, info, echo, verbose),
+            Artefact::StaticLib => msvc::archive(objects, info, echo, verbose),
         }
     } else {
-        let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
+        let objects = fsutil::scan_for_filetype(&PathBuf::from(&info.outdir), &["o".into()])?;
         match info.artefact {
-            Artefact::Executable | Artefact::SharedLib => gnu::link(all_objs, info, echo, verbose),
-            Artefact::StaticLib => gnu::archive(all_objs, info, echo, verbose),
+            Artefact::Executable | Artefact::SharedLib => gnu::link(objects, info, echo, verbose),
+            Artefact::StaticLib => gnu::archive(objects, info, echo, verbose),
         }
     }
 }

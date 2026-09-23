@@ -2,7 +2,7 @@ use crate::{
     cli::BuildSwitches,
     config::{Artefact, BuildSettings, PackageManifest, Platform, Toolchain, WarnLevel},
     error::Error,
-    exec::{self, BuildInfo, prep},
+    exec::{self, BuildInfo, fsutil},
     fetch,
 };
 use serde::{Deserialize, Serialize};
@@ -28,9 +28,9 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool)
         profile.include.push("include".into());
     }
     for incdir in &profile.include {
-        headers.extend(fetch::source_files(incdir, "h")?);
+        headers.extend(fsutil::scan_for_filetype(incdir, &["h".to_string()])?);
         if build.lang.is_cpp() {
-            headers.extend(fetch::source_files(incdir, "hpp")?);
+            headers.extend(fsutil::scan_for_filetype(incdir, &["hpp".to_string()])?);
         }
     }
 
@@ -76,7 +76,7 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool)
     };
 
     // replicate source directory hierarchy in output directory
-    prep::ensure_out_dirs(Path::new("src"), &outdir);
+    fsutil::ensure_out_dirs(Path::new("src"), &outdir);
 
     let info = BuildInfo {
         changed: settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),
@@ -96,7 +96,7 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool)
         outdir,
 
         pch: profile.pch,
-        sources: fetch::source_files(Path::new("src"), build.lang.src_ext()).unwrap(),
+        sources: fsutil::scan_for_filetype(Path::new("src"), &[build.lang.src_ext().to_string()]).unwrap(),
         headers,
         archives: deps.archives,
         relink: deps.relink,

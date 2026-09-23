@@ -2,7 +2,7 @@ use crate::{
     Error,
     cli::BuildSwitches,
     config::{PackageManifest, Toolchain},
-    exec::{self, BuildInfo, prep},
+    exec::{self, BuildInfo, fsutil},
     fetch, log_info_ln,
 };
 use std::{
@@ -21,14 +21,10 @@ pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<Stri
     let include = std::env::current_exe()?.parent().unwrap().to_owned().join("testframework");
 
     let profile = build.remove(&switches.profile)?;
-    let mut headers = fetch::source_files(Path::new("include"), "h")?;
-    headers.extend(fetch::source_files(Path::new("include"), "hpp")?);
-    headers.extend(fetch::source_files(Path::new("src"), "h")?);
-    headers.extend(fetch::source_files(Path::new("src"), "hpp")?);
-    headers.push(include.join("vangotest/asserts.h"));
-    headers.push(include.join("vangotest/casserts.h"));
-    headers.push(include.join("vangotest/asserts2.h"));
-    headers.push(include.join("vangotest/casserts2.h"));
+    let headers = fsutil::scan_dirs_for_filetype(
+        &["src".into(), "include".into(), include.join("vangotest")],
+        &["h".into(), "hpp".into()],
+    )?;
 
     let mut inherited = fetch::libraries(&build, &profile.baseprof, switches)?;
     inherited.defines.push("VANGO_TEST".to_string());
@@ -59,7 +55,7 @@ pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<Stri
     }
 
     // replicate source directory hierarchy in output directory
-    prep::ensure_out_dirs(Path::new("test"), &outdir);
+    fsutil::ensure_out_dirs(Path::new("test"), &outdir);
 
     let info = BuildInfo {
         artefact: crate::config::Artefact::Executable,
@@ -78,8 +74,8 @@ pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<Stri
         rpaths: inherited.rpaths,
         outdir,
 
-        pch: None,
-        sources: fetch::source_files(&PathBuf::from("test"), build.lang.src_ext()).unwrap(),
+        pch: vec![],
+        sources: fsutil::scan_for_filetype(&PathBuf::from("test"), &[build.lang.src_ext().to_string()]).unwrap(),
         headers,
         archives: inherited.archives,
         relink,

@@ -1,5 +1,5 @@
-mod raw;
 mod profile;
+mod raw;
 
 use super::{Language, Profile, Version, build::PackageManifest};
 use crate::{
@@ -56,7 +56,9 @@ impl LibManifest {
     }
 
     pub fn remove(&mut self, profile: &Profile) -> Result<LibProfile, Error> {
-        self.profiles.remove(profile).ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
+        self.profiles
+            .remove(profile)
+            .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn validate(self, other_name: &str, other_lang: Language) -> Result<Self, Error> {
@@ -74,14 +76,23 @@ impl TryFrom<raw::LibManifest> for LibManifest {
     fn try_from(value: raw::LibManifest) -> Result<Self, Self::Error> {
         let mut profiles = HashMap::new();
 
-        profiles.insert(Profile::Debug,   LibProfile::default_debug().layer(value.staticlib.defaults.clone()));
-        profiles.insert(Profile::Release, LibProfile::default_release().layer(value.staticlib.defaults.clone()));
+        profiles.insert(Profile::Debug, LibProfile::default_debug().layer(value.staticlib.defaults.clone()));
+        profiles.insert(
+            Profile::Release,
+            LibProfile::default_release().layer(value.staticlib.defaults.clone()),
+        );
         for (k, v) in value.profile {
             let base = v.inherits.as_ref().unwrap_or(&k);
             if base == "debug" {
-                profiles.insert(Profile::from_str(&k)?, LibProfile::default_debug().layer(value.staticlib.defaults.clone()).layer(v));
+                profiles.insert(
+                    Profile::from_str(&k)?,
+                    LibProfile::default_debug().layer(value.staticlib.defaults.clone()).layer(v),
+                );
             } else if base == "release" {
-                profiles.insert(Profile::from_str(&k)?, LibProfile::default_release().layer(value.staticlib.defaults.clone()).layer(v));
+                profiles.insert(
+                    Profile::from_str(&k)?,
+                    LibProfile::default_release().layer(value.staticlib.defaults.clone()).layer(v),
+                );
             } else {
                 return Err(Error::InvalidCustomProfile(k));
             };
@@ -103,4 +114,3 @@ pub struct LibProfile {
     pub binaries: Vec<PathBuf>,
     pub defines: Vec<String>,
 }
-

@@ -45,8 +45,7 @@ impl VangoFile {
 
 #[cfg(test)]
 mod tests {
-
-    use super::{Artefact, Language, VangoFile, Profile, build::*, lib::*};
+    use super::*;
     use std::{collections::HashMap, str::FromStr};
 
     #[test]

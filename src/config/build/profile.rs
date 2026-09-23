@@ -1,4 +1,5 @@
 use super::*;
+use crate::config::{Runtime, WarnLevel};
 
 impl BuildProfile {
     pub fn default_debug() -> Self {
@@ -6,7 +7,7 @@ impl BuildProfile {
             baseprof: Profile::Debug,
             defines: vec!["VANGO_DEBUG".to_string()],
             include: vec!["src".into()],
-            pch: None,
+            pch: vec![],
             settings: BuildSettings {
                 opt_level: 0,
                 opt_size: false,
@@ -60,7 +61,7 @@ impl BuildProfile {
 
         self.defines.extend(other.defines);
         self.include.extend(other.include);
-        self.pch = other.pch;
+        self.pch = other.precompile;
 
         other.build_settings.opt_level.inspect(|v| self.settings.opt_level = *v);
         other.build_settings.opt_size.inspect(|v| self.settings.opt_size = *v);
@@ -90,4 +91,3 @@ impl BuildProfile {
         self
     }
 }
-

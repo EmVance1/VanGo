@@ -7,24 +7,8 @@ use crate::{
 use serde::Serialize;
 use std::{
     collections::HashMap,
-    ffi::OsStr,
     path::{Path, PathBuf},
 };
-
-pub fn source_files(sdir: &Path, ext: &str) -> Result<Vec<PathBuf>, Error> {
-    let mut res = Vec::new();
-
-    for e in std::fs::read_dir(sdir)? {
-        let e = e?;
-        if e.path().is_dir() {
-            res.extend(source_files(&e.path(), ext)?);
-        } else if e.path().is_file() && e.path().extension().unwrap_or(OsStr::new("")) == ext {
-            res.push(e.path());
-        }
-    }
-
-    Ok(res)
-}
 
 pub fn pull_git_repo(url: &Path, tag: &Option<String>, install_loc: &Path) {
     let branch: Vec<PathBuf> = if let Some(tag) = tag {

@@ -1,4 +1,31 @@
-use std::path::Path;
+use crate::Error;
+use std::path::{Path, PathBuf};
+
+pub fn scan_dirs_for_filetype(dirs: &[PathBuf], extensions: &[String]) -> Result<Vec<PathBuf>, Error> {
+    let mut res = Vec::new();
+    for dir in dirs {
+        res.extend(scan_for_filetype(dir, extensions)?);
+    }
+    Ok(res)
+}
+
+pub fn scan_for_filetype(dir: &Path, extensions: &[String]) -> Result<Vec<PathBuf>, Error> {
+    let mut res = Vec::new();
+    for e in std::fs::read_dir(dir)? {
+        let e = e?;
+        if e.path().is_dir() {
+            res.extend(scan_for_filetype(&e.path(), extensions)?);
+        } else if e.path().is_file() {
+            let ext = e.path().extension().unwrap_or_default().to_owned();
+            for alt in extensions {
+                if ext == alt.as_str() {
+                    res.push(e.path());
+                }
+            }
+        }
+    }
+    Ok(res)
+}
 
 pub fn ensure_out_dirs(sdir: &Path, odir: &Path) {
     let _ = std::fs::create_dir_all(odir);

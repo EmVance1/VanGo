@@ -1,13 +1,12 @@
 use super::*;
 
-
 impl LibProfile {
     pub fn default_debug() -> Self {
         Self {
             include: "include".into(),
             libdir: "bin/debug".into(),
             binaries: vec![],
-            defines: vec![ "VANGO_DEBUG".to_string() ],
+            defines: vec!["VANGO_DEBUG".to_string()],
         }
     }
 
@@ -16,7 +15,7 @@ impl LibProfile {
             include: "include".into(),
             libdir: "bin/release".into(),
             binaries: vec![],
-            defines: vec![ "VANGO_RELEASE".to_string() ],
+            defines: vec!["VANGO_RELEASE".to_string()],
         }
     }
 
@@ -32,4 +31,3 @@ impl LibProfile {
         self
     }
 }
-

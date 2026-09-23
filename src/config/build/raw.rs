@@ -1,11 +1,10 @@
-use super::{Runtime, VcpkgConfig, WarnLevel};
-use crate::config::{Artefact, Sanitizer, Toolchain};
+use crate::config::{Artefact, PrecompiledHeader, Runtime, Sanitizer, Toolchain, VcpkgConfig, WarnLevel};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PackageManifest {
-    pub package: Build,
+    pub package: BuildDef,
     pub vcpkg: Option<VcpkgConfig>,
     pub dependencies: toml::Table,
     #[serde(default)]
@@ -13,7 +12,7 @@ pub struct PackageManifest {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct Build {
+pub struct BuildDef {
     pub name: String,
     pub version: String,
     pub lang: String,
@@ -36,7 +35,7 @@ pub struct BuildProfile {
 
     pub defines: Vec<String>,
     pub include: Vec<PathBuf>,
-    pub pch: Option<PathBuf>,
+    pub precompile: Vec<PrecompiledHeader>,
 
     #[serde(flatten)]
     pub build_settings: BuildSettings,

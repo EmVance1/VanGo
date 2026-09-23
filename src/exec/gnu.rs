@@ -112,8 +112,6 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.ubsan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
-    cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
-    cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
     match pch {
         PreCompHead::Create(_) => {
             cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
@@ -128,6 +126,8 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
         }
         PreCompHead::None => (),
     }
+    cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
+    cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
     if info.toolchain.is_emcc() {
         cmd.arg("-sUSE_SDL=2");
     }

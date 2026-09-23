@@ -1,9 +1,8 @@
 mod profile;
 mod raw;
 
-use super::{Artefact, Language, Profile, Toolchain, Version};
-use crate::{config::{Platform}, error::Error};
-use serde::{Deserialize, Serialize};
+use crate::{config::*, error::Error};
+use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,11 +27,15 @@ impl PackageManifest {
     }
 
     pub fn get(&self, profile: &Profile) -> Result<&BuildProfile, Error> {
-        self.profiles.get(profile).ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
+        self.profiles
+            .get(profile)
+            .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 
     pub fn remove(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
-        self.profiles.remove(profile).ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
+        self.profiles
+            .remove(profile)
+            .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
 }
 
@@ -50,14 +53,26 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
         let artefact = value.package.artefact.unwrap_or_default();
         let implib = (artefact == Artefact::SharedLib) && (Platform::current()? == Platform::Windows);
         let mut profiles = HashMap::new();
-        profiles.insert(Profile::Debug,   BuildProfile::default_release().layer(value.package.defaults.clone()));
-        profiles.insert(Profile::Release, BuildProfile::default_release().layer(value.package.defaults.clone()));
+        profiles.insert(
+            Profile::Debug,
+            BuildProfile::default_release().layer(value.package.defaults.clone()),
+        );
+        profiles.insert(
+            Profile::Release,
+            BuildProfile::default_release().layer(value.package.defaults.clone()),
+        );
         for (k, v) in value.profile {
             let base = v.inherits.as_ref().unwrap_or(&k);
             if base == "debug" {
-                profiles.insert(Profile::from_str(&k)?, BuildProfile::default_debug().layer(value.package.defaults.clone()).layer(v));
+                profiles.insert(
+                    Profile::from_str(&k)?,
+                    BuildProfile::default_debug().layer(value.package.defaults.clone()).layer(v),
+                );
             } else if base == "release" {
-                profiles.insert(Profile::from_str(&k)?, BuildProfile::default_release().layer(value.package.defaults.clone()).layer(v));
+                profiles.insert(
+                    Profile::from_str(&k)?,
+                    BuildProfile::default_release().layer(value.package.defaults.clone()).layer(v),
+                );
             } else {
                 return Err(Error::InvalidCustomProfile(k));
             };
@@ -112,35 +127,13 @@ pub enum Dependency {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VcpkgConfig {
-    pub triplet: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum WarnLevel {
-    None = 0,
-    Basic = 1,
-    High = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Runtime {
-    DynamicDebug,
-    DynamicRelease,
-    StaticDebug,
-    StaticRelease,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildProfile {
     pub baseprof: Profile,
 
     pub defines: Vec<String>,
     pub include: Vec<PathBuf>,
-    pub pch: Option<PathBuf>,
+    pub pch: Vec<PrecompiledHeader>,
     pub settings: BuildSettings,
 
     pub compiler_options: Vec<String>,

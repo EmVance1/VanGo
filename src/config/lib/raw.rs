@@ -3,13 +3,13 @@ use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct LibManifest {
-    pub staticlib: Library,
+    pub staticlib: LibDef,
     #[serde(default)]
     pub profile: HashMap<String, LibProfile>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct Library {
+pub struct LibDef {
     pub name: String,
     pub version: String,
     pub lang: String,
@@ -35,4 +35,3 @@ pub struct Feature {
     pub requires: Vec<String>,
     pub binaries: Vec<PathBuf>,
 }
-

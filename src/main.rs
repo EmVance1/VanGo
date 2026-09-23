@@ -60,6 +60,8 @@ fn main() -> ExitCode {
                 .get_build()
                 .unwrap_or_else(|| exit_failure!("action requires source code ([package]) type manifest"));
 
+            println!("{:#?}", manifest);
+
             match cmd {
                 cli::Action::Build { build } => {
                     let switches = build.into_switches(true);

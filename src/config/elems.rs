@@ -313,9 +313,9 @@ impl FromStr for Profile {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "debug"   => Ok(Profile::Debug),
+            "debug" => Ok(Profile::Debug),
             "release" => Ok(Profile::Release),
-            _ => Ok(Profile::Custom(s.to_string()))
+            _ => Ok(Profile::Custom(s.to_string())),
         }
     }
 }
@@ -407,6 +407,38 @@ impl FromStr for Language {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VcpkgConfig {
+    pub triplet: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WarnLevel {
+    None = 0,
+    Basic = 1,
+    High = 2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Runtime {
+    DynamicDebug,
+    DynamicRelease,
+    StaticDebug,
+    StaticRelease,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct PrecompiledHeader {
+    pub header: PathBuf,
+    #[serde(default)]
+    pub used_by: Vec<PathBuf>,
+    #[serde(default)]
+    pub ignored_by: Vec<PathBuf>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]

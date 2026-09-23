@@ -40,6 +40,7 @@ fn gnu_is_sys_include(path: &str) -> bool {
 
 pub fn gnu_compiler(output: &std::process::Output) -> bool {
     let mut includes = vec![];
+    let mut skip_next = false;
     let mut skip_until = false;
     for line in output.stderr.lines() {
         let line = line.unwrap();
@@ -51,6 +52,9 @@ pub fn gnu_compiler(output: &std::process::Output) -> bool {
             if !gnu_is_sys_include(inc) {
                 includes.push(PathBuf::from(inc));
             }
+        } else if line.starts_with("! ") {
+            skip_next = true;
+            continue;
         } else if line.contains(": error: ") || line.contains(": fatal error: ") {
             skip_until = false;
             log_error_ln!("{line}");
@@ -59,9 +63,10 @@ pub fn gnu_compiler(output: &std::process::Output) -> bool {
             log_warn_ln!("{line}");
         } else if line == "Multiple include guards may be useful for:" {
             skip_until = true;
-        } else if !gnu_is_sys_include(&line) && !skip_until {
+        } else if !gnu_is_sys_include(&line) && !skip_next && !skip_until {
             println!("{line}");
         }
+        skip_next = false;
     }
     // println!("{:?}", includes);
     output.status.success()

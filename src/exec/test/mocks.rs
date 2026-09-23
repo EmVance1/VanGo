@@ -36,7 +36,7 @@ impl BuildInfo {
             libdirs: vec![],
             rpaths: vec![],
             outdir: "bin\\debug".into(),
-            pch: None,
+            pch: vec![],
             sources: vec![],
             headers: vec![],
             archives: vec![],
@@ -54,7 +54,7 @@ impl BuildInfo {
         artefact: Artefact,
         lang: Language,
         toolchain: Toolchain,
-        pch: Option<PathBuf>,
+        pch: Vec<PrecompiledHeader>,
         crtstatic: bool,
     ) -> Self {
         let base = Self::mock_base(outfile);
@@ -82,7 +82,7 @@ impl BuildInfo {
         artefact: Artefact,
         lang: Language,
         toolchain: Toolchain,
-        pch: Option<PathBuf>,
+        pch: Vec<PrecompiledHeader>,
         crtstatic: bool,
     ) -> Self {
         let base = Self::mock_base(outfile);

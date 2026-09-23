@@ -1,7 +1,7 @@
 pub mod fsutil;
 mod incremental;
-pub mod toolchain;
 mod queue;
+pub mod toolchain;
 
 use crate::{
     config::{Artefact, BuildSettings, Language, PrecompiledHeader},
@@ -43,7 +43,7 @@ pub struct BuildInfo {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-enum PreCompHead<'a> {
+pub enum PreCompHead<'a> {
     #[default]
     None,
     Create(&'a Path),
@@ -70,7 +70,6 @@ fn msvc_check_iso(lang: Language) {
         _ => (),
     }
 }
-
 
 pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<(), Error> {
     // replicate source directory hierarchy in output directory
@@ -187,13 +186,16 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
         Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
     }
-    let toolchain = info.toolchain.clone();
-    let outfile   = info.outfile.clone();
-    let objects   = fsutil::scan_for_filetype(Path::new(&info.outdir), &[ info.toolchain.object_extension().to_string() ])?;
+    let toolchain = info.toolchain;
+    let outfile = info.outfile.clone();
+    let objects = fsutil::scan_for_filetype(Path::new(&info.outdir), &[info.toolchain.object_extension().to_string()])?;
     match info.artefact {
         Artefact::Executable | Artefact::SharedLib => {
             let mut cmd = toolchain.linker().command(objects, info, verbose, echo);
-            if toolchain.linker().output(&cmd.output().map_err(|_| Error::LinkerNotFound(toolchain))?) {
+            if toolchain
+                .linker()
+                .output(&cmd.output().map_err(|_| Error::LinkerNotFound(toolchain))?)
+            {
                 log_info_ln!("successfully built project: {}\n", outfile.display());
                 Ok(())
             } else {
@@ -202,7 +204,10 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
         Artefact::StaticLib => {
             let mut cmd = toolchain.archiver().command(objects, info, verbose, echo);
-            if toolchain.archiver().output(&cmd.output().map_err(|_| Error::ArchiverNotFound(toolchain))?) {
+            if toolchain
+                .archiver()
+                .output(&cmd.output().map_err(|_| Error::ArchiverNotFound(toolchain))?)
+            {
                 log_info_ln!("successfully built project: {}\n", outfile.display());
                 Ok(())
             } else {
@@ -211,4 +216,3 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
     }
 }
-

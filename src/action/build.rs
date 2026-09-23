@@ -1,9 +1,9 @@
 use crate::{
     cli::BuildSwitches,
     config::{Artefact, BuildSettings, PackageManifest, Platform, WarnLevel},
+    deps,
     error::Error,
     exec::{self, BuildInfo, Toolchain, fsutil},
-    deps,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

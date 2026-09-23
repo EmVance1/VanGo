@@ -1,7 +1,6 @@
 use crate::{log_error_ln, log_warn_ln};
 use std::{io::BufRead, path::PathBuf};
 
-
 fn is_sys_include(path: &str) -> bool {
     if cfg!(windows) {
         path.starts_with("C:/msys64")
@@ -70,4 +69,3 @@ pub fn archiver(output: &std::process::Output) -> bool {
     }
     output.status.success()
 }
-

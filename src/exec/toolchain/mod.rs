@@ -3,10 +3,17 @@ mod output;
 #[cfg(test)]
 mod test;
 
+use crate::{
+    Error,
+    config::{Language, Platform},
+    exec::{BuildInfo, PreCompHead},
+};
 use serde::Deserialize;
-use std::{fmt::Display, path::{Path, PathBuf}, str::FromStr };
-use crate::{Error, config::{Platform, Language}, exec::{PreCompHead, BuildInfo}};
-
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -25,8 +32,8 @@ impl Toolchain {
     pub fn system_default() -> Result<Self, Error> {
         match Platform::current()? {
             Platform::Windows => Ok(Toolchain::Msvc),
-            Platform::Linux   => Ok(Toolchain::Gcc),
-            Platform::Macos   => Ok(Toolchain::ClangGcc),
+            Platform::Linux => Ok(Toolchain::Gcc),
+            Platform::Macos => Ok(Toolchain::ClangGcc),
         }
     }
 
@@ -45,20 +52,20 @@ impl Toolchain {
                 // log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}");
                 Ok(sysdef)
             }
-            Err(std::env::VarError::NotPresent) => Ok(sysdef)
+            Err(std::env::VarError::NotPresent) => Ok(sysdef),
         }
     }
 
     pub fn as_directory(self) -> &'static str {
         match self {
-            Self::Msvc       => "msvc",
-            Self::Gcc        => "gcc",
-            Self::Mingw      => "mingw",
-            Self::ClangMsvc  => "clang-msvc",
-            Self::ClangGcc   => "clang-gcc",
+            Self::Msvc => "msvc",
+            Self::Gcc => "gcc",
+            Self::Mingw => "mingw",
+            Self::ClangMsvc => "clang-msvc",
+            Self::ClangGcc => "clang-gcc",
             Self::ClangMingw => "clang-mingw",
-            Self::Zig        => "zig",
-            Self::Emcc       => "emcc",
+            Self::Zig => "zig",
+            Self::Emcc => "emcc",
         }
     }
 
@@ -81,9 +88,12 @@ impl Toolchain {
     #[allow(dead_code)]
     pub fn supports(self, platform: Platform) -> bool {
         match platform {
-            Platform::Windows => matches!(self, Self::Msvc | Self::Mingw | Self::ClangMsvc | Self::ClangMingw | Self::Zig | Self::Emcc),
-            Platform::Linux   => matches!(self, Self::Gcc | Self::ClangGcc | Self::Zig | Self::Emcc),
-            Platform::Macos   => matches!(self, Self::Gcc | Self::ClangGcc | Self::Zig | Self::Emcc),
+            Platform::Windows => matches!(
+                self,
+                Self::Msvc | Self::Mingw | Self::ClangMsvc | Self::ClangMingw | Self::Zig | Self::Emcc
+            ),
+            Platform::Linux => matches!(self, Self::Gcc | Self::ClangGcc | Self::Zig | Self::Emcc),
+            Platform::Macos => matches!(self, Self::Gcc | Self::ClangGcc | Self::Zig | Self::Emcc),
         }
     }
     #[allow(dead_code)]
@@ -104,11 +114,7 @@ impl Toolchain {
     }
 
     pub fn object_extension(self) -> &'static str {
-        if self.is_msvc_compatible() {
-            "obj"
-        } else {
-            "o"
-        }
+        if self.is_msvc_compatible() { "obj" } else { "o" }
     }
 
     pub fn compiler(self) -> Compiler {
@@ -151,9 +157,9 @@ impl Compiler {
     pub fn command(self, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, verbose: bool, echo: bool) -> std::process::Command {
         let mut cmd = self.exe(info.lang);
         if self.0.is_msvc_compatible() {
-            cmd::msvc::compiler_args(&mut cmd, src, &obj, &info, &pch, verbose)
+            cmd::msvc::compiler_args(&mut cmd, src, obj, info, pch, verbose)
         } else {
-            cmd::gnu::compiler_args(&mut cmd, src, &obj, &info, &pch, verbose)
+            cmd::gnu::compiler_args(&mut cmd, src, obj, info, pch, verbose)
         };
         if echo {
             cmd::echo_command(&cmd);
@@ -217,7 +223,6 @@ impl Linker {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Archiver(Toolchain);
 
@@ -263,14 +268,14 @@ impl FromStr for Toolchain {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "msvc"        => Ok(Toolchain::Msvc),
-            "gcc"         => Ok(Toolchain::Gcc),
-            "mingw"       => Ok(Toolchain::Mingw),
-            "clang-msvc"  => Ok(Toolchain::ClangMsvc),
-            "clang-gcc"   => Ok(Toolchain::ClangGcc),
+            "msvc" => Ok(Toolchain::Msvc),
+            "gcc" => Ok(Toolchain::Gcc),
+            "mingw" => Ok(Toolchain::Mingw),
+            "clang-msvc" => Ok(Toolchain::ClangMsvc),
+            "clang-gcc" => Ok(Toolchain::ClangGcc),
             "clang-mingw" => Ok(Toolchain::ClangMingw),
-            "zig"         => Ok(Toolchain::Zig),
-            "emcc"        => Ok(Toolchain::Emcc),
+            "zig" => Ok(Toolchain::Zig),
+            "emcc" => Ok(Toolchain::Emcc),
             _ => Err(Error::UnknownToolchain(s.to_string())),
         }
     }
@@ -279,15 +284,14 @@ impl FromStr for Toolchain {
 impl Display for Toolchain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Msvc       => write!(f, "MSVC"),
-            Self::Gcc        => write!(f, "GCC"),
-            Self::Mingw      => write!(f, "MinGW"),
-            Self::ClangMsvc  => write!(f, "Clang (MSVC backend)"),
-            Self::ClangGcc   => write!(f, "Clang (GNU backend)"),
+            Self::Msvc => write!(f, "MSVC"),
+            Self::Gcc => write!(f, "GCC"),
+            Self::Mingw => write!(f, "MinGW"),
+            Self::ClangMsvc => write!(f, "Clang (MSVC backend)"),
+            Self::ClangGcc => write!(f, "Clang (GNU backend)"),
             Self::ClangMingw => write!(f, "Clang (MinGW backend)"),
-            Self::Zig        => write!(f, "Zig"),
-            Self::Emcc       => write!(f, "Emscripten"),
+            Self::Zig => write!(f, "Zig"),
+            Self::Emcc => write!(f, "Emscripten"),
         }
     }
 }
-

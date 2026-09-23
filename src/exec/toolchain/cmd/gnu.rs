@@ -4,7 +4,6 @@ use crate::{
 };
 use std::path::{Path, PathBuf};
 
-
 pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, verbose: bool) {
     cmd.args(&info.comp_args);
     if !info.toolchain.is_emcc() {
@@ -12,7 +11,7 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
         cmd.arg("-H"); // output configuration (see output parser)
     }
     cmd.arg(format!("-std={}", info.lang));
-    if !cfg!(windows) && !info.toolchain.is_emcc() {
+    if !info.toolchain.is_windows() && !info.toolchain.is_emcc() {
         match info.artefact {
             Artefact::Executable => {
                 if info.settings.aslr {
@@ -98,16 +97,16 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
         cmd.arg("-pthread");
     }
     // MinGW has extremely poor sanitizer support, Clang with MinGW backend slightly better for some reason
-    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
+    if info.settings.asan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
-    if info.settings.tsan && !cfg!(windows) {
+    if info.settings.tsan && !info.toolchain.is_windows() {
         cmd.arg("-fsanitize=thread");
     }
-    if info.settings.lsan && !cfg!(windows) {
+    if info.settings.lsan && !info.toolchain.is_windows() {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
+    if info.settings.ubsan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     match pch {
@@ -216,4 +215,3 @@ pub fn archiver_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: 
     cmd.args(info.link_args);
     cmd.args(objs);
 }
-

@@ -1,7 +1,6 @@
 use crate::{log_error_ln, log_warn_ln};
 use std::{io::BufRead, path::PathBuf};
 
-
 pub fn compiler(output: &std::process::Output) -> bool {
     for line in output.stderr.lines() {
         let line = line.unwrap();
@@ -78,4 +77,3 @@ pub fn archiver(output: &std::process::Output, clang: bool) -> bool {
     }
     output.status.success()
 }
-

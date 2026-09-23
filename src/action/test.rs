@@ -1,9 +1,10 @@
 use crate::{
     Error,
     cli::BuildSwitches,
-    config::{PackageManifest},
+    config::PackageManifest,
+    deps,
     exec::{self, BuildInfo, Toolchain, fsutil},
-    deps, log_info_ln,
+    log_info_ln,
 };
 use std::{
     path::{Path, PathBuf},

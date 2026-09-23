@@ -15,4 +15,3 @@ pub fn pull_package(url: &Path, tag: &Option<String>, install_loc: &Path) {
         .output()
         .unwrap();
 }
-

@@ -1,10 +1,4 @@
-use crate::{
-    cli::BuildSwitches,
-    config::PackageManifest,
-    exec::Toolchain,
-    error::Error,
-    log_info_ln,
-};
+use crate::{cli::BuildSwitches, config::PackageManifest, error::Error, exec::Toolchain, log_info_ln};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::{

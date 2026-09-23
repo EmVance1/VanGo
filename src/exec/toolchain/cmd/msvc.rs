@@ -1,18 +1,17 @@
 use crate::{
-    config::{Language, Artefact, Runtime, WarnLevel},
+    config::{Artefact, Language, Runtime, WarnLevel},
     exec::{BuildInfo, PreCompHead},
 };
 use std::path::{Path, PathBuf};
 
-
 pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, _verbose: bool) {
     cmd.args(&info.comp_args);
-    cmd.arg("/nologo");             // output configuration (see output parser)
-    cmd.arg("/showIncludes");       // "
-    cmd.arg("/diagnostics:caret");  // "
+    cmd.arg("/nologo"); // output configuration (see output parser)
+    cmd.arg("/showIncludes"); // "
+    cmd.arg("/diagnostics:caret"); // "
     // cmd.arg("/WL");              // ", one line diagnostics
     cmd.arg("/c");
-    match info.lang{
+    match info.lang {
         Language::Cpp(123) => {
             cmd.arg("/std:c++latest");
         }
@@ -213,4 +212,3 @@ const DEFAULT_LIBS: &[&str] = &[
     "odbccp32.lib",
     "gdi32.lib",
 ];
-

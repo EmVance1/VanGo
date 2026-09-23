@@ -1,22 +1,18 @@
-use super::{BuildInfo, PreCompHead};
 use crate::{
-    Error,
-    config::{Artefact, Language, Runtime, WarnLevel},
-    exec::output,
-    log_info_ln,
+    config::{Language, Artefact, Runtime, WarnLevel},
+    exec::{BuildInfo, PreCompHead},
 };
 use std::path::{Path, PathBuf};
 
-pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, _verbose: bool) -> std::process::Command {
-    let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
+pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, _verbose: bool) {
     cmd.args(&info.comp_args);
-    cmd.arg("/nologo"); // output configuration (see output parser)
-    cmd.arg("/showIncludes"); // "
-    cmd.arg("/diagnostics:caret"); // "
-    // /WL (one line diagnostics)   // "
+    cmd.arg("/nologo");             // output configuration (see output parser)
+    cmd.arg("/showIncludes");       // "
+    cmd.arg("/diagnostics:caret");  // "
+    // cmd.arg("/WL");              // ", one line diagnostics
     cmd.arg("/c");
-    match info.lang {
+    match info.lang{
         Language::Cpp(123) => {
             cmd.arg("/std:c++latest");
         }
@@ -153,15 +149,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
 
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
-    if echo {
-        print_command(&cmd);
-    }
-    cmd
 }
 
-pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<(), Error> {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp());
-
+pub fn linker_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: BuildInfo, _verbose: bool) {
     cmd.args(info.link_args);
     cmd.arg("/NOLOGO");
     cmd.arg("/MACHINE:X64");
@@ -193,24 +183,9 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     }
     cmd.args(DEFAULT_LIBS);
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
-
-    if echo {
-        print_command(&cmd);
-    }
-    if output::msvc_linker(
-        &cmd.output().map_err(|_| Error::LinkerNotFound(info.toolchain))?,
-        info.toolchain.is_llvm(),
-    ) {
-        log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(())
-    } else {
-        Err(Error::LinkerFail(info.outfile))
-    }
 }
 
-pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bool) -> Result<(), Error> {
-    let mut cmd = info.toolchain.archiver();
-
+pub fn archiver_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: BuildInfo, _verbose: bool) {
     cmd.args(info.link_args);
     cmd.arg("/NOLOGO");
     cmd.arg("/MACHINE:X64");
@@ -222,19 +197,6 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose:
     }
     cmd.args(objs);
     cmd.arg(format!("/OUT:{}", info.outfile.display()));
-
-    if echo {
-        print_command(&cmd);
-    }
-    if output::msvc_archiver(
-        &cmd.output().map_err(|_| Error::ArchiverNotFound(info.toolchain))?,
-        info.toolchain.is_llvm(),
-    ) {
-        log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(())
-    } else {
-        Err(Error::ArchiverFail(info.outfile))
-    }
 }
 
 const DEFAULT_LIBS: &[&str] = &[
@@ -252,10 +214,3 @@ const DEFAULT_LIBS: &[&str] = &[
     "gdi32.lib",
 ];
 
-fn print_command(cmd: &std::process::Command) {
-    print!("{} ", cmd.get_program().to_string_lossy());
-    for arg in cmd.get_args() {
-        print!("{} ", arg.to_string_lossy());
-    }
-    println!();
-}

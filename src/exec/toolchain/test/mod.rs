@@ -1,7 +1,7 @@
 mod mocks;
 
 use super::*;
-use crate::config::{Artefact, Language, Toolchain};
+use crate::config::{Artefact, Language};
 
 #[test]
 pub fn compile_cmd_gcc_dbg1() {
@@ -9,7 +9,7 @@ pub fn compile_cmd_gcc_dbg1() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::Gcc.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, vec![], false),
@@ -42,7 +42,7 @@ pub fn compile_cmd_clang_mingw_dbg1() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::ClangMingw.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(23), Toolchain::ClangMingw, vec![], true),
@@ -77,7 +77,7 @@ pub fn compile_cmd_clang_gcc_dbg1() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::ClangGcc.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(23), Toolchain::ClangGcc, vec![], true),
@@ -110,7 +110,7 @@ pub fn compile_cmd_gcc_rel1() {
     let out = Path::new("bin/release");
     let obj = Path::new("bin/release/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::Gcc.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, vec![], false),
@@ -162,7 +162,7 @@ pub fn compile_cmd_gcc_rel2() {
     let out = Path::new("bin/release");
     let obj = Path::new("bin/release/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::Gcc.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(23), Toolchain::Gcc, vec![], true),
@@ -214,7 +214,7 @@ pub fn compile_cmd_gcc_staticlib() {
     let out = Path::new("bin/release");
     let obj = Path::new("bin/release/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::Gcc.compiler().command(
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::StaticLib, Language::Cpp(20), Toolchain::Gcc, vec![], true),
@@ -267,10 +267,10 @@ pub fn compile_cmd_mingw_sharedlib() {
     let out = Path::new("bin/release");
     let obj = Path::new("bin/release/obj/main.o");
 
-    let cmd = gnu::compile(
+    let cmd = Toolchain::Mingw.compiler().command(
         src,
         obj,
-        &BuildInfo::mock_debug(out, Artefact::SharedLib, Language::Cpp(20), Toolchain::Gcc, vec![], true),
+        &BuildInfo::mock_debug(out, Artefact::SharedLib, Language::Cpp(20), Toolchain::Mingw, vec![], true),
         &PreCompHead::None,
         false,
         false,
@@ -301,7 +301,7 @@ pub fn compile_cmd_msvc_dbg() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.obj");
 
-    let cmd = msvc::compile(
+    let cmd = Toolchain::Msvc.compiler().command(
         src,
         obj,
         &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(120), Toolchain::Msvc, vec![], false),
@@ -344,7 +344,7 @@ pub fn compile_cmd_msvc_dbg2() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.obj");
 
-    let cmd = msvc::compile(
+    let cmd = Toolchain::ClangMsvc.compiler().command(
         src,
         obj,
         &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(123), Toolchain::ClangMsvc, vec![], true),
@@ -386,7 +386,7 @@ pub fn compile_cmd_msvc_rel1() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.obj");
 
-    let cmd = msvc::compile(
+    let cmd = Toolchain::Msvc.compiler().command(
         src,
         obj,
         &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, vec![], false),
@@ -426,7 +426,7 @@ pub fn compile_cmd_msvc_rel2() {
     let out = Path::new("bin/debug");
     let obj = Path::new("bin/debug/obj/main.obj");
 
-    let cmd = msvc::compile(
+    let cmd = Toolchain::Msvc.compiler().command(
         src,
         obj,
         &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, vec![], true),

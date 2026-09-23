@@ -1,9 +1,9 @@
 use crate::{
     Error,
     cli::BuildSwitches,
-    config::{PackageManifest, Toolchain},
-    exec::{self, BuildInfo, fsutil},
-    fetch, log_info_ln,
+    config::{PackageManifest},
+    exec::{self, BuildInfo, Toolchain, fsutil},
+    deps, log_info_ln,
 };
 use std::{
     path::{Path, PathBuf},
@@ -26,7 +26,7 @@ pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<Stri
         &["h".into(), "hpp".into()],
     )?;
 
-    let mut inherited = fetch::libraries(&build, &profile.baseprof, switches)?;
+    let mut inherited = deps::libraries(&build, &profile.baseprof, switches)?;
     inherited.defines.push("VANGO_TEST".to_string());
     if cfg!(windows) {
         inherited.defines.push("UNICODE".to_string());

@@ -1,7 +1,7 @@
 mod profile;
 mod raw;
 
-use crate::{config::*, error::Error};
+use crate::{config::*, error::Error, exec::Toolchain};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
@@ -78,7 +78,7 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
             };
         }
 
-        let mut dependencies: Vec<(String, Dependency)> = Vec::new();
+        let mut dependencies = Vec::new();
         for (k, v) in value.dependencies {
             dependencies.push((k, v.try_into()?));
         }

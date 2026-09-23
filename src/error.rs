@@ -1,4 +1,4 @@
-use crate::config::Language;
+use crate::{config::Language, exec::Toolchain};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -31,12 +31,12 @@ pub enum Error {
     #[error("project dependency '{0}' is not a library")]
     InvalidDependency(String),
     #[error("toolchain '{0}' compiler is unavailable{help}",
-        help = if let crate::config::Toolchain::Msvc = .0 { " (make sure you are using a developer terminal)" } else { "" })]
-    CompilerNotFound(crate::config::Toolchain),
+        help = if let Toolchain::Msvc = .0 { " (make sure you are using a developer terminal)" } else { "" })]
+    CompilerNotFound(Toolchain),
     #[error("toolchain '{0}' archiver is unavailable")]
-    ArchiverNotFound(crate::config::Toolchain),
+    ArchiverNotFound(Toolchain),
     #[error("toolchain '{0}' linker is unavailable")]
-    LinkerNotFound(crate::config::Toolchain),
+    LinkerNotFound(Toolchain),
     #[error("failed to compile project '{0}'")]
     CompilerFail(PathBuf),
     #[error("failed to archive project '{0}'")]

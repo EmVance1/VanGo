@@ -1,21 +1,18 @@
-use super::{BuildInfo, PreCompHead, output};
 use crate::{
-    Error,
     config::{Artefact, Runtime, WarnLevel},
-    log_info_ln,
+    exec::{BuildInfo, PreCompHead},
 };
 use std::path::{Path, PathBuf};
 
-pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, echo: bool, verbose: bool) -> std::process::Command {
-    let mut cmd = info.toolchain.compiler(info.lang.is_cpp());
 
+pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, verbose: bool) {
     cmd.args(&info.comp_args);
     if !info.toolchain.is_emcc() {
         // breaks miniaudio
         cmd.arg("-H"); // output configuration (see output parser)
     }
     cmd.arg(format!("-std={}", info.lang));
-    if !info.toolchain.is_windows() && !info.toolchain.is_emcc() {
+    if !cfg!(windows) && !info.toolchain.is_emcc() {
         match info.artefact {
             Artefact::Executable => {
                 if info.settings.aslr {
@@ -100,16 +97,17 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    if info.settings.asan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
+    // MinGW has extremely poor sanitizer support, Clang with MinGW backend slightly better for some reason
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
-    if info.settings.tsan && !info.toolchain.is_windows() {
+    if info.settings.tsan && !cfg!(windows) {
         cmd.arg("-fsanitize=thread");
     }
-    if info.settings.lsan && !info.toolchain.is_windows() {
+    if info.settings.lsan && !cfg!(windows) {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     match pch {
@@ -140,15 +138,9 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
     }
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::piped());
-    if echo {
-        print_command(&cmd);
-    }
-    cmd
 }
 
-pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
-    let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt); // use g++/clang++ etc. when combining C and C++
-
+pub fn linker_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: BuildInfo, verbose: bool) {
     cmd.args(info.link_args);
     if let Artefact::SharedLib = info.artefact {
         if cfg!(target_os = "macos") {
@@ -188,16 +180,16 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    if info.settings.asan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
+    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
-    if info.settings.tsan && !info.toolchain.is_windows() {
+    if info.settings.tsan && !cfg!(windows) {
         cmd.arg("-fsanitize=thread");
     }
-    if info.settings.lsan && !info.toolchain.is_windows() {
+    if info.settings.lsan && !cfg!(windows) {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
+    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     if info.toolchain.is_emcc() {
@@ -212,21 +204,9 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if verbose {
         cmd.arg("--verbose");
     }
-
-    if echo {
-        print_command(&cmd);
-    }
-    if output::gnu_linker(&cmd.output().map_err(|_| Error::LinkerNotFound(info.toolchain))?) {
-        log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(())
-    } else {
-        Err(Error::LinkerFail(info.outfile))
-    }
 }
 
-pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: bool) -> Result<(), Error> {
-    let mut cmd = info.toolchain.archiver();
-
+pub fn archiver_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: BuildInfo, verbose: bool) {
     if verbose {
         cmd.arg("rcsv");
     } else {
@@ -235,22 +215,5 @@ pub(super) fn archive(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: 
     cmd.arg(&info.outfile);
     cmd.args(info.link_args);
     cmd.args(objs);
-
-    if echo {
-        print_command(&cmd);
-    }
-    if output::gnu_archiver(&cmd.output().map_err(|_| Error::ArchiverNotFound(info.toolchain))?) {
-        log_info_ln!("successfully built project: {}\n", info.outfile.display());
-        Ok(())
-    } else {
-        Err(Error::ArchiverFail(info.outfile))
-    }
 }
 
-fn print_command(cmd: &std::process::Command) {
-    print!("{} ", cmd.get_program().display());
-    for arg in cmd.get_args() {
-        print!("{} ", arg.display());
-    }
-    println!();
-}

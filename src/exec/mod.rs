@@ -1,19 +1,16 @@
 pub mod fsutil;
-mod gnu;
 mod incremental;
-mod msvc;
-mod output;
+pub mod toolchain;
 mod queue;
-#[cfg(test)]
-mod test;
 
 use crate::{
-    config::{Artefact, BuildSettings, Language, PrecompiledHeader, Toolchain},
+    config::{Artefact, BuildSettings, Language, PrecompiledHeader},
     error::Error,
     log_info_ln, log_warn_ln,
 };
 use incremental::BuildLevel;
 use std::path::{Path, PathBuf};
+pub use toolchain::Toolchain;
 
 #[derive(Debug)]
 pub struct BuildInfo {
@@ -53,13 +50,6 @@ enum PreCompHead<'a> {
     Use(&'a Path),
 }
 
-fn on_compile_finish(tc: Toolchain, output: &std::process::Output) -> bool {
-    match tc {
-        Toolchain::Msvc => output::msvc_compiler(output),
-        _ => output::gnu_compiler(output),
-    }
-}
-
 fn msvc_check_iso(lang: Language) {
     match lang {
         Language::Cpp(123) => {
@@ -81,7 +71,11 @@ fn msvc_check_iso(lang: Language) {
     }
 }
 
+
 pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<(), Error> {
+    // replicate source directory hierarchy in output directory
+    fsutil::ensure_out_dirs(Path::new("src"), &info.outdir);
+
     // remove all objects created from sources that no longer exist
     fsutil::cull_zombies(&info.srcdir, &info.outdir, info.lang.src_ext());
 
@@ -114,7 +108,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
                 log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display()));
             }
 
-            // MSVC has sketchy ISO settings...
+            // MSVC has sketchy ISO compliance...
             if info.toolchain.is_msvc_compatible() {
                 msvc_check_iso(info.lang);
             }
@@ -143,16 +137,16 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             log_info_ln!("precompiling header: {}", inpch.display());
             let var = PreCompHead::Create(pch);
             let mut comp = if info.toolchain.is_msvc_compatible() {
-                msvc::compile(&incpp, &outfile, &info, &var, echo, verbose)
+                info.toolchain.compiler().command(&incpp, &outfile, &info, &var, verbose, echo)
             } else {
-                gnu::compile(&inpch, &outfile, &info, &var, echo, verbose)
+                info.toolchain.compiler().command(&inpch, &outfile, &info, &var, verbose, echo)
             };
             let output = comp
                 .spawn()
                 .map_err(|_| Error::CompilerNotFound(info.toolchain))?
                 .wait_with_output()
                 .unwrap();
-            if !on_compile_finish(info.toolchain, &output) {
+            if !info.toolchain.compiler().output(&output) {
                 return Err(Error::CompilerFail(info.outfile));
             }
         }
@@ -168,20 +162,16 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
         for (src, obj) in jobs {
             log_info_ln!("compiling: {}", src.to_string_lossy());
-            let mut comp = if info.toolchain.is_msvc_compatible() {
-                msvc::compile(src, &obj, &info, &pch_use, echo, verbose)
-            } else {
-                gnu::compile(src, &obj, &info, &pch_use, echo, verbose)
-            };
+            let mut comp = info.toolchain.compiler().command(src, &obj, &info, &pch_use, verbose, echo);
             if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::CompilerNotFound(info.toolchain))?)
-                && !on_compile_finish(info.toolchain, &output)
+                && !info.toolchain.compiler().output(&output)
             {
                 failure = true;
             }
         }
 
         while !queue.is_empty() {
-            if !on_compile_finish(info.toolchain, &queue.flush_one()) {
+            if !info.toolchain.compiler().output(&queue.flush_one()) {
                 failure = true;
             }
         }
@@ -197,17 +187,28 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
         }
         Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
     }
-    if info.toolchain.is_msvc_compatible() {
-        let objects = fsutil::scan_for_filetype(&PathBuf::from(&info.outdir), &["obj".into()])?;
-        match info.artefact {
-            Artefact::Executable | Artefact::SharedLib => msvc::link(objects, info, echo, verbose),
-            Artefact::StaticLib => msvc::archive(objects, info, echo, verbose),
+    let toolchain = info.toolchain.clone();
+    let outfile   = info.outfile.clone();
+    let objects   = fsutil::scan_for_filetype(Path::new(&info.outdir), &[ info.toolchain.object_extension().to_string() ])?;
+    match info.artefact {
+        Artefact::Executable | Artefact::SharedLib => {
+            let mut cmd = toolchain.linker().command(objects, info, verbose, echo);
+            if toolchain.linker().output(&cmd.output().map_err(|_| Error::LinkerNotFound(toolchain))?) {
+                log_info_ln!("successfully built project: {}\n", outfile.display());
+                Ok(())
+            } else {
+                Err(Error::LinkerFail(outfile))
+            }
         }
-    } else {
-        let objects = fsutil::scan_for_filetype(&PathBuf::from(&info.outdir), &["o".into()])?;
-        match info.artefact {
-            Artefact::Executable | Artefact::SharedLib => gnu::link(objects, info, echo, verbose),
-            Artefact::StaticLib => gnu::archive(objects, info, echo, verbose),
+        Artefact::StaticLib => {
+            let mut cmd = toolchain.archiver().command(objects, info, verbose, echo);
+            if toolchain.archiver().output(&cmd.output().map_err(|_| Error::ArchiverNotFound(toolchain))?) {
+                log_info_ln!("successfully built project: {}\n", outfile.display());
+                Ok(())
+            } else {
+                Err(Error::ArchiverFail(outfile))
+            }
         }
     }
 }
+

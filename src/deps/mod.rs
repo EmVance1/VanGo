@@ -1,60 +1,13 @@
+pub mod git;
+mod vcpkg;
+
 use crate::{
+    Error,
     cli::BuildSwitches,
-    config::{Dependency, LibManifest, PackageManifest, Profile, Toolchain, VangoFile},
-    error::Error,
-    log_info_ln,
+    config::{Dependency, LibManifest, PackageManifest, Profile, VangoFile},
+    exec::Toolchain,
 };
-use serde::Serialize;
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
-
-pub fn pull_git_repo(url: &Path, tag: &Option<String>, install_loc: &Path) {
-    let branch: Vec<PathBuf> = if let Some(tag) = tag {
-        vec!["--branch".into(), tag.into(), "--depth".into(), "1".into(), url.into()]
-    } else {
-        vec![url.into()]
-    };
-    log_info_ln!("{:-<80}", format!("cloning project dependency to: {} ", install_loc.display()));
-    std::process::Command::new("git")
-        .arg("clone")
-        .args(branch)
-        .arg(install_loc)
-        .output()
-        .unwrap();
-}
-
-#[derive(Serialize)]
-struct VcpkgDependency {
-    name: String,
-    features: Vec<String>,
-}
-
-fn pull_vcpkg(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut Dependencies) {
-    if packages.is_empty() {
-        return;
-    }
-    let _ = std::fs::create_dir("bin");
-    std::env::set_current_dir("bin").unwrap();
-    let mut data = HashMap::new();
-    data.insert("dependencies".to_string(), packages);
-    std::fs::write("vcpkg.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
-
-    log_info_ln!("{:-<80}", format!("pulling vcpkg dependencies"));
-    // std::process::Command::new("vcpkg")
-    //     .arg("install")
-    //     .arg("--triplet")
-    //     .arg(triplet)
-    //     .output()
-    //     .unwrap();
-
-    std::env::set_current_dir("..").unwrap();
-
-    deps.incdirs.push(format!("bin/vcpkg_installed/{}/include", triplet).into());
-    deps.libdirs.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
-    deps.rpaths.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
-}
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, Clone)]
 pub struct Dependencies {
@@ -93,13 +46,13 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&path).unwrap() {
-                    pull_git_repo(git, tag, &path);
+                    git::pull_package(git, tag, &path);
                 }
                 path
             }
             Dependency::Package { src, targets, features } => {
                 if src == "vcpkg" {
-                    vcpkg.push(VcpkgDependency {
+                    vcpkg.push(vcpkg::VcpkgDependency {
                         name: lib.0.to_ascii_lowercase(),
                         features: features.clone(),
                     });
@@ -176,7 +129,7 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
             .extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 
-    pull_vcpkg(vcpkg, &info.vcpkg.triplet, &mut deps);
+    vcpkg::pull_package(vcpkg, &info.vcpkg.triplet, &mut deps);
 
     Ok(deps)
 }

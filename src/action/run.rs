@@ -1,6 +1,7 @@
 use crate::{
     cli::BuildSwitches,
-    config::{PackageManifest, Toolchain},
+    config::PackageManifest,
+    exec::Toolchain,
     error::Error,
     log_info_ln,
 };

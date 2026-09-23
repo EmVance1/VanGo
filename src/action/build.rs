@@ -1,9 +1,9 @@
 use crate::{
     cli::BuildSwitches,
-    config::{Artefact, BuildSettings, PackageManifest, Platform, Toolchain, WarnLevel},
+    config::{Artefact, BuildSettings, PackageManifest, Platform, WarnLevel},
     error::Error,
-    exec::{self, BuildInfo, fsutil},
-    fetch,
+    exec::{self, BuildInfo, Toolchain, fsutil},
+    deps,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -35,7 +35,7 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool)
     }
 
     // collect and flatten all dependency information into single SOA
-    let mut deps = fetch::libraries(build, &profile.baseprof, switches)?;
+    let mut deps = deps::libraries(build, &profile.baseprof, switches)?;
     deps.defines.extend(profile.defines);
     if switches.is_test {
         deps.defines.push("VANGO_TEST".to_string());

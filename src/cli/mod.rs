@@ -1,7 +1,7 @@
 #[macro_use]
 mod log;
 
-use crate::config::{Profile, Toolchain};
+use crate::{config::Profile, exec::Toolchain};
 use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::str::FromStr;
 

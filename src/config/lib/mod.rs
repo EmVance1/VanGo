@@ -1,11 +1,8 @@
 mod profile;
 mod raw;
 
-use super::{Language, Profile, Version, build::PackageManifest};
-use crate::{
-    config::{Artefact, Toolchain},
-    error::Error,
-};
+use super::{Artefact, Language, Profile, Version, build::PackageManifest};
+use crate::{exec::Toolchain, error::Error};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

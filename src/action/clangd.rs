@@ -1,6 +1,7 @@
 use crate::{
-    config::{Artefact, Dependency, LibManifest, PackageManifest, Profile, Toolchain, VangoFile, WarnLevel},
+    config::{Artefact, Dependency, LibManifest, PackageManifest, Profile, VangoFile, WarnLevel},
     error::Error,
+    exec::Toolchain,
     log_info_ln,
 };
 use std::io::Write;
@@ -57,7 +58,7 @@ pub fn clangd(build: &PackageManifest, block_output: bool) -> Result<(), Error> 
                 let stem = git.file_stem().unwrap().to_string_lossy();
                 let path = home.join(format!(".vango/packages/{stem}"));
                 if !std::fs::exists(&path).unwrap() {
-                    crate::fetch::pull_git_repo(git, tag, &path);
+                    crate::deps::git::pull_package(git, tag, &path);
                 }
                 path.clone()
             }

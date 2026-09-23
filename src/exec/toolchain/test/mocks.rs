@@ -1,5 +1,5 @@
 use super::*;
-use crate::config::{Runtime, WarnLevel};
+use crate::{config::{BuildSettings, PrecompiledHeader, Runtime, WarnLevel}, exec::BuildInfo};
 
 impl BuildInfo {
     fn mock_base(outfile: &Path) -> Self {

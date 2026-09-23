@@ -1,4 +1,4 @@
-use crate::{Error, log_error_ln, log_warn_ln};
+use crate::Error;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 
@@ -101,6 +101,7 @@ impl FromStr for Artefact {
     }
 }
 
+/*
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Toolchain {
     Msvc,
@@ -275,6 +276,7 @@ impl Display for Toolchain {
         }
     }
 }
+*/
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Profile {

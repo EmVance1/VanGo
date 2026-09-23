@@ -3,7 +3,7 @@ mod cli;
 mod config;
 mod error;
 mod exec;
-mod fetch;
+mod deps;
 
 use error::Error;
 use std::process::ExitCode;

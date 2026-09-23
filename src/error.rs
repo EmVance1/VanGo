@@ -10,8 +10,8 @@ pub enum Error {
     TomlParse(#[from] toml::de::Error),
     #[error("toml parse error: `{0}` is not a valid semver string")]
     MimicTomlSemver(String),
-    #[error("toml parse error: unknown variant `{0}`, expected one of `app`, `sharedlib`, `staticlib`\nin `package`\n")]
-    MimicTomlProjkind(String),
+    #[error("toml parse error: unknown variant `{0}`, expected one of `executable`, `sharedlib`, `staticlib`\nin `package`\n")]
+    MimicTomlArtefact(String),
     #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
     InvalidPkgHeader(PathBuf),
     #[error("platform not yet supported by VanGo")]

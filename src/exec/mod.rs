@@ -1,11 +1,11 @@
 mod gnu;
 mod incremental;
-#[cfg(test)]
-mod mocks;
 mod msvc;
 mod output;
 pub mod prep;
 mod queue;
+#[cfg(test)]
+mod test;
 
 use crate::{
     config::{Artefact, BuildSettings, Language, Toolchain},

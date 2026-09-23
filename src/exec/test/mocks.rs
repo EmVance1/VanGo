@@ -2,13 +2,7 @@ use super::*;
 use crate::config::{Runtime, WarnLevel};
 
 impl BuildInfo {
-    pub fn mock_base(outfile: &Path) -> Self {
-        let defines = if cfg!(windows) {
-            vec!["UNICODE".to_string(), "_UNICODE".to_string()]
-        } else {
-            vec![]
-        };
-
+    fn mock_base(outfile: &Path) -> Self {
         Self {
             artefact: Artefact::Executable,
             toolchain: Toolchain::Msvc,
@@ -36,7 +30,7 @@ impl BuildInfo {
                 lsan: false,
                 ubsan: false,
             },
-            defines,
+            defines: vec![],
             srcdir: "src".into(),
             incdirs: vec!["src".into()],
             libdirs: vec![],
@@ -64,6 +58,12 @@ impl BuildInfo {
         crtstatic: bool,
     ) -> Self {
         let base = Self::mock_base(outfile);
+        let defines = if toolchain.is_windows() {
+            vec!["UNICODE".to_string(), "_UNICODE".to_string()]
+        } else {
+            vec![]
+        };
+
         Self {
             artefact,
             toolchain,
@@ -73,6 +73,7 @@ impl BuildInfo {
                 runtime: if crtstatic { Runtime::StaticDebug } else { Runtime::DynamicDebug },
                 ..base.settings
             },
+            defines,
             ..base
         }
     }
@@ -85,6 +86,12 @@ impl BuildInfo {
         crtstatic: bool,
     ) -> Self {
         let base = Self::mock_base(outfile);
+        let defines = if toolchain.is_windows() {
+            vec!["UNICODE".to_string(), "_UNICODE".to_string()]
+        } else {
+            vec![]
+        };
+
         Self {
             artefact,
             toolchain,
@@ -101,6 +108,7 @@ impl BuildInfo {
                 },
                 ..base.settings
             },
+            defines,
             ..base
         }
     }

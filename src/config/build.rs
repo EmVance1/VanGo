@@ -45,7 +45,7 @@ impl BuildFile {
             }
         }
         let lang = Language::from_str(&file.package.lang)?;
-        let mut kind = Artefact::from_str(&file.package.kind.unwrap_or("app".to_string()))?;
+        let mut kind = Artefact::from_str(&file.package.kind.unwrap_or("executable".to_string()))?;
         if let Artefact::SharedLib { implib } = &mut kind {
             *implib = file.package.implib.unwrap_or(true);
         }

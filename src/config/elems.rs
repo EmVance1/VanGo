@@ -102,9 +102,9 @@ impl FromStr for Artefact {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "executable" => Ok(Artefact::Executable),
-            "sharedlib" => Ok(Artefact::SharedLib { implib: true }),
-            "staticlib" => Ok(Artefact::StaticLib),
-            _ => Err(Error::MimicTomlProjkind(s.to_string())),
+            "sharedlib"  => Ok(Artefact::SharedLib { implib: true }),
+            "staticlib"  => Ok(Artefact::StaticLib),
+            _ => Err(Error::MimicTomlArtefact(s.to_string())),
         }
     }
 }
@@ -197,6 +197,10 @@ impl Toolchain {
     #[allow(dead_code)]
     pub fn is_emcc(self) -> bool {
         matches!(self, Self::Emcc)
+    }
+    #[allow(dead_code)]
+    pub fn is_windows(self) -> bool {
+        matches!(self, Self::Msvc | Self::Mingw | Self::ClangMsvc | Self::ClangMingw)
     }
 
     pub fn fmt_executable(self, name: &str) -> PathBuf {

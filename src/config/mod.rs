@@ -62,15 +62,15 @@ include = [ "headers" ]
 include = [ "dbg_headers" ]
 
 [dependencies]
-engine  = { path="../engine" }
-NavMesh = { path="../../NavMesh" }
+engine  = { src="../engine" }
+NavMesh = { src="../../NavMesh" }
 SFML    = { git="https://github.com/SFML/SFML.git",     recipe="recipes/SFML.bat",  features=[ "graphics" ] }
 LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.bat" }
 "#;
 
         let mut dependencies = Vec::new();
         dependencies.push((
-            String::new(),
+            "engine".into(),
             Dependency::Package {
                 src: "../engine".into(),
                 targets: vec![],
@@ -78,7 +78,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
             },
         ));
         dependencies.push((
-            String::new(),
+            "NavMesh".into(),
             Dependency::Package {
                 src: "../../NavMesh".into(),
                 targets: vec![],
@@ -86,7 +86,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
             },
         ));
         dependencies.push((
-            String::new(),
+            "SFML".into(),
             Dependency::Git {
                 git: "https://github.com/SFML/SFML.git".into(),
                 tag: None,
@@ -94,7 +94,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
             },
         ));
         dependencies.push((
-            String::new(),
+            "LuaJIT".into(),
             Dependency::Git {
                 git: "https://github.com/LuaJIT/LuaJIT.git".into(),
                 tag: None,

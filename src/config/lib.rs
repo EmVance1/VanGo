@@ -1,5 +1,5 @@
 use super::{Language, Profile, Version, build::BuildFile};
-use crate::{config::Toolchain, error::Error};
+use crate::{config::{Artefact, Toolchain}, error::Error};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
@@ -64,7 +64,7 @@ impl LibFile {
 impl LibFile {
     pub fn from_build(value: BuildFile, toolchain: Toolchain) -> Result<Self, Error> {
         let name = value.name;
-        if !value.kind.is_lib() {
+        if !value.artefact.is_lib() {
             return Err(Error::InvalidDependency(name));
         }
         let libbase = if toolchain == Toolchain::system_default()? {
@@ -72,7 +72,7 @@ impl LibFile {
         } else {
             PathBuf::from("bin").join(toolchain.as_directory())
         };
-        let haslib = value.kind.has_lib();
+        let haslib = (value.artefact == Artefact::StaticLib) || value.implib;
         let profiles: HashMap<_, _> = value
             .profiles
             .into_iter()

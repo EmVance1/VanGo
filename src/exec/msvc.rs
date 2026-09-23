@@ -165,10 +165,10 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, _verbose: bo
     cmd.args(info.link_args);
     cmd.arg("/NOLOGO");
     cmd.arg("/MACHINE:X64");
-    if let Artefact::SharedLib { implib } = info.artefact {
+    if let Artefact::SharedLib = info.artefact {
         cmd.arg("/DLL");
-        if implib {
-            cmd.arg(format!("/IMPLIB:{}", info.implib.unwrap().display()));
+        if let Some(implib) = info.implib {
+            cmd.arg(format!("/IMPLIB:{}", implib.display()));
         }
     }
     if info.settings.aslr {

@@ -90,7 +90,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     if cfg!(windows) {
         writeln!(file, "-DUNICODE")?;
         writeln!(file, "-D_UNICODE")?;
-        if let Artefact::SharedLib { .. } = build.kind {
+        if let Artefact::SharedLib = build.artefact {
             writeln!(file, "-DVANGO_EXPORT_SHARED")?;
         }
     }
@@ -109,7 +109,7 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
     for inc in &profile.include {
         writeln!(file, "-I{}", inc.display())?;
     }
-    if build.kind.is_lib() {
+    if build.artefact.is_lib() {
         writeln!(file, "-Iinclude")?;
     }
     writeln!(

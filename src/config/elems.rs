@@ -1,6 +1,6 @@
-use crate::{Error, log_error_ln, log_warn_ln};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf, str::FromStr};
+use crate::{Error, log_error_ln, log_warn_ln};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {
@@ -73,26 +73,18 @@ impl Platform {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Artefact {
     #[default]
     Executable,
-    SharedLib {
-        implib: bool,
-    },
+    SharedLib,
     StaticLib,
 }
 
 impl Artefact {
     pub fn is_lib(self) -> bool {
-        matches!(self, Artefact::StaticLib | Artefact::SharedLib { .. })
-    }
-    pub fn has_lib(self) -> bool {
-        match self {
-            Artefact::SharedLib { implib } => !cfg!(windows) || implib,
-            Artefact::StaticLib => true,
-            Artefact::Executable => false,
-        }
+        matches!(self, Artefact::StaticLib | Artefact::SharedLib)
     }
 }
 
@@ -102,7 +94,7 @@ impl FromStr for Artefact {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "executable" => Ok(Artefact::Executable),
-            "sharedlib"  => Ok(Artefact::SharedLib { implib: true }),
+            "sharedlib"  => Ok(Artefact::SharedLib),
             "staticlib"  => Ok(Artefact::StaticLib),
             _ => Err(Error::MimicTomlArtefact(s.to_string())),
         }
@@ -404,6 +396,17 @@ impl FromStr for Language {
         }
     }
 }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+#[serde(rename_all = "kebab-case")]
+pub struct Sanitizer {
+    pub address: Option<bool>,
+    pub thread: Option<bool>,
+    pub leak: Option<bool>,
+    pub undefined: Option<bool>,
+}
+
 
 #[cfg(test)]
 mod tests {

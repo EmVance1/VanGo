@@ -21,7 +21,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 
     // BANDAID: collect all headers from all (direct) include directories (for incremental builds)
     let mut headers = Vec::new();
-    if build.kind.is_lib() {
+    if build.artefact.is_lib() {
         if !std::fs::exists("include").unwrap_or_default() {
             return Err(Error::MissingInclude(build.name.clone()));
         }
@@ -43,7 +43,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     if cfg!(windows) {
         deps.defines.push("UNICODE".to_string());
         deps.defines.push("_UNICODE".to_string());
-        if let Artefact::SharedLib { .. } = build.kind {
+        if let Artefact::SharedLib = build.artefact {
             deps.defines.push("VANGO_EXPORT_SHARED".to_string());
         }
     }
@@ -64,14 +64,15 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     };
 
     // determine output filenames, depends on project type, toolchain and platform (see elems::{Toolchain, Artefact})
-    let (outfile, implib) = match build.kind {
-        Artefact::Executable => (outdir.join(toolchain.fmt_executable(&build.name)), None),
-        Artefact::SharedLib { implib: false } => (outdir.join(Platform::current()?.fmt_shared_lib(&build.name)), None),
-        Artefact::SharedLib { implib: true } => (
-            outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
-            Some(outdir.join(toolchain.fmt_static_lib(&build.name))),
-        ),
-        Artefact::StaticLib => (outdir.join(toolchain.fmt_static_lib(&build.name)), None),
+    let outfile = match build.artefact {
+        Artefact::Executable => outdir.join(toolchain.fmt_executable(&build.name)),
+        Artefact::SharedLib  => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
+        Artefact::StaticLib  => outdir.join(toolchain.fmt_static_lib(&build.name)),
+    };
+    let implib = if build.implib {
+        Some(outdir.join(toolchain.fmt_static_lib(&build.name)))
+    } else {
+        None
     };
 
     // replicate source directory hierarchy in output directory
@@ -79,7 +80,7 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
 
     let info = BuildInfo {
         changed: settings_cache_changed(deps.defines.clone(), &profile.settings, switches, &outdir),
-        artefact: build.kind,
+        artefact: build.artefact,
         toolchain,
         lang: build.lang,
         cpprt: build.runtime.as_ref().map(|rt| rt.eq_ignore_ascii_case("c++")).unwrap_or_default(),

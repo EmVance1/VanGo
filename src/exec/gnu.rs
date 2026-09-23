@@ -150,14 +150,14 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     let mut cmd = info.toolchain.linker(info.lang.is_cpp() || info.cpprt); // use g++/clang++ etc. when combining C and C++
 
     cmd.args(info.link_args);
-    if let Artefact::SharedLib { implib } = info.artefact {
+    if let Artefact::SharedLib = info.artefact {
         if cfg!(target_os = "macos") {
             cmd.arg("-dynamiclib");
         } else {
             cmd.arg("-shared");
         }
-        if implib {
-            cmd.arg(format!("-Wl,--out-implib,{}", info.implib.unwrap().display())); // forward to LINK.exe
+        if let Some(implib) = info.implib {
+            cmd.arg(format!("-Wl,--out-implib,{}", implib.display())); // forward to LINK.exe
         }
     }
     if !info.toolchain.is_emcc() {
@@ -188,16 +188,16 @@ pub(super) fn link(objs: Vec<PathBuf>, info: BuildInfo, echo: bool, verbose: boo
     if info.settings.pthreads {
         cmd.arg("-pthread");
     }
-    if info.settings.asan && (!cfg!(windows) || info.toolchain.is_llvm()) {
+    if info.settings.asan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=address");
     }
-    if info.settings.tsan && !cfg!(windows) {
+    if info.settings.tsan && !info.toolchain.is_windows() {
         cmd.arg("-fsanitize=thread");
     }
-    if info.settings.lsan && !cfg!(windows) {
+    if info.settings.lsan && !info.toolchain.is_windows() {
         cmd.arg("-fsanitize=leak");
     }
-    if info.settings.ubsan && (!cfg!(windows) || info.toolchain.is_llvm()) {
+    if info.settings.ubsan && (!info.toolchain.is_windows() || info.toolchain.is_llvm()) {
         cmd.arg("-fsanitize=undefined");
     }
     if info.toolchain.is_emcc() {

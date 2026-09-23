@@ -66,7 +66,7 @@ fn main() -> ExitCode {
                     action::build(&manifest, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Run { build, args } => {
-                    if manifest.kind.is_lib() {
+                    if manifest.artefact.is_lib() {
                         exit_failure!("{}", Error::LibNotExe(manifest.name));
                     }
                     let switches = build.into_switches(true);

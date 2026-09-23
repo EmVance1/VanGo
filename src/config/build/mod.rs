@@ -1,5 +1,7 @@
+mod raw;
+
 use super::{Artefact, Language, Profile, Toolchain, Version};
-use crate::error::Error;
+use crate::{config::Platform, error::Error};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
@@ -8,7 +10,8 @@ pub struct BuildFile {
     pub name: String,
     pub version: Version,
     pub lang: Language,
-    pub kind: Artefact,
+    pub artefact: Artefact,
+    pub implib: bool,
     pub toolchain: Option<Toolchain>,
     pub interface: Language,
     pub runtime: Option<String>,
@@ -19,7 +22,7 @@ pub struct BuildFile {
 
 impl BuildFile {
     pub fn from_table(value: toml::Table) -> Result<Self, Error> {
-        let mut file: SerdeBuildFile = value.try_into()?;
+        let mut file: raw::BuildFile = value.try_into()?;
         let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
         let mut dependencies: Vec<(String, Dependency)> = Vec::new();
 
@@ -44,22 +47,16 @@ impl BuildFile {
                 profiles.insert(k, BuildProfile::release(&file.package.defaults).merge(p).finish());
             }
         }
+
         let lang = Language::from_str(&file.package.lang)?;
-        let mut kind = Artefact::from_str(&file.package.kind.unwrap_or("executable".to_string()))?;
-        if let Artefact::SharedLib { implib } = &mut kind {
-            *implib = file.package.implib.unwrap_or(true);
-        }
         let interface = if let Some(interface) = file.package.interface {
             Language::from_str(&interface)?
         } else {
             lang
         };
 
-        let toolchain = if let Some(tc) = file.package.toolchain {
-            Some(Toolchain::from_str(&tc)?)
-        } else {
-            None
-        };
+        let artefact = file.package.artefact.unwrap_or_default();
+        let implib = (artefact == Artefact::SharedLib) && (Platform::current()? == Platform::Windows);
 
         for (k, v) in file.dependencies {
             dependencies.push((k, v.try_into()?));
@@ -69,8 +66,9 @@ impl BuildFile {
             name: file.package.name,
             version: Version::from_str(&file.package.version)?,
             lang,
-            kind,
-            toolchain,
+            artefact,
+            implib,
+            toolchain: file.package.toolchain,
             interface,
             runtime: file.package.runtime,
             vcpkg: file.vcpkg.unwrap_or(VcpkgConfig {
@@ -162,15 +160,13 @@ pub struct BuildProfile {
 }
 
 impl BuildProfile {
-    pub(super) fn debug(defaults: &SerdeBuildProfile) -> Self {
-        let mut defines = vec!["VANGO_DEBUG".to_string()];
-        if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(String::to_owned));
-        }
+    pub(super) fn debug(defaults: &raw::BuildProfile) -> Self {
+        let mut defines = defaults.defines.clone();
+        defines.push("VANGO_DEBUG".to_string());
         Self {
             baseprof: Profile::Debug,
             defines,
-            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
+            include: defaults.include.clone(),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -194,20 +190,18 @@ impl BuildProfile {
                 ubsan: defaults.build_settings.sanitize.undefined.unwrap_or(false),
             },
 
-            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
-            linker_options: defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
+            compiler_options: defaults.compiler_options.clone(),
+            linker_options: defaults.linker_options.clone(),
         }
     }
 
-    pub(super) fn release(defaults: &SerdeBuildProfile) -> Self {
-        let mut defines = vec!["VANGO_RELEASE".to_string()];
-        if let Some(def) = &defaults.defines {
-            defines.extend(def.iter().map(String::to_owned));
-        }
+    pub(super) fn release(defaults: &raw::BuildProfile) -> Self {
+        let mut defines = defaults.defines.clone();
+        defines.push("VANGO_RELEASE".to_string());
         Self {
             baseprof: Profile::Release,
             defines,
-            include: defaults.include.iter().flatten().map(PathBuf::to_owned).collect(),
+            include: defaults.include.clone(),
             pch: defaults.pch.clone(),
 
             settings: BuildSettings {
@@ -231,14 +225,14 @@ impl BuildProfile {
                 ubsan: defaults.build_settings.sanitize.undefined.unwrap_or(false),
             },
 
-            compiler_options: defaults.compiler_options.iter().flatten().map(String::to_owned).collect(),
-            linker_options: defaults.linker_options.iter().flatten().map(String::to_owned).collect(),
+            compiler_options: defaults.compiler_options.clone(),
+            linker_options: defaults.linker_options.clone(),
         }
     }
 
-    fn merge(mut self, other: SerdeBuildProfile) -> Self {
-        self.defines.extend(other.defines.unwrap_or_default());
-        self.include.extend(other.include.unwrap_or_default());
+    fn merge(mut self, other: raw::BuildProfile) -> Self {
+        self.defines.extend(other.defines);
+        self.include.extend(other.include);
         if let Some(pch) = other.pch {
             self.pch = Some(pch);
         }
@@ -262,8 +256,8 @@ impl BuildProfile {
         other.build_settings.sanitize.leak.inspect(|s| self.settings.lsan = *s);
         other.build_settings.sanitize.undefined.inspect(|s| self.settings.ubsan = *s);
 
-        self.compiler_options.extend(other.compiler_options.unwrap_or_default());
-        self.linker_options.extend(other.linker_options.unwrap_or_default());
+        self.compiler_options.extend(other.compiler_options);
+        self.linker_options.extend(other.linker_options);
         self
     }
 
@@ -296,74 +290,3 @@ pub struct BuildSettings {
     pub ubsan: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-struct SerdeBuildFile {
-    package: SerdeBuild,
-    vcpkg: Option<VcpkgConfig>,
-    dependencies: toml::Table,
-    #[serde(default)]
-    profile: HashMap<String, SerdeBuildProfile>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-struct SerdeBuild {
-    name: String,
-    version: String,
-    lang: String,
-    kind: Option<String>,
-    toolchain: Option<String>,
-    implib: Option<bool>,
-    interface: Option<String>,
-    runtime: Option<String>,
-
-    #[serde(flatten)]
-    defaults: SerdeBuildProfile,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
-#[serde(default)]
-#[serde(rename_all = "kebab-case")]
-pub(super) struct SerdeBuildProfile {
-    inherits: Option<String>,
-
-    defines: Option<Vec<String>>,
-    include: Option<Vec<PathBuf>>,
-    pch: Option<PathBuf>,
-
-    #[serde(flatten)]
-    build_settings: SerdeBuildSettings,
-
-    compiler_options: Option<Vec<String>>,
-    linker_options: Option<Vec<String>>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct SerdeBuildSettings {
-    opt_level: Option<u32>,
-    opt_size: Option<bool>,
-    opt_speed: Option<bool>,
-    opt_linktime: Option<bool>,
-    iso_compliant: Option<bool>,
-    warn_level: Option<WarnLevel>,
-    warn_as_error: Option<bool>,
-    debug_info: Option<bool>,
-    runtime: Option<Runtime>,
-
-    aslr: Option<bool>,
-    no_rtti: Option<bool>,
-    no_except: Option<bool>,
-
-    pthreads: Option<bool>,
-    #[serde(default)]
-    sanitize: SerdeSanitizer,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct SerdeSanitizer {
-    address: Option<bool>,
-    thread: Option<bool>,
-    leak: Option<bool>,
-    undefined: Option<bool>,
-}

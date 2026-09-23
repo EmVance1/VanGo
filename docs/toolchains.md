@@ -1,12 +1,10 @@
 # Toolchains
-Vango is not itself a compilation toolchain, simply a compilation automator. For everything to work, you need at least one compiler installed on your system and visible in your `PATH` variable. Currently supported toolchains are MSVC (windows only), GCC (linux, mingw windows, macos), Clang/LLVM (universal, both GNU and MSVC ecosystems).
-
-All platforms have a compiler toolchain they default to - MSVC on windows, GCC on linux, Clang on macos - this can be overridden using the -t switch on build, run, and test commands. The `-t=msvc` option is provided for completeness, despite the tool being unavailable on non-windows platforms. Clang on windows will default to its MSVC variant. This can be overridden by using `-t=clang-gnu`.
-
-To change your system default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the 6 valid values: `gcc`, `clang`, `clang-gnu`, `clang-msvc`, `msvc`, `zig`.
+Vango is not itself a compilation toolchain, simply a compilation automator. For everything to work, you need at least one compiler installed on your system and visible in your `PATH` variable. Currently supported toolchains are MSVC (Windows only), GCC (Linux, Macos, MinGW), Clang/LLVM (with backends for all aforementioned toolchains).
+All platforms have a compiler toolchain they default to - MSVC on Windows, GCC on Linux, Clang on Macos - this can be overridden using the -t switch on build, run, and test commands. To change your user default toolchain, set the environment variable `VANGO_DEFAULT_TOOLCHAIN` to one of the 7 valid values: `msvc`, `gcc`, `mingw`, `clang-msvc`, `clang-gcc`, `clang-mingw`, `zig`.
 
 The toolchain is chosen from the following list in order of decreasing priority, with additional usage hints:
 - Commandline           (per build)
+- Manifest (.toml)      (per project)
 - Environment variable  (per user)
 - Platform default
 

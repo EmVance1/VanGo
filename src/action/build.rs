@@ -66,8 +66,8 @@ pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Re
     // determine output filenames, depends on project type, toolchain and platform (see elems::{Toolchain, Artefact})
     let outfile = match build.artefact {
         Artefact::Executable => outdir.join(toolchain.fmt_executable(&build.name)),
-        Artefact::SharedLib  => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
-        Artefact::StaticLib  => outdir.join(toolchain.fmt_static_lib(&build.name)),
+        Artefact::SharedLib => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
+        Artefact::StaticLib => outdir.join(toolchain.fmt_static_lib(&build.name)),
     };
     let implib = if build.implib {
         Some(outdir.join(toolchain.fmt_static_lib(&build.name)))

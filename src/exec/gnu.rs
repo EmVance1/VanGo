@@ -254,4 +254,3 @@ fn print_command(cmd: &std::process::Command) {
     }
     println!();
 }
-

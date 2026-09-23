@@ -1,8 +1,7 @@
+use super::{Runtime, VcpkgConfig, WarnLevel};
+use crate::config::{Artefact, Sanitizer, Toolchain};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf};
-use super::{WarnLevel, Runtime, VcpkgConfig};
-use crate::config::{Artefact, Toolchain, Sanitizer};
-
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct BuildFile {
@@ -67,4 +66,3 @@ pub struct BuildSettings {
     pub pthreads: Option<bool>,
     pub sanitize: Sanitizer,
 }
-

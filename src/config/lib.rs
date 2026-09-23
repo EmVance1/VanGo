@@ -1,5 +1,8 @@
 use super::{Language, Profile, Version, build::BuildFile};
-use crate::{config::{Artefact, Toolchain}, error::Error};
+use crate::{
+    config::{Artefact, Toolchain},
+    error::Error,
+};
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 

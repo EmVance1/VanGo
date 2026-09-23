@@ -1,6 +1,6 @@
+use crate::{Error, log_error_ln, log_warn_ln};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf, str::FromStr};
-use crate::{Error, log_error_ln, log_warn_ln};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {
@@ -94,8 +94,8 @@ impl FromStr for Artefact {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "executable" => Ok(Artefact::Executable),
-            "sharedlib"  => Ok(Artefact::SharedLib),
-            "staticlib"  => Ok(Artefact::StaticLib),
+            "sharedlib" => Ok(Artefact::SharedLib),
+            "staticlib" => Ok(Artefact::StaticLib),
             _ => Err(Error::MimicTomlArtefact(s.to_string())),
         }
     }
@@ -406,7 +406,6 @@ pub struct Sanitizer {
     pub leak: Option<bool>,
     pub undefined: Option<bool>,
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,6 @@
 use crate::{
     cli::BuildSwitches,
-    config::{BuildFile, Dependency, LibFile, Profile, Toolchain, VangoFile},
+    config::{Dependency, LibManifest, PackageManifest, Profile, Toolchain, VangoFile},
     error::Error,
     log_info_ln,
 };
@@ -58,12 +58,12 @@ fn pull_vcpkg(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut Dependen
     std::fs::write("vcpkg.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
 
     log_info_ln!("{:-<80}", format!("pulling vcpkg dependencies"));
-    std::process::Command::new("vcpkg")
-        .arg("install")
-        .arg("--triplet")
-        .arg(triplet)
-        .output()
-        .unwrap();
+    // std::process::Command::new("vcpkg")
+    //     .arg("install")
+    //     .arg("--triplet")
+    //     .arg(triplet)
+    //     .output()
+    //     .unwrap();
 
     std::env::set_current_dir("..").unwrap();
 
@@ -82,7 +82,7 @@ pub struct Dependencies {
     pub defines: Vec<String>,
 }
 
-pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) -> Result<Dependencies, Error> {
+pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwitches) -> Result<Dependencies, Error> {
     let mut deps = Dependencies::default();
     let home = std::env::home_dir().unwrap();
 
@@ -160,14 +160,14 @@ pub fn libraries(info: &BuildFile, profile: &Profile, switches: &BuildSwitches) 
                 }
                 srcpkg = true;
                 crate::action::build(&build, &switches, true)?;
-                LibFile::from_build(build, toolchain)?
+                LibManifest::from_build(build, toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };
         std::env::set_current_dir(&save).unwrap();
 
         // collect all dependency artefacts (includes, definitions, libraries, libdirs) into SOA
-        let profile = library.take(&switches.profile)?;
+        let profile = library.remove(&switches.profile)?;
         deps.incdirs.push(path.join(profile.include));
         deps.libdirs.push(path.join(&profile.libdir));
         if toolchain.is_msvc_compatible() {

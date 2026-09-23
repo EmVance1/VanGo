@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct BuildFile {
+pub struct PackageManifest {
     pub package: Build,
     pub vcpkg: Option<VcpkgConfig>,
     pub dependencies: toml::Table,

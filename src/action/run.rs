@@ -1,6 +1,6 @@
 use crate::{
     cli::BuildSwitches,
-    config::{BuildFile, Toolchain},
+    config::{PackageManifest, Toolchain},
     error::Error,
     log_info_ln,
 };
@@ -11,7 +11,7 @@ use std::{
     process::{ExitCode, ExitStatus},
 };
 
-pub fn run(build: &BuildFile, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
+pub fn run(build: &PackageManifest, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
     // select toolchain in order of descending priority
     let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(Toolchain::user_default()?);
 

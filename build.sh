@@ -2,5 +2,6 @@
 
 cargo b
 cargo b -r
-mv -f target/release/vango vango-linux/vango
+cp -f ./target/release/vango ./vango-linux/vango
+cp -r ./testframework        ./vango-linux/testframework
 

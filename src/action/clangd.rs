@@ -1,11 +1,11 @@
 use crate::{
-    config::{Artefact, BuildFile, Dependency, LibFile, Profile, Toolchain, VangoFile, WarnLevel},
+    config::{Artefact, Dependency, LibManifest, PackageManifest, Profile, Toolchain, VangoFile, WarnLevel},
     error::Error,
     log_info_ln,
 };
 use std::io::Write;
 
-pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
+pub fn clangd(build: &PackageManifest, block_output: bool) -> Result<(), Error> {
     if !block_output {
         log_info_ln!("generating 'compile_flags.txt' for '{}'", build.name);
     }
@@ -75,11 +75,11 @@ pub fn clangd(build: &BuildFile, block_output: bool) -> Result<(), Error> {
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
-            VangoFile::Build(build) => LibFile::from_build(build, Toolchain::system_default()?)?,
+            VangoFile::Build(build) => LibManifest::from_build(build, Toolchain::system_default()?)?,
             VangoFile::Lib(lib) => lib,
         };
         std::env::set_current_dir(&save).unwrap();
-        let profile = library.take(&Profile::Debug)?;
+        let profile = library.remove(&Profile::Debug)?;
         defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
         incdirs.push(path.join(profile.include));
     }

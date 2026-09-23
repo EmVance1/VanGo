@@ -276,7 +276,7 @@ impl Display for Toolchain {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Profile {
     #[default]
     Debug,
@@ -304,6 +304,18 @@ impl Profile {
             Self::Debug => "--debug".to_string(),
             Self::Release => "--release".to_string(),
             Self::Custom(s) => format!("--profile={s}"),
+        }
+    }
+}
+
+impl FromStr for Profile {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "debug"   => Ok(Profile::Debug),
+            "release" => Ok(Profile::Release),
+            _ => Ok(Profile::Custom(s.to_string()))
         }
     }
 }

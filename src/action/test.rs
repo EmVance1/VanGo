@@ -1,7 +1,7 @@
 use crate::{
     Error,
     cli::BuildSwitches,
-    config::{BuildFile, Toolchain},
+    config::{PackageManifest, Toolchain},
     exec::{self, BuildInfo, prep},
     fetch, log_info_ln,
 };
@@ -10,7 +10,7 @@ use std::{
     process::ExitCode,
 };
 
-pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -> Result<ExitCode, Error> {
+pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<String>) -> Result<ExitCode, Error> {
     if !std::fs::exists("test").unwrap_or_default() {
         return Err(Error::MissingTests(build.name));
     }
@@ -20,7 +20,7 @@ pub fn test(mut build: BuildFile, switches: &BuildSwitches, args: Vec<String>) -
 
     let include = std::env::current_exe()?.parent().unwrap().to_owned().join("testframework");
 
-    let profile = build.take(&switches.profile)?;
+    let profile = build.remove(&switches.profile)?;
     let mut headers = fetch::source_files(Path::new("include"), "h")?;
     headers.extend(fetch::source_files(Path::new("include"), "hpp")?);
     headers.extend(fetch::source_files(Path::new("src"), "h")?);

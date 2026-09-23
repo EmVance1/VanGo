@@ -9,8 +9,8 @@ pub use lib::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VangoFile {
-    Build(BuildFile),
-    Lib(LibFile),
+    Build(PackageManifest),
+    Lib(LibManifest),
 }
 
 #[allow(dead_code)]
@@ -18,27 +18,27 @@ impl VangoFile {
     pub fn from_str(value: &str) -> Result<VangoFile, Error> {
         let table: toml::Table = toml::from_str(value)?;
         if table.contains_key("package") {
-            Ok(VangoFile::Build(BuildFile::from_table(table)?))
+            Ok(VangoFile::Build(PackageManifest::from_table(table)?))
         } else if table.contains_key("staticlib") {
-            Ok(VangoFile::Lib(LibFile::from_table(table)?))
+            Ok(VangoFile::Lib(LibManifest::from_table(table)?))
         } else {
             Err(Error::InvalidPkgHeader(std::env::current_dir()?))
         }
     }
 
-    pub fn get_build(self) -> Option<BuildFile> {
+    pub fn get_build(self) -> Option<PackageManifest> {
         if let Self::Build(b) = self { Some(b) } else { None }
     }
 
-    pub fn get_lib(self) -> Option<LibFile> {
+    pub fn get_lib(self) -> Option<LibManifest> {
         if let Self::Lib(l) = self { Some(l) } else { None }
     }
 
-    pub fn unwrap_build(self) -> BuildFile {
+    pub fn unwrap_build(self) -> PackageManifest {
         self.get_build().unwrap()
     }
 
-    pub fn unwrap_lib(self) -> LibFile {
+    pub fn unwrap_lib(self) -> LibManifest {
         self.get_lib().unwrap()
     }
 }
@@ -46,7 +46,7 @@ impl VangoFile {
 #[cfg(test)]
 mod tests {
 
-    use super::{Artefact, Language, VangoFile, build::*, lib::*};
+    use super::{Artefact, Language, VangoFile, Profile, build::*, lib::*};
     use std::{collections::HashMap, str::FromStr};
 
     #[test]
@@ -102,27 +102,27 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
             },
         ));
 
-        let mut profiles: HashMap<String, BuildProfile> = HashMap::new();
+        let mut profiles = HashMap::new();
         profiles.insert(
-            "debug".into(),
+            Profile::Debug,
             BuildProfile {
-                include: vec!["headers".into(), "dbg_headers".into(), "src".into()],
+                include: vec!["src".into(), "headers".into(), "dbg_headers".into()],
                 defines: vec!["VANGO_DEBUG".into()],
-                ..BuildProfile::debug(&Default::default())
+                ..BuildProfile::default_debug()
             },
         );
         profiles.insert(
-            "release".into(),
+            Profile::Release,
             BuildProfile {
-                include: vec!["headers".into(), "src".into()],
+                include: vec!["src".into(), "headers".into()],
                 defines: vec!["VANGO_RELEASE".into()],
-                ..BuildProfile::release(&Default::default())
+                ..BuildProfile::default_release()
             },
         );
 
         assert_eq!(
             VangoFile::from_str(file).unwrap(),
-            VangoFile::Build(BuildFile {
+            VangoFile::Build(PackageManifest {
                 name: "Shimmy".to_string(),
                 version: "0.1.0".parse().unwrap(),
                 lang: Language::Cpp(120),
@@ -159,9 +159,9 @@ libdir = "bin/release"
 binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s", "sfml-system-s" ]
 "#;
 
-        let mut profiles: HashMap<String, LibProfile> = HashMap::new();
+        let mut profiles = HashMap::new();
         profiles.insert(
-            "debug".into(),
+            Profile::Debug,
             LibProfile {
                 include: "include".into(),
                 libdir: "bin/debug".into(),
@@ -176,7 +176,7 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
             },
         );
         profiles.insert(
-            "release".into(),
+            Profile::Release,
             LibProfile {
                 include: "include".into(),
                 libdir: "bin/release".into(),
@@ -193,7 +193,7 @@ binaries = [ "sfml-network-s", "sfml-audio-s", "sfml-graphics-s", "sfml-window-s
 
         assert_eq!(
             VangoFile::from_str(file).unwrap(),
-            VangoFile::Lib(LibFile {
+            VangoFile::Lib(LibManifest {
                 name: "SFML".to_string(),
                 version: "3.0.1".parse().unwrap(),
                 lang: Language::from_str("C++17").unwrap(),

@@ -24,7 +24,7 @@ pub(super) fn compile(src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHea
                     cmd.arg("-fno-pie"); // explicitly disable ASLR on macos 10.7 (2011)
                 }
             }
-            Artefact::StaticLib | Artefact::SharedLib { .. } => {
+            Artefact::StaticLib | Artefact::SharedLib => {
                 if info.settings.aslr {
                     cmd.arg("-fPIC");
                 } else {

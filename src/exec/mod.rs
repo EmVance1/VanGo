@@ -191,7 +191,7 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     }
 
     match info.artefact {
-        Artefact::Executable | Artefact::SharedLib { .. } => {
+        Artefact::Executable | Artefact::SharedLib => {
             log_info_ln!("linking:   {: <30}", info.outfile.display());
         }
         Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
@@ -199,13 +199,13 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     if info.toolchain.is_msvc_compatible() {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "obj")?;
         match info.artefact {
-            Artefact::Executable | Artefact::SharedLib { .. } => msvc::link(all_objs, info, echo, verbose),
+            Artefact::Executable | Artefact::SharedLib => msvc::link(all_objs, info, echo, verbose),
             Artefact::StaticLib => msvc::archive(all_objs, info, echo, verbose),
         }
     } else {
         let all_objs = crate::fetch::source_files(&PathBuf::from(&info.outdir), "o")?;
         match info.artefact {
-            Artefact::Executable | Artefact::SharedLib { .. } => gnu::link(all_objs, info, echo, verbose),
+            Artefact::Executable | Artefact::SharedLib => gnu::link(all_objs, info, echo, verbose),
             Artefact::StaticLib => gnu::archive(all_objs, info, echo, verbose),
         }
     }

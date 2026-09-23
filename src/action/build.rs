@@ -1,6 +1,6 @@
 use crate::{
     cli::BuildSwitches,
-    config::{Artefact, BuildFile, BuildSettings, Platform, Toolchain, WarnLevel},
+    config::{Artefact, BuildSettings, PackageManifest, Platform, Toolchain, WarnLevel},
     error::Error,
     exec::{self, BuildInfo, prep},
     fetch,
@@ -8,7 +8,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-pub fn build(build: &BuildFile, switches: &BuildSwitches, recursive: bool) -> Result<(), Error> {
+pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool) -> Result<(), Error> {
     if !std::fs::exists("src").unwrap_or_default() {
         return Err(Error::MissingSource(build.name.clone()));
     }

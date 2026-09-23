@@ -5,7 +5,7 @@ mod new;
 mod run;
 mod test;
 
-use crate::{config::BuildFile, error::Error, log_info_ln};
+use crate::{config::PackageManifest, error::Error, log_info_ln};
 pub use build::build;
 pub use clangd::clangd;
 pub use help::{help, version};
@@ -13,7 +13,7 @@ pub use new::init;
 pub use run::run;
 pub use test::test;
 
-pub fn clean(build: &BuildFile) -> Result<(), Error> {
+pub fn clean(build: &PackageManifest) -> Result<(), Error> {
     log_info_ln!("cleaning build files for \"{}\"", build.name);
     match std::fs::remove_dir_all("bin") {
         Ok(()) => (),

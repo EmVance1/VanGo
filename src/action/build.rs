@@ -8,7 +8,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool) -> Result<(), Error> {
+pub fn build(build: &PackageManifest, switches: &BuildSwitches, output_depth: u32) -> Result<(), Error> {
     if !std::fs::exists("src").unwrap_or_default() {
         return Err(Error::MissingSource(build.name.clone()));
     }
@@ -106,7 +106,7 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, recursive: bool)
         comp_args: profile.compiler_options,
         link_args: profile.linker_options,
     };
-    exec::run_build(info, switches.echo, switches.verbose, recursive)
+    exec::run_build(info, switches.verbose, switches.echo, output_depth)
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]

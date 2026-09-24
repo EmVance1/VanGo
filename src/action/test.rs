@@ -86,7 +86,7 @@ pub fn test(mut build: PackageManifest, switches: &BuildSwitches, args: Vec<Stri
         comp_args: vec![],
         link_args: vec![],
     };
-    exec::run_build(info, switches.echo, false, false)?;
+    exec::run_build(info, false, switches.echo, 1)?;
     log_info_ln!("{:=<80}", format!("running tests for project: {} ", build.name));
     let status = std::process::Command::new(PathBuf::from(".").join(&outfile))
         .args(args)

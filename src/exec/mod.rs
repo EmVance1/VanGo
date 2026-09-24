@@ -9,7 +9,7 @@ use crate::{
     log_info_ln, log_warn_ln,
 };
 use incremental::BuildLevel;
-use std::path::{Path, PathBuf};
+use std::{path::{Path, PathBuf}, collections::{HashSet, HashMap}};
 pub use toolchain::Toolchain;
 
 #[derive(Debug)]
@@ -71,7 +71,7 @@ fn msvc_check_iso(lang: Language) {
     }
 }
 
-pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) -> Result<(), Error> {
+pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) -> Result<(), Error> {
     // replicate source directory hierarchy in output directory
     fsutil::ensure_out_dirs(Path::new("src"), &info.outdir);
 
@@ -83,20 +83,20 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
     match jobs {
         BuildLevel::UpToDate => {
-            if !recursive {
+            if !output_depth == 0 {
                 log_info_ln!("build up to date for project: {}", info.outfile.display());
             }
             return Ok(());
         }
         BuildLevel::LinkOnly => {
-            if recursive {
+            if output_depth == 0 {
                 log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display()));
             } else {
                 log_info_ln!("{:=<80}", format!("building project: {} ", info.outfile.display()));
             }
         }
         BuildLevel::CompileAndLink(..) => {
-            if recursive {
+            if output_depth == 0 {
                 log_info_ln!("{:=<80}", format!("building dependency: {} ", info.outfile.display()));
             } else if info.changed {
                 log_info_ln!(
@@ -115,17 +115,22 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     }
 
     // precompiled headers must finish before compilation can begin
-    let pch_use = if let Some(pch) = &info.pch.first() {
-        let pch = &pch.header;
+    let mut use_pch = HashMap::new();
+    for pch in &info.pch {
         let _ = std::fs::create_dir(info.outdir.join("pch"));
-        let inpch = info.srcdir.join(pch); // path/to/header
+        let inpch = info.srcdir.join(&pch.header); // path/to/header
         let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
+        let infile = if info.toolchain.is_msvc_compatible() {
+            &incpp
+        } else {
+            &inpch
+        };
         let outfile = if info.toolchain.is_msvc_compatible() {
             // output file
-            let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.display()));
-            info.outdir.join("obj").join(pch).with_extension("h.obj") // MSVC internally reates a .obj and .pch
+            let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.header.display()));
+            info.outdir.join("obj").join(&pch.header).with_extension("h.obj") // MSVC internally reates a .obj and .pch
         } else {
-            info.outdir.join("pch").join(pch).with_extension("h.gch") // GNU .gch
+            info.outdir.join("pch").join(&pch.header).with_extension("h.gch") // GNU .gch
         };
 
         // if PCH requires rebuild
@@ -134,13 +139,8 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?)
         {
             log_info_ln!("precompiling header: {}", inpch.display());
-            let var = PreCompHead::Create(pch);
-            let mut comp = if info.toolchain.is_msvc_compatible() {
-                info.toolchain.compiler().command(&incpp, &outfile, &info, &var, verbose, echo)
-            } else {
-                info.toolchain.compiler().command(&inpch, &outfile, &info, &var, verbose, echo)
-            };
-            let output = comp
+            let var = PreCompHead::Create(&pch.header);
+            let output = info.toolchain.compiler().command(&infile, &outfile, &info, &var, verbose, echo)
                 .spawn()
                 .map_err(|_| Error::CompilerNotFound(info.toolchain))?
                 .wait_with_output()
@@ -149,10 +149,37 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
                 return Err(Error::CompilerFail(info.outfile));
             }
         }
-        PreCompHead::Use(pch)
-    } else {
-        PreCompHead::None
-    };
+
+        let used_by: HashSet<_> = if pch.used_by.is_empty() {
+            fsutil::scan_for_filetype(Path::new("src"), &[ info.lang.src_ext().to_string() ])?.into_iter().collect()
+        } else {
+            let mut total = Vec::new();
+            for used in &pch.used_by {
+                if used.is_dir() {
+                    total.extend(fsutil::scan_for_filetype(&used, &[ info.lang.src_ext().to_string() ])?);
+                } else {
+                    total.push(used.clone());
+                }
+            }
+            total.into_iter().collect()
+        };
+        let ignored_by: HashSet<_> = {
+            let mut total = Vec::new();
+            for ignored in &pch.ignored_by {
+                if ignored.is_dir() {
+                    total.extend(fsutil::scan_for_filetype(&ignored, &[ info.lang.src_ext().to_string() ])?);
+                } else {
+                    total.push(ignored.clone());
+                }
+            }
+            total.into_iter().collect()
+        };
+        for entry in used_by.difference(&ignored_by) {
+            if let Some(_) = use_pch.insert(entry.to_owned(), pch.header.clone()) {
+                log_warn_ln!("source '{}' included in multiple PCH sets - not disjoint", entry.display());
+            }
+        }
+    }
 
     // recompile all outdated objects, subprocess queue with capacity #cores
     if let BuildLevel::CompileAndLink(jobs) = jobs {
@@ -161,10 +188,15 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
 
         for (src, obj) in jobs {
             log_info_ln!("compiling: {}", src.to_string_lossy());
-            let mut comp = info.toolchain.compiler().command(src, &obj, &info, &pch_use, verbose, echo);
-            if let Some(output) = queue.push(comp.spawn().map_err(|_| Error::CompilerNotFound(info.toolchain))?)
-                && !info.toolchain.compiler().output(&output)
-            {
+            let pch = if let Some(header) = use_pch.get(src) {
+                PreCompHead::Use(header)
+            } else {
+                PreCompHead::None
+            };
+            let handle = info.toolchain.compiler().command(src, &obj, &info, &pch, verbose, echo)
+                .spawn()
+                .map_err(|_| Error::CompilerNotFound(info.toolchain))?;
+            if let Some(output) = queue.push(handle) && !info.toolchain.compiler().output(&output) {
                 failure = true;
             }
         }
@@ -191,11 +223,10 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
     let objects = fsutil::scan_for_filetype(Path::new(&info.outdir), &[info.toolchain.object_extension().to_string()])?;
     match info.artefact {
         Artefact::Executable | Artefact::SharedLib => {
-            let mut cmd = toolchain.linker().command(objects, info, verbose, echo);
-            if toolchain
-                .linker()
-                .output(&cmd.output().map_err(|_| Error::LinkerNotFound(toolchain))?)
-            {
+            let output = toolchain.linker().command(objects, info, verbose, echo)
+                .output()
+                .map_err(|_| Error::LinkerNotFound(toolchain))?;
+            if toolchain.linker().output(&output) {
                 log_info_ln!("successfully built project: {}\n", outfile.display());
                 Ok(())
             } else {
@@ -203,11 +234,10 @@ pub fn run_build(info: BuildInfo, echo: bool, verbose: bool, recursive: bool) ->
             }
         }
         Artefact::StaticLib => {
-            let mut cmd = toolchain.archiver().command(objects, info, verbose, echo);
-            if toolchain
-                .archiver()
-                .output(&cmd.output().map_err(|_| Error::ArchiverNotFound(toolchain))?)
-            {
+            let output = toolchain.archiver().command(objects, info, verbose, echo)
+                .output()
+                .map_err(|_| Error::ArchiverNotFound(toolchain))?;
+            if toolchain.archiver().output(&output) {
                 log_info_ln!("successfully built project: {}\n", outfile.display());
                 Ok(())
             } else {

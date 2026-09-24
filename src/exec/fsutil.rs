@@ -11,21 +11,22 @@ pub fn scan_dirs_for_filetype(dirs: &[PathBuf], extensions: &[String]) -> Result
 
 pub fn scan_for_filetype(dir: &Path, extensions: &[String]) -> Result<Vec<PathBuf>, Error> {
     let mut res = Vec::new();
-    for e in std::fs::read_dir(dir)? {
-        let e = e?;
-        if e.path().is_dir() {
-            res.extend(scan_for_filetype(&e.path(), extensions)?);
-        } else if e.path().is_file() {
-            let ext = e.path().extension().unwrap_or_default().to_owned();
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        if entry.path().is_dir() {
+            res.extend(scan_for_filetype(&entry.path(), extensions)?);
+        } else if entry.path().is_file() {
+            let ext = entry.path().extension().unwrap_or_default().to_owned();
             for alt in extensions {
                 if ext == alt.as_str() {
-                    res.push(e.path());
+                    res.push(entry.path());
                 }
             }
         }
     }
     Ok(res)
 }
+
 
 pub fn ensure_out_dirs(sdir: &Path, odir: &Path) {
     let _ = std::fs::create_dir_all(odir);

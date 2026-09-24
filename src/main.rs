@@ -60,24 +60,22 @@ fn main() -> ExitCode {
                 .get_build()
                 .unwrap_or_else(|| exit_failure!("action requires source code ([package]) type manifest"));
 
-            println!("{:#?}", manifest);
-
             match cmd {
                 cli::Action::Build { build } => {
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                    action::build(&manifest, &switches, 1).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Run { build, args } => {
                     if manifest.artefact.is_lib() {
                         exit_failure!("{}", Error::LibNotExe(manifest.name));
                     }
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, false).unwrap_or_else(|e| exit_failure!("{}", e));
+                    action::build(&manifest, &switches, 1).unwrap_or_else(|e| exit_failure!("{}", e));
                     return action::run(&manifest, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Test { build, args } => {
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, true).unwrap_or_else(|e| exit_failure!("{}", e));
+                    action::build(&manifest, &switches, 0).unwrap_or_else(|e| exit_failure!("{}", e));
                     return action::test(manifest, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Clean => {

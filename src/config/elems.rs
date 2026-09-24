@@ -1,6 +1,6 @@
 use crate::Error;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{fmt::Display, path::PathBuf, str::FromStr, collections::HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {
@@ -100,183 +100,6 @@ impl FromStr for Artefact {
         }
     }
 }
-
-/*
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Toolchain {
-    Msvc,
-    Gcc,
-    Mingw,
-    ClangMsvc,
-    ClangGcc,
-    ClangMingw,
-    Zig,
-    Emcc,
-}
-
-impl FromStr for Toolchain {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "msvc" => Ok(Toolchain::Msvc),
-            "gcc" => Ok(Toolchain::Gcc),
-            "mingw" => Ok(Toolchain::Mingw),
-            "clang-msvc" => Ok(Toolchain::ClangMsvc),
-            "clang-gcc" => Ok(Toolchain::ClangGcc),
-            "clang-mingw" => Ok(Toolchain::ClangMingw),
-            "zig" => Ok(Toolchain::Zig),
-            "emcc" => Ok(Toolchain::Emcc),
-            _ => Err(Error::UnknownToolchain(s.to_string())),
-        }
-    }
-}
-
-impl Toolchain {
-    pub fn system_default() -> Result<Self, Error> {
-        match Platform::current()? {
-            Platform::Windows => Ok(Toolchain::Msvc),
-            Platform::Linux => Ok(Toolchain::Gcc),
-            Platform::Macos => Ok(Toolchain::ClangGcc),
-        }
-    }
-
-    pub fn user_default() -> Result<Self, Error> {
-        let sysdef = Self::system_default()?;
-        match std::env::var("VANGO_DEFAULT_TOOLCHAIN") {
-            Ok(var) => match Self::from_str(&var) {
-                Ok(tc) => return Ok(tc),
-                Err(e) => {
-                    log_error_ln!("{}", e);
-                    log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}");
-                }
-            },
-            Err(std::env::VarError::NotUnicode(..)) => {
-                log_warn_ln!("'$VANGO_DEFAULT_TOOLCHAIN' was not a valid toolchain, defaulting to: {sysdef}");
-            }
-            _ => (),
-        }
-        Ok(sysdef)
-    }
-
-    pub fn as_directory(self) -> &'static str {
-        match self {
-            Self::Msvc => "msvc",
-            Self::Gcc => "gcc",
-            Self::Mingw => "mingw",
-            Self::ClangMsvc => "clang-msvc",
-            Self::ClangGcc => "clang-gcc",
-            Self::ClangMingw => "clang-mingw",
-            Self::Zig => "zig",
-            Self::Emcc => "emcc",
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn is_msvc_compatible(self) -> bool {
-        matches!(self, Self::Msvc | Self::ClangMsvc)
-    }
-    #[allow(dead_code)]
-    pub fn is_gnu_compatible(self) -> bool {
-        matches!(
-            self,
-            Self::Gcc | Self::Mingw | Self::ClangGcc | Self::ClangMingw | Self::Zig | Self::Emcc
-        )
-    }
-    #[allow(dead_code)]
-    pub fn is_llvm(self) -> bool {
-        matches!(self, Self::ClangMsvc | Self::ClangGcc | Self::ClangMingw | Self::Zig | Self::Emcc)
-    }
-    #[allow(dead_code)]
-    pub fn is_emcc(self) -> bool {
-        matches!(self, Self::Emcc)
-    }
-    #[allow(dead_code)]
-    pub fn is_windows(self) -> bool {
-        matches!(self, Self::Msvc | Self::Mingw | Self::ClangMsvc | Self::ClangMingw)
-    }
-
-    pub fn fmt_executable(self, name: &str) -> PathBuf {
-        match self {
-            Self::Emcc => PathBuf::from(name).with_added_extension("html"),
-            _ => PathBuf::from(name),
-        }
-    }
-    pub fn fmt_static_lib(self, name: &str) -> PathBuf {
-        match self {
-            Self::Msvc | Self::ClangMsvc => PathBuf::from(name).with_added_extension("lib"),
-            _ => PathBuf::from(&format!("lib{}.a", name)),
-        }
-    }
-
-    pub fn compiler(self, cpp: bool) -> std::process::Command {
-        match self {
-            Self::Msvc => std::process::Command::new("cl.exe"),
-            Self::Gcc | Self::Mingw => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
-            Self::ClangMsvc => std::process::Command::new("clang-cl"),
-            Self::ClangGcc => std::process::Command::new(if cpp { "clang++" } else { "clang" }),
-            Self::ClangMingw => {
-                let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                cmd.arg("--target=x86_64-w64-mingw32");
-                cmd
-            }
-            Self::Zig => {
-                let mut cmd = std::process::Command::new("zig");
-                cmd.arg(if cpp { "c++" } else { "cc" });
-                cmd
-            }
-            Self::Emcc => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
-        }
-    }
-    pub fn linker(self, cpp: bool) -> std::process::Command {
-        match self {
-            Self::Msvc => std::process::Command::new("LINK.exe"),
-            Self::Gcc | Self::Mingw => std::process::Command::new(if cpp { "g++" } else { "gcc" }),
-            Self::ClangMsvc => std::process::Command::new("lld-link"),
-            Self::ClangGcc => std::process::Command::new(if cpp { "clang++" } else { "clang" }),
-            Self::ClangMingw => {
-                let mut cmd = std::process::Command::new(if cpp { "clang++" } else { "clang" });
-                cmd.arg("--target=x86_64-w64-mingw32");
-                cmd
-            }
-            Self::Zig => {
-                let mut cmd = std::process::Command::new("zig");
-                cmd.arg(if cpp { "c++" } else { "cc" });
-                cmd
-            }
-            Self::Emcc => std::process::Command::new(if cpp { "em++.bat" } else { "emcc.bat" }),
-        }
-    }
-    pub fn archiver(self) -> std::process::Command {
-        match self {
-            Self::Msvc => std::process::Command::new("LIB.exe"),
-            Self::Gcc | Self::Mingw => std::process::Command::new("ar"),
-            Self::ClangMsvc => std::process::Command::new("llvm-lib"),
-            Self::ClangGcc | Self::ClangMingw | Self::Emcc => std::process::Command::new("llvm-ar"),
-            Self::Zig => {
-                let mut cmd = std::process::Command::new("zig");
-                cmd.arg("ar");
-                cmd
-            }
-        }
-    }
-}
-
-impl Display for Toolchain {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Msvc => write!(f, "MSVC"),
-            Self::Gcc => write!(f, "GCC"),
-            Self::Mingw => write!(f, "MinGW"),
-            Self::ClangMsvc => write!(f, "Clang (MSVC compatibility)"),
-            Self::ClangGcc => write!(f, "Clang (GCC compatibility)"),
-            Self::ClangMingw => write!(f, "Clang (MinGW compatibility)"),
-            Self::Zig => write!(f, "Zig"),
-            Self::Emcc => write!(f, "Emscripten"),
-        }
-    }
-}
-*/
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Profile {
@@ -438,9 +261,9 @@ pub enum Runtime {
 pub struct PrecompiledHeader {
     pub header: PathBuf,
     #[serde(default)]
-    pub used_by: Vec<PathBuf>,
+    pub used_by: HashSet<PathBuf>,
     #[serde(default)]
-    pub ignored_by: Vec<PathBuf>,
+    pub ignored_by: HashSet<PathBuf>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]

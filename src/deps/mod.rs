@@ -96,7 +96,7 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                     return Err(Error::IncompatibleCppStd(build.name, build.interface, info.name.clone(), info.lang));
                 }
                 srcpkg = true;
-                crate::action::build(&build, &switches, true)?;
+                crate::action::build(&build, &switches, 0)?;
                 LibManifest::from_build(build, toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,

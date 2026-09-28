@@ -6,16 +6,15 @@ name = "foobar"
 version = "x.y.z"
 lang = "C++XX"
 # optional
-type = "executable|staticlib|sharedlib"
-implib = true
+type = "executable|staticlib|sharedlib|module"
 interface = "CXX"
 ```
 - `name` is an arbitrary string that defines how your project is viewed in the builder. This is for example the name the builder will look for when resolving source dependencies (see later).
 - `version` takes a sem-ver number. At time of writing, this has no effect, but is worth maintaining nonetheless for clarity and for when versioned packages are implemented.
 - `lang` takes any valid C or C++ ISO standard, case insensitive. GNU standards not yet supported. Aside from compiler settings, if the `interface` field is not defined, `lang` also declares a libraries minimum compatibility (see [Library Configuration](libraries.md)).
-- `type` is for declaring whether your project builds to an executable (`executable`, default) or a library. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib). In contrast to other kinds, the behaviour of `sharedlib` varies widely per platform, *regardless of toolchain*. On linux, it creates a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and (by default) a static *import* library for automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a DLL file, for all your `__declspec` needs.
+- `type` is for declaring whether your project builds to an `executable` (default), or some type of library. `staticlib` will produce a symbol archive file for your toolchain (.a, .lib). The behaviours of `sharedlib` and `module` vary widely per platform, *regardless of toolchain*. On linux, `sharedlib` creates a .so file, a .dylib on mac, while on windows it will produce a '.dll' binary and a static import library for automatic symbol loading. The macro `VANGO_EXPORT_SHARED` is also defined when building a DLL file, for all your `__declspec` needs. For shared libraries that are to be loaded manually via `dlopen` or equivalents, use `module` instead of `sharedlib`. On windows this will omit the import library, and on macos it will output a bundle file instead of the usual Mach-O shared library format. On linux based systems this option is identical to `sharedlib`.
 
-    **Note**: At time of writing, most aspects of shared library linking are not automated by VanGo. DLLs must be manually moved to the dependent projects working directory for correct linkage, shared objects must be installed, etc.
+**Note**: At time of writing, most aspects of making a shared library findable are not automated by VanGo. DLLs must be manually moved to the dependent projects working directory for correct linkage, shared objects must be installed, etc.
 
 - `interface`: at times you may want to implement a library using one standard, but provide an interface for use in another earlier standard, or in C. To partially bypass the compatibility checker, you can declare the `interface` field, which sets the earliest standard your library is compatible with. `interface` uses the same format as `lang`.
 
@@ -23,11 +22,11 @@ interface = "CXX"
 The `dependencies` section is the main workhorse of the build system. Within it, you can list 0 or more named objects representing libraries also supported by VanGo. A dependency that is not header-only must have a toml file in its root directory. Source libraries will be automatically built recursively by any project that includes them. Currently supported ways of specifying dependencies are as follows:
 ```toml
 [dependencies]
-MyLib     = { src="../MyLib" } # source, local, contains [package] (build) toml-config
-SFML      = { src="../SFML" }  # binary, local, contains [staticlib] (prebuilt) toml-config
-SFUtils   = { git="https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains [package] toml-config
-stb_image = { headers="lib/stb_image" } # headers, local, contains no config
-Ws2       = { system="Ws2_32", target="windows" } # system binaries require no config
+MyLib     = { src = "../MyLib" } # source, local, contains [package] (build) toml-config
+SFML      = { src = "../SFML" }  # binary, local, contains [staticlib] (prebuilt) toml-config
+SFUtils   = { git = "https://github.com/EmVance1/ShimmyNav.git" } # source, remote, contains [package] toml-config
+stb_image = { headers = "lib/stb_image" } # headers, local, contains no config
+Ws2       = { system = "Ws2_32", platform = "windows" } # system binaries require no config
 ```
 **Note**: if you are building a *static* library, it is important to remember that no dependencies are bundled into the binary you build - they still need to be linked into the final executable. For example, if you are building a wrapper library for the Winsock2 API, the executable consuming it must list said library **and** `Ws2_32.lib` in its dependencies (this is not the case for *shared* libraries, as they are created via the linker). Despite this, static library projects should always declare all dependencies, both for user clarity, and because tests need to inherit them (tests are effectively dependent executables).
 

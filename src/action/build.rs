@@ -66,8 +66,8 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, output_depth: u3
     // determine output filenames, depends on project type, toolchain and platform (see elems::{Toolchain, Artefact})
     let outfile = match build.artefact {
         Artefact::Executable => outdir.join(toolchain.fmt_executable(&build.name)),
-        Artefact::SharedLib => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
         Artefact::StaticLib => outdir.join(toolchain.fmt_static_lib(&build.name)),
+        Artefact::SharedLib => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
         Artefact::Module    => outdir.join(Platform::current()?.fmt_module(&build.name)),
     };
     let implib = if build.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows {

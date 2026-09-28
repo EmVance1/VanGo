@@ -93,20 +93,7 @@ pub enum Artefact {
 
 impl Artefact {
     pub fn is_lib(self) -> bool {
-        matches!(self, Artefact::StaticLib | Artefact::SharedLib)
-    }
-}
-
-impl FromStr for Artefact {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "executable" => Ok(Artefact::Executable),
-            "sharedlib" => Ok(Artefact::SharedLib),
-            "staticlib" => Ok(Artefact::StaticLib),
-            _ => Err(Error::MimicTomlArtefact(s.to_string())),
-        }
+        matches!(self, Artefact::StaticLib | Artefact::SharedLib | Artefact::Module)
     }
 }
 

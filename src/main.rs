@@ -63,20 +63,30 @@ fn main() -> ExitCode {
             match cmd {
                 cli::Action::Build { build } => {
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, 1).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let build_info = action::BuildInfo::from_build_cfg(&manifest, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                    exec::run_build(build_info, switches.verbose, switches.echo, 1).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Run { build, args } => {
                     if manifest.artefact.is_lib() {
                         exit_failure!("{}", Error::LibNotExe(manifest.name));
                     }
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, 1).unwrap_or_else(|e| exit_failure!("{}", e));
-                    return action::run(&manifest, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let build_info = action::BuildInfo::from_build_cfg(&manifest, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let build_exe = build_info.outfile.clone();
+                    exec::run_build(build_info, switches.verbose, switches.echo, 1).unwrap_or_else(|e| exit_failure!("{}", e));
+                    return action::run_exe(build_exe, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Test { build, args } => {
+                    if !manifest.artefact.is_lib() {
+                        exit_failure!("{}", Error::ExeNotLib(manifest.name));
+                    }
                     let switches = build.into_switches(true);
-                    action::build(&manifest, &switches, 0).unwrap_or_else(|e| exit_failure!("{}", e));
-                    return action::test(manifest, &switches, args).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let build_info = action::BuildInfo::from_build_cfg(&manifest, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                    exec::run_build(build_info, switches.verbose, switches.echo, 1).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let test_info = action::BuildInfo::from_test_cfg(&manifest, &switches).unwrap_or_else(|e| exit_failure!("{}", e));
+                    let test_exe = test_info.outfile.clone();
+                    exec::run_build(test_info, false, switches.echo, 0).unwrap_or_else(|e| exit_failure!("{}", e));
+                    return action::run_exe(test_exe, args).unwrap_or_else(|e| exit_failure!("{}", e));
                 }
                 cli::Action::Clean => {
                     action::clean(&manifest).unwrap_or_else(|e| exit_failure!("{}", e));

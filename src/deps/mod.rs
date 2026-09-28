@@ -90,14 +90,15 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
         let save = std::env::current_dir().unwrap();
         std::env::set_current_dir(&path).unwrap();
         let mut library = match VangoFile::from_str(&crate::read_manifest()?)? {
-            VangoFile::Build(build) => {
+            VangoFile::Build(manifest) => {
                 // could use .validate(), but prefer checking *before* build to save user time
-                if build.interface > info.lang {
-                    return Err(Error::IncompatibleCppStd(build.name, build.interface, info.name.clone(), info.lang));
+                if manifest.interface > info.lang {
+                    return Err(Error::IncompatibleCppStd(manifest.name, manifest.interface, info.name.clone(), info.lang));
                 }
                 srcpkg = true;
-                crate::action::build(&build, &switches, 0)?;
-                LibManifest::from_build(build, toolchain)?
+                let build_info = crate::action::BuildInfo::from_build_cfg(&manifest, &switches)?;
+                crate::exec::run_build(build_info, switches.verbose, switches.echo, 1)?;
+                LibManifest::from_build(manifest, toolchain)?
             }
             VangoFile::Lib(lib) => lib.validate(&info.name, info.lang)?,
         };

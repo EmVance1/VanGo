@@ -10,8 +10,6 @@ pub enum Error {
     TomlParse(#[from] toml::de::Error),
     #[error("toml parse error: `{0}` is not a valid semver string")]
     MimicTomlSemver(String),
-    #[error("toml parse error: unknown variant `{0}`, expected one of `executable`, `sharedlib`, `staticlib`\nin `package`\n")]
-    MimicTomlArtefact(String),
     #[error("manifest in '{0}' does not contain header '[package]' or '[staticlib]'")]
     InvalidPkgHeader(PathBuf),
     #[error("platform not yet supported by VanGo")]
@@ -53,6 +51,8 @@ pub enum Error {
     InvalidExe(PathBuf),
     #[error("project '{0}' does not build an executable")]
     LibNotExe(String),
+    #[error("project '{0}' does not build a library - only libraries currently support automated testing")]
+    ExeNotLib(String),
     #[error("process '{0}' was killed by the OS ({1})")]
     ExeKilled(PathBuf, String),
     #[error("OS error: {0}")]

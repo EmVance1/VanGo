@@ -1,4 +1,4 @@
-use crate::{cli::BuildSwitches, config::PackageManifest, error::Error, exec::Toolchain, log_info_ln};
+use crate::{error::Error, log_info_ln};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::{
@@ -6,27 +6,15 @@ use std::{
     process::{ExitCode, ExitStatus},
 };
 
-pub fn run(build: &PackageManifest, switches: &BuildSwitches, runargs: Vec<String>) -> Result<ExitCode, Error> {
-    // select toolchain in order of descending priority
-    let toolchain = switches.toolchain.or(build.toolchain).unwrap_or(Toolchain::user_default()?);
-
-    let outdir = if toolchain == Toolchain::system_default()? {
-        PathBuf::from("bin").join(switches.profile.to_string())
-    } else {
-        PathBuf::from("bin")
-            .join(toolchain.as_directory())
-            .join(switches.profile.to_string())
-    };
-    let outfile = outdir.join(toolchain.fmt_executable(&build.name));
-
-    log_info_ln!("{:=<80}", format!("running application: {} ", outfile.display()));
-    let status = std::process::Command::new(PathBuf::from(".").join(&outfile))
-        .args(runargs)
+pub fn run_exe(file: PathBuf, args: Vec<String>) -> Result<ExitCode, Error> {
+    log_info_ln!("{:=<80}", format!("running application: {} ", file.display()));
+    let status = std::process::Command::new(PathBuf::from(".").join(&file))
+        .args(args)
         .current_dir(std::env::current_dir().unwrap())
         .status()
-        .map_err(|_| Error::InvalidExe(outfile.clone()))?;
+        .map_err(|_| Error::InvalidExe(file.clone()))?;
 
-    graceful_crash(outfile, status)
+    graceful_crash(file, status)
 }
 
 #[cfg(windows)]

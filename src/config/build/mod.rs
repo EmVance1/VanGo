@@ -30,12 +30,6 @@ impl PackageManifest {
             .get(profile)
             .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
     }
-
-    pub fn remove(&mut self, profile: &Profile) -> Result<BuildProfile, Error> {
-        self.profiles
-            .remove(profile)
-            .ok_or(Error::ProfileUnavailable(self.name.clone(), profile.to_string()))
-    }
 }
 
 impl TryFrom<raw::PackageManifest> for PackageManifest {

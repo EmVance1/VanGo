@@ -71,6 +71,14 @@ impl Platform {
             Self::Macos => PathBuf::from(&format!("lib{}.dylib", name)),
         }
     }
+
+    pub fn fmt_module(self, name: &str) -> PathBuf {
+        match self {
+            Self::Windows => PathBuf::from(name).with_added_extension("dll"),
+            Self::Linux => PathBuf::from(&format!("lib{}.so", name)),
+            Self::Macos => PathBuf::from(&format!("lib{}.so", name)),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -80,6 +88,7 @@ pub enum Artefact {
     Executable,
     SharedLib,
     StaticLib,
+    Module,
 }
 
 impl Artefact {

@@ -1,10 +1,10 @@
 use crate::{
     config::{Artefact, Language, Runtime, WarnLevel},
-    exec::{BuildInfo, PreCompHead},
+    exec::{BuildInfo, pch},
 };
 use std::path::{Path, PathBuf};
 
-pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, _verbose: bool) {
+pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: pch::UseType, _verbose: bool) {
     cmd.args(&info.comp_args);
     cmd.arg("/nologo"); // output configuration (see output parser)
     cmd.arg("/showIncludes"); // "
@@ -132,15 +132,15 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
     cmd.args(info.incdirs.iter().map(|inc| format!("/I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("/D{def}")));
     match pch {
-        PreCompHead::Create(h) => {
+        pch::UseType::Create(h) => {
             cmd.arg(format!("/Yc{}", h.display()));
             cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
-        PreCompHead::Use(h) => {
+        pch::UseType::Use(h) => {
             cmd.arg(format!("/Yu{}", h.display()));
             cmd.arg(format!("/Fp:{}", info.outdir.join("pch").join(h).with_extension("h.pch").display()));
         }
-        PreCompHead::None => (),
+        pch::UseType::None => (),
     }
 
     cmd.arg(src);

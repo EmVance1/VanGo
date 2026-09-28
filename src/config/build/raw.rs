@@ -19,7 +19,6 @@ pub struct BuildDef {
     #[serde(alias = "type")]
     pub artefact: Option<Artefact>,
     pub toolchain: Option<Toolchain>,
-    pub implib: Option<bool>,
     pub interface: Option<String>,
     pub runtime: Option<String>,
 

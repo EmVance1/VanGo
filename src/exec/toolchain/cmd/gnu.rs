@@ -1,10 +1,10 @@
 use crate::{
     config::{Artefact, Runtime, WarnLevel},
-    exec::{BuildInfo, PreCompHead},
+    exec::{BuildInfo, pch},
 };
 use std::path::{Path, PathBuf};
 
-pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, verbose: bool) {
+pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, info: &BuildInfo, pch: pch::UseType, verbose: bool) {
     cmd.args(&info.comp_args);
     if !info.toolchain.is_emcc() {
         // breaks miniaudio
@@ -20,7 +20,7 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
                     cmd.arg("-fno-pie"); // explicitly disable ASLR on macos 10.7 (2011)
                 }
             }
-            Artefact::StaticLib | Artefact::SharedLib => {
+            Artefact::StaticLib | Artefact::SharedLib | Artefact::Module => {
                 if info.settings.aslr {
                     cmd.arg("-fPIC");
                 } else {
@@ -110,10 +110,10 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
         cmd.arg("-fsanitize=undefined");
     }
     match pch {
-        PreCompHead::Create(_) => {
+        pch::UseType::Create(_) => {
             cmd.arg(format!("-x{}-header", if info.lang.is_cpp() { "c++" } else { "c" }));
         }
-        PreCompHead::Use(header) => {
+        pch::UseType::Use(header) => {
             if info.toolchain.is_llvm() {
                 cmd.arg("-include-pch");
                 cmd.arg(format!("{}/pch/{}.gch", info.outdir.display(), header.display()));
@@ -121,7 +121,7 @@ pub fn compiler_args(cmd: &mut std::process::Command, src: &Path, obj: &Path, in
                 cmd.arg(format!("-I{}/pch", info.outdir.display()));
             }
         }
-        PreCompHead::None => (),
+        pch::UseType::None => (),
     }
     cmd.args(info.incdirs.iter().map(|inc| format!("-I{}", inc.display())));
     cmd.args(info.defines.iter().map(|def| format!("-D{def}")));
@@ -149,6 +149,11 @@ pub fn linker_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: Bu
         }
         if let Some(implib) = info.implib {
             cmd.arg(format!("-Wl,--out-implib,{}", implib.display())); // forward to LINK.exe
+        }
+    }
+    if let Artefact::Module = info.artefact {
+        if cfg!(target_os = "macos") {
+            cmd.arg("-bundle");
         }
     }
     if !info.toolchain.is_emcc() {

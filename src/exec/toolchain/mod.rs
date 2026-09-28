@@ -6,7 +6,7 @@ mod test;
 use crate::{
     Error,
     config::{Language, Platform},
-    exec::{BuildInfo, PreCompHead},
+    exec::{BuildInfo, pch},
 };
 use serde::Deserialize;
 use std::{
@@ -154,7 +154,7 @@ impl Compiler {
         }
     }
 
-    pub fn command(self, src: &Path, obj: &Path, info: &BuildInfo, pch: &PreCompHead, verbose: bool, echo: bool) -> std::process::Command {
+    pub fn command(self, src: &Path, obj: &Path, info: &BuildInfo, pch: pch::UseType, verbose: bool, echo: bool) -> std::process::Command {
         let mut cmd = self.exe(info.lang);
         if self.0.is_msvc_compatible() {
             cmd::msvc::compiler_args(&mut cmd, src, obj, info, pch, verbose)

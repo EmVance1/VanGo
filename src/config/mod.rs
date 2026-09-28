@@ -126,7 +126,6 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 version: "0.1.0".parse().unwrap(),
                 lang: Language::Cpp(120),
                 artefact: Artefact::Executable,
-                implib: false,
                 toolchain: None,
                 interface: Language::Cpp(120),
                 runtime: None,

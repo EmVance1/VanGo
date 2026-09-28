@@ -11,7 +11,6 @@ pub struct PackageManifest {
     pub version: Version,
     pub lang: Language,
     pub artefact: Artefact,
-    pub implib: bool,
     pub toolchain: Option<Toolchain>,
     pub interface: Language,
     pub runtime: Option<String>,
@@ -51,7 +50,6 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
         };
 
         let artefact = value.package.artefact.unwrap_or_default();
-        let implib = (artefact == Artefact::SharedLib) && (Platform::current()? == Platform::Windows);
         let mut profiles = HashMap::new();
         profiles.insert(
             Profile::Debug,
@@ -88,7 +86,6 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
             version: Version::from_str(&value.package.version)?,
             lang,
             artefact,
-            implib,
             toolchain: value.package.toolchain,
             interface,
             runtime: value.package.runtime,

@@ -2,7 +2,7 @@ mod profile;
 mod raw;
 
 use super::{Artefact, Language, Profile, Version, build::PackageManifest};
-use crate::{error::Error, exec::Toolchain};
+use crate::{config::Platform, error::Error, exec::Toolchain};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,7 +29,7 @@ impl LibManifest {
         } else {
             PathBuf::from("bin").join(toolchain.as_directory())
         };
-        let haslib = (value.artefact == Artefact::StaticLib) || value.implib;
+        let haslib = (value.artefact == Artefact::StaticLib) || (value.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows);
         let profiles: HashMap<_, _> = value
             .profiles
             .into_iter()

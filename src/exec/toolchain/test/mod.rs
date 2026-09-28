@@ -13,7 +13,7 @@ pub fn compile_cmd_gcc_dbg1() {
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, vec![], false),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -46,7 +46,7 @@ pub fn compile_cmd_clang_mingw_dbg1() {
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(23), Toolchain::ClangMingw, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -81,7 +81,7 @@ pub fn compile_cmd_clang_gcc_dbg1() {
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::Executable, Language::Cpp(23), Toolchain::ClangGcc, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -114,7 +114,7 @@ pub fn compile_cmd_gcc_rel1() {
         &src,
         &obj,
         &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(20), Toolchain::Gcc, vec![], false),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -166,7 +166,7 @@ pub fn compile_cmd_gcc_rel2() {
         &src,
         &obj,
         &BuildInfo::mock_release(&out, Artefact::Executable, Language::Cpp(23), Toolchain::Gcc, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -218,7 +218,7 @@ pub fn compile_cmd_gcc_staticlib() {
         &src,
         &obj,
         &BuildInfo::mock_debug(&out, Artefact::StaticLib, Language::Cpp(20), Toolchain::Gcc, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -271,7 +271,7 @@ pub fn compile_cmd_mingw_sharedlib() {
         src,
         obj,
         &BuildInfo::mock_debug(out, Artefact::SharedLib, Language::Cpp(20), Toolchain::Mingw, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -305,7 +305,7 @@ pub fn compile_cmd_msvc_dbg() {
         src,
         obj,
         &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(120), Toolchain::Msvc, vec![], false),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -348,7 +348,7 @@ pub fn compile_cmd_msvc_dbg2() {
         src,
         obj,
         &BuildInfo::mock_debug(out, Artefact::Executable, Language::Cpp(123), Toolchain::ClangMsvc, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -390,7 +390,7 @@ pub fn compile_cmd_msvc_rel1() {
         src,
         obj,
         &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, vec![], false),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );
@@ -430,7 +430,7 @@ pub fn compile_cmd_msvc_rel2() {
         src,
         obj,
         &BuildInfo::mock_release(out, Artefact::Executable, Language::Cpp(123), Toolchain::Msvc, vec![], true),
-        &PreCompHead::None,
+        pch::UseType::None,
         false,
         false,
     );

@@ -1,6 +1,7 @@
 pub mod fsutil;
 mod incremental;
-mod queue;
+mod pch;
+mod pool2;
 pub mod toolchain;
 
 use crate::{
@@ -9,7 +10,8 @@ use crate::{
     log_info_ln, log_warn_ln,
 };
 use incremental::BuildLevel;
-use std::{path::{Path, PathBuf}, collections::{HashSet, HashMap}};
+use pool2::ProcessPool;
+use std::path::{Path, PathBuf};
 pub use toolchain::Toolchain;
 
 #[derive(Debug)]
@@ -40,14 +42,6 @@ pub struct BuildInfo {
 
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub enum PreCompHead<'a> {
-    #[default]
-    None,
-    Create(&'a Path),
-    Use(&'a Path),
 }
 
 fn msvc_check_iso(lang: Language) {
@@ -115,88 +109,22 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
     }
 
     // precompiled headers must finish before compilation can begin
-    let mut use_pch = HashMap::new();
-    for pch in &info.pch {
-        let _ = std::fs::create_dir(info.outdir.join("pch"));
-        let inpch = info.srcdir.join(&pch.header); // path/to/header
-        let incpp = info.outdir.join(format!("pch/pch_impl.{}", info.lang.src_ext())); // including cpp file (MSVC style)
-        let infile = if info.toolchain.is_msvc_compatible() {
-            &incpp
-        } else {
-            &inpch
-        };
-        let outfile = if info.toolchain.is_msvc_compatible() {
-            // output file
-            let _ = std::fs::write(&incpp, format!("#include \"{}\"", pch.header.display()));
-            info.outdir.join("obj").join(&pch.header).with_extension("h.obj") // MSVC internally reates a .obj and .pch
-        } else {
-            info.outdir.join("pch").join(&pch.header).with_extension("h.gch") // GNU .gch
-        };
-
-        // if PCH requires rebuild
-        if info.changed
-            || !std::fs::exists(&outfile)?
-            || (std::fs::metadata(&inpch)?.modified()? > std::fs::metadata(&outfile)?.modified()?)
-        {
-            log_info_ln!("precompiling header: {}", inpch.display());
-            let var = PreCompHead::Create(&pch.header);
-            let output = info.toolchain.compiler().command(&infile, &outfile, &info, &var, verbose, echo)
-                .spawn()
-                .map_err(|_| Error::CompilerNotFound(info.toolchain))?
-                .wait_with_output()
-                .unwrap();
-            if !info.toolchain.compiler().output(&output) {
-                return Err(Error::CompilerFail(info.outfile));
-            }
-        }
-
-        let used_by: HashSet<_> = if pch.used_by.is_empty() {
-            fsutil::scan_for_filetype(Path::new("src"), &[ info.lang.src_ext().to_string() ])?.into_iter().collect()
-        } else {
-            let mut total = Vec::new();
-            for used in &pch.used_by {
-                if used.is_dir() {
-                    total.extend(fsutil::scan_for_filetype(&used, &[ info.lang.src_ext().to_string() ])?);
-                } else {
-                    total.push(used.clone());
-                }
-            }
-            total.into_iter().collect()
-        };
-        let ignored_by: HashSet<_> = {
-            let mut total = Vec::new();
-            for ignored in &pch.ignored_by {
-                if ignored.is_dir() {
-                    total.extend(fsutil::scan_for_filetype(&ignored, &[ info.lang.src_ext().to_string() ])?);
-                } else {
-                    total.push(ignored.clone());
-                }
-            }
-            total.into_iter().collect()
-        };
-        for entry in used_by.difference(&ignored_by) {
-            if let Some(_) = use_pch.insert(entry.to_owned(), pch.header.clone()) {
-                log_warn_ln!("source '{}' included in multiple PCH sets - not disjoint", entry.display());
-            }
-        }
-    }
+    let use_pch = pch::precompile_headers(&info, verbose, echo)?;
 
     // recompile all outdated objects, subprocess queue with capacity #cores
     if let BuildLevel::CompileAndLink(jobs) = jobs {
-        let mut queue = queue::ProcQueue::new();
+        let mut queue = ProcessPool::new();
         let mut failure = false;
 
         for (src, obj) in jobs {
             log_info_ln!("compiling: {}", src.to_string_lossy());
             let pch = if let Some(header) = use_pch.get(src) {
-                PreCompHead::Use(header)
+                pch::UseType::Use(header)
             } else {
-                PreCompHead::None
+                pch::UseType::None
             };
-            let handle = info.toolchain.compiler().command(src, &obj, &info, &pch, verbose, echo)
-                .spawn()
-                .map_err(|_| Error::CompilerNotFound(info.toolchain))?;
-            if let Some(output) = queue.push(handle) && !info.toolchain.compiler().output(&output) {
+            let cmd = info.toolchain.compiler().command(src, &obj, &info, pch, verbose, echo);
+            if let Some(output) = queue.enqueue_task(cmd, Error::CompilerNotFound(info.toolchain))? && !info.toolchain.compiler().output(&output) {
                 failure = true;
             }
         }
@@ -213,7 +141,7 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
     }
 
     match info.artefact {
-        Artefact::Executable | Artefact::SharedLib => {
+        Artefact::Executable | Artefact::SharedLib | Artefact::Module => {
             log_info_ln!("linking:   {: <30}", info.outfile.display());
         }
         Artefact::StaticLib => log_info_ln!("archiving: {: <30}", info.outfile.display()),
@@ -222,7 +150,7 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
     let outfile = info.outfile.clone();
     let objects = fsutil::scan_for_filetype(Path::new(&info.outdir), &[info.toolchain.object_extension().to_string()])?;
     match info.artefact {
-        Artefact::Executable | Artefact::SharedLib => {
+        Artefact::Executable | Artefact::SharedLib | Artefact::Module => {
             let output = toolchain.linker().command(objects, info, verbose, echo)
                 .output()
                 .map_err(|_| Error::LinkerNotFound(toolchain))?;

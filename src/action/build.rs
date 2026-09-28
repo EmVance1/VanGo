@@ -68,8 +68,9 @@ pub fn build(build: &PackageManifest, switches: &BuildSwitches, output_depth: u3
         Artefact::Executable => outdir.join(toolchain.fmt_executable(&build.name)),
         Artefact::SharedLib => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
         Artefact::StaticLib => outdir.join(toolchain.fmt_static_lib(&build.name)),
+        Artefact::Module    => outdir.join(Platform::current()?.fmt_module(&build.name)),
     };
-    let implib = if build.implib {
+    let implib = if build.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows {
         Some(outdir.join(toolchain.fmt_static_lib(&build.name)))
     } else {
         None

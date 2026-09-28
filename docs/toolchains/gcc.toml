@@ -1,41 +1,41 @@
 [toolchain]
 name = "GCC"
-compiler-c =   [ "gcc" ]
+compiler-c   = [ "gcc" ]
 compiler-cpp = [ "g++" ]
-linker-c =     [ "gcc" ]
-linker-cpp =   [ "g++" ]
-archiver-c =   [ "ar", "rcs" ]
+linker-c     = [ "gcc" ]
+linker-cpp   = [ "g++" ]
+archiver-c   = [ "ar", "rcs" ]
 archiver-cpp = [ "ar", "rcs" ]
-exe-fmt     = "{name}"
-obj-fmt     = "{name}.o"
-archive-fmt = "lib{name}.a"
+exe-fmt     = "{name}.exe"
+object-fmt  = "{name}.o"
+archive-fmt = "{name}.a"
 
 
 # =============================================================================================
 [compiler]
-input =   [ "{srcfile}" ]
-output =  [ "-o", "{objfile}" ]
+input  = [ "{srcfile}" ]
+output = [ "-o", "{objfile}" ]
 
-standard =   [ "-std={lang}" ]
-comp-only =  [ "-c" ]
+standard   = [ "-std={lang}" ]
+comp-only  = [ "-c" ]
 eh-default = []
 debug-info = [ "-g" ]
 
-include =  [ "-I{incdir}" ]
-define =   [ "-D{define}" ]
+include = [ "-I{incdir}" ]
+define  = [ "-D{define}" ]
 
-opt-0 =     [ "-O0" ]
-opt-1 =     [ "-O1" ]
-opt-2 =     [ "-O2" ]
-opt-3 =     [ "-O3" ]
-opt-size =  [ "-Os" ]
-opt-speed = [ "-Ofast" ]
+opt-0        = [ "-O0" ]
+opt-1        = [ "-O1" ]
+opt-2        = [ "-O2" ]
+opt-3        = [ "-O3" ]
+opt-size     = [ "-Os" ]
+opt-speed    = [ "-Ofast" ]
 opt-linktime = [ "-flto" ]
 
 aslr-app = [ "-fpie" ]
 aslr-lib = [ "-fPIC" ]
 
-no-rtti = [ "-fno-rtti" ]
+no-rtti   = [ "-fno-rtti" ]
 no-except = [ "-fno-exceptions" ]
 
 pthread = [ "-pthread" ]
@@ -44,18 +44,18 @@ sanitize.thread    = [ "-fsanitize=thread" ]
 sanitize.leak      = [ "-fsanitize=leak" ]
 sanitize.undefined = [ "-fsanitize=undefined" ]
 
-warn-none =     [ "-w" ]
-warn-basic =    [ "-Wall" ]
-warn-high =     [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
-                 "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough" ]
+warn-none  = [ "-w" ]
+warn-basic = [ "-Wall" ]
+warn-high  = [ "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wsign-conversion", "-Wshadow",
+               "-Wformat=2", "-Wnull-dereference", "-Wdouble-promotion", "-Wimplicit-fallthrough" ]
 warn-as-error = [ "-Werror" ]
 
 pch-create =  []
 pch-include = [ "-I{outdir}/pch" ]
 
-runtime-static-debug =    []
-runtime-static-release =  []
-runtime-dynamic-debug =   []
+runtime-static-debug    = []
+runtime-static-release  = []
+runtime-dynamic-debug   = []
 runtime-dynamic-release = []
 
 iso-compliant = [ "-pedantic-errors" ]
@@ -63,10 +63,10 @@ iso-compliant = [ "-pedantic-errors" ]
 
 # =============================================================================================
 [linker]
-object =  [ "{objfile}" ]
-libdir =  [ "-L{libdir}" ]
+object  = [ "{objfile}" ]
+libdir  = [ "-L{libdir}" ]
 library = [ "-l{library}" ]
-output =  [ "-o{binary}" ]
+output  = [ "-o{binary}" ]
 
 shared-lib = [ "-shared" ]
 import-lib = [ "-Wl,--out-implib,{library}" ]
@@ -80,8 +80,8 @@ default-libs = []
 
 # =============================================================================================
 [archiver]
-object =  [ "{objfile}" ]
-output =  [ "{archive}" ]
+object = [ "{objfile}" ]
+output = [ "{archive}" ]
 
 opt-linktime = []
 

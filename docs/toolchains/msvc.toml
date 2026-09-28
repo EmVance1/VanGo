@@ -1,41 +1,41 @@
 [toolchain]
 name = "MSVC"
-compiler-c =   [ "cl.exe" ]
+compiler-c   = [ "cl.exe" ]
 compiler-cpp = [ "cl.exe" ]
-linker-c =     [ "LINK.exe" ]
-linker-cpp =   [ "LINK.exe" ]
-archiver-c =   [ "LIB.exe" ]
+linker-c     = [ "LINK.exe" ]
+linker-cpp   = [ "LINK.exe" ]
+archiver-c   = [ "LIB.exe" ]
 archiver-cpp = [ "LIB.exe" ]
 exe-fmt     = "{name}.exe"
-obj-fmt     = "{name}.obj"
+object-fmt  = "{name}.obj"
 archive-fmt = "{name}.lib"
 
 
 # =============================================================================================
 [compiler]
-input =   [ "{srcfile}" ]
-output =  [ "/Fo:{objfile}" ]
+input  = [ "{srcfile}" ]
+output = [ "/Fo:{objfile}" ]
 
-standard =   [ "/std:{lang}" ]
-comp-only =  [ "/c" ]
+standard   = [ "/std:{lang}" ]
+comp-only  = [ "/c" ]
 eh-default = [ "/EHsc" ]
 debug-info = [ "/Zi", "/Fd:{outdir}\\obj\\", "/FS" ]
 
-include =  [ "/I{incdir}" ]
-define =   [ "/D{define}" ]
+include = [ "/I{incdir}" ]
+define  = [ "/D{define}" ]
 
-opt-0 =     [ "/Od" ]
-opt-1 =     [ "/Ox" ]
-opt-2 =     [ "/O1" ]
-opt-3 =     [ "/O2", "Oi" ]
-opt-size =  [ "/Os" ]
-opt-speed = [ "/Ot" ]
+opt-0        = [ "/Od" ]
+opt-1        = [ "/Ox" ]
+opt-2        = [ "/O1" ]
+opt-3        = [ "/O2", "Oi" ]
+opt-size     = [ "/Os" ]
+opt-speed    = [ "/Ot" ]
 opt-linktime = [ "/GL" ]
 
 aslr-app = [] # LINKTIME
 aslr-lib = [] # LINKTIME
 
-no-rtti = [ "/GR-" ]
+no-rtti   = [ "/GR-" ]
 no-except = [ "/EHsc-" ]
 
 pthread = [] # UNAVAILABLE
@@ -44,17 +44,17 @@ sanitize.thread    = [] # UNAVAILABLE
 sanitize.leak      = [] # UNAVAILABLE
 sanitize.undefined = [ "/fsanitize=undefined" ] # clang-cl only
 
-warn-none =     [ "/w" ]
-warn-basic =    [ "/W1" ]
-warn-high =     [ "/W4" ]
+warn-none     = [ "/w" ]
+warn-basic    = [ "/W1" ]
+warn-high     = [ "/W4" ]
 warn-as-error = [ "/WX" ]
 
-pch-create =  [ "/Yc{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
+pch-create  = [ "/Yc{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
 pch-include = [ "/Yu{pcheader}", "/Fp:{outdir}/pch/{pcheader}.pch" ]
 
-runtime-static-debug =    [ "/MTd" ]
-runtime-static-release =  [ "/MT" ]
-runtime-dynamic-debug =   [ "/MDd" ]
+runtime-static-debug    = [ "/MTd" ]
+runtime-static-release  = [ "/MT" ]
+runtime-dynamic-debug   = [ "/MDd" ]
 runtime-dynamic-release = [ "/MD" ]
 
 iso-compliant = [ "/permissive-" ]
@@ -62,10 +62,10 @@ iso-compliant = [ "/permissive-" ]
 
 # =============================================================================================
 [linker]
-object =  [ "{objfile}" ]
-libdir =  [ "/LIBPATH:{libdir}" ]
+object  = [ "{objfile}" ]
+libdir  = [ "/LIBPATH:{libdir}" ]
 library = [ "{library}" ]
-output =  [ "/OUT:{binary}" ]
+output  = [ "/OUT:{binary}" ]
 
 shared-lib = [ "/DLL" ]
 import-lib = [ "/IMPLIB:{library}" ]

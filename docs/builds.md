@@ -57,7 +57,7 @@ ignored-by = [ "src/utils/other.cpp" ]
     * `no-rtti`: (C++ only) disable RTTI (`true|false*`)
     * `no-except`: (C++ only) disable exceptions (`true|false*`)
     * `pthreads`: (GNU only) enable pthreads (`true|false*`)
-- **sanitizers**: sanitizer settings work like any other, but their applicability is highly platform dependent. On UNIX systems, all sanitizers are always available. Windows is trickier. Windows only universally supports AddressSanitizer, while UndefinedBehaviorSanitizer has partial support when using clang. Options turning on unsupported sanitizers will simply be ignored, however there is one annoying edge-case that GNU/Clang on windows *does* support ASan, but does not ship with the required libraries bundled in, and will fail to link if you haven't installed them (MSVC/Clang does not have this problem). The following options are provided for enabling sanitizers:
+- **sanitizers**: sanitizer settings work like any other, but their applicability is highly platform dependent. On unix-like systems, all sanitizers are always available. Windows is trickier. Windows only universally supports AddressSanitizer, while UndefinedBehaviorSanitizer has partial support when using clang. Options turning on unsupported sanitizers will simply be ignored, however there is one annoying edge-case that GNU/Clang on windows *does* support ASan, but does not ship with the required libraries bundled in, and will fail to link if you haven't installed them (MSVC/Clang does not have this problem). The following options are provided for enabling sanitizers:
     * `sanitize.address`: compile with AddressSanitizer (`true|false*`)
     * `sanitize.thread`: compile with ThreadSanitizer (`true|false*`)
     * `sanitize.leak`: compile with LeakSanitizer (`true|false*`)
@@ -90,7 +90,7 @@ The defines array will contain a number of vango specific preprocessor definitio
     * `VANGO_TEST` for conditional compilation.
 
 - Windows builds
-    * `VANGO_EXPORT_SHARED` defined for `sharedlib` projects, intended for use with `__declspec(dll*)`, though not required.
+    * `VANGO_EXPORT_SHARED` defined for `sharedlib` and `module` projects, intended for use with `__declspec(dllimport|dllexport)`, though not required.
     * `UNICODE`, `_UNICODE` can be ignored, makes unicode the default mode for windows API calls.
 
 

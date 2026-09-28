@@ -1,6 +1,6 @@
 use crate::Error;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::PathBuf, str::FromStr, collections::HashSet};
+use std::{collections::HashSet, fmt::Display, path::PathBuf, str::FromStr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Version {

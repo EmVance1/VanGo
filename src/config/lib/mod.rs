@@ -29,7 +29,8 @@ impl LibManifest {
         } else {
             PathBuf::from("bin").join(toolchain.as_directory())
         };
-        let haslib = (value.artefact == Artefact::StaticLib) || (value.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows);
+        let haslib =
+            (value.artefact == Artefact::StaticLib) || (value.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows);
         let profiles: HashMap<_, _> = value
             .profiles
             .into_iter()

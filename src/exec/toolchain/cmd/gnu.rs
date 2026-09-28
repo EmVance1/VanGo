@@ -151,10 +151,10 @@ pub fn linker_args(cmd: &mut std::process::Command, objs: Vec<PathBuf>, info: Bu
             cmd.arg(format!("-Wl,--out-implib,{}", implib.display())); // forward to LINK.exe
         }
     }
-    if let Artefact::Module = info.artefact {
-        if cfg!(target_os = "macos") {
-            cmd.arg("-bundle");
-        }
+    if let Artefact::Module = info.artefact
+        && cfg!(target_os = "macos")
+    {
+        cmd.arg("-bundle");
     }
     if !info.toolchain.is_emcc() {
         if info.settings.aslr {

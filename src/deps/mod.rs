@@ -93,7 +93,12 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
             VangoFile::Build(manifest) => {
                 // could use .validate(), but prefer checking *before* build to save user time
                 if manifest.interface > info.lang {
-                    return Err(Error::IncompatibleCppStd(manifest.name, manifest.interface, info.name.clone(), info.lang));
+                    return Err(Error::IncompatibleCppStd(
+                        manifest.name,
+                        manifest.interface,
+                        info.name.clone(),
+                        info.lang,
+                    ));
                 }
                 srcpkg = true;
                 let build_info = crate::action::BuildInfo::from_build_cfg(&manifest, &switches)?;

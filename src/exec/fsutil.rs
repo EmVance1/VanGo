@@ -27,7 +27,6 @@ pub fn scan_for_filetype(dir: &Path, extensions: &[String]) -> Result<Vec<PathBu
     Ok(res)
 }
 
-
 pub fn ensure_out_dirs(sdir: &Path, odir: &Path) {
     let _ = std::fs::create_dir_all(odir);
     ensure_out_dirs_rec(sdir, sdir, &odir.join("obj"));

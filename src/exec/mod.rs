@@ -5,9 +5,9 @@ mod pool2;
 pub mod toolchain;
 
 use crate::{
+    action::BuildInfo,
     config::{Artefact, Language},
     error::Error,
-    action::BuildInfo,
     log_info_ln, log_warn_ln,
 };
 use incremental::BuildLevel;
@@ -84,14 +84,18 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
             for (src, obj) in jobs {
                 log_info_ln!("compiling: {}", src.to_string_lossy());
                 let cmd = if let Some(header) = use_pch.get(src) {
-                    info.toolchain.compiler().command(src, &obj, &info, pch::UseType::Use(header), verbose, echo)
+                    info.toolchain
+                        .compiler()
+                        .command(src, &obj, &info, pch::UseType::Use(header), verbose, echo)
                 } else {
-                    info.toolchain.compiler().command(src, &obj, &info, pch::UseType::None, verbose, echo)
+                    info.toolchain
+                        .compiler()
+                        .command(src, &obj, &info, pch::UseType::None, verbose, echo)
                 };
-                if let Some(finished) = queue.enqueue_task(cmd, Error::CompilerNotFound(info.toolchain))? {
-                    if !info.toolchain.compiler().output(&finished) {
-                        failure = true;
-                    }
+                if let Some(finished) = queue.enqueue_task(cmd, Error::CompilerNotFound(info.toolchain))?
+                    && !info.toolchain.compiler().output(&finished)
+                {
+                    failure = true;
                 }
             }
 
@@ -113,7 +117,9 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
     match info.artefact {
         Artefact::Executable | Artefact::SharedLib | Artefact::Module => {
             log_info_ln!("linking:   {: <30}", info.outfile.display());
-            let output = toolchain.linker().command(objects, info, verbose, echo)
+            let output = toolchain
+                .linker()
+                .command(objects, info, verbose, echo)
                 .output()
                 .map_err(|_| Error::LinkerNotFound(toolchain))?;
             if toolchain.linker().output(&output) {
@@ -125,7 +131,9 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
         }
         Artefact::StaticLib => {
             log_info_ln!("archiving: {: <30}", info.outfile.display());
-            let output = toolchain.archiver().command(objects, info, verbose, echo)
+            let output = toolchain
+                .archiver()
+                .command(objects, info, verbose, echo)
                 .output()
                 .map_err(|_| Error::ArchiverNotFound(toolchain))?;
             if toolchain.archiver().output(&output) {

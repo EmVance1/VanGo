@@ -33,4 +33,3 @@ pub fn pull_package(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut De
     deps.libdirs.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
     deps.rpaths.push(format!("bin/vcpkg_installed/{}/lib", triplet).into());
 }
-

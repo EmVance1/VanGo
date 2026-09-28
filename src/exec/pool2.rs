@@ -16,7 +16,12 @@ impl ProcessPool {
     pub fn new() -> Self {
         let capacity = std::thread::available_parallelism().map_or(1, |n| n.get());
         let (tx, rx) = mpsc::channel();
-        Self { tx, rx, capacity, count: 0 }
+        Self {
+            tx,
+            rx,
+            capacity,
+            count: 0,
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -61,4 +66,3 @@ impl Default for ProcessPool {
         Self::new()
     }
 }
-

@@ -2,13 +2,12 @@ mod cache;
 
 use crate::{
     cli::BuildSwitches,
-    config::{PackageManifest, Artefact, Language, Platform, BuildSettings, PrecompiledHeader},
+    config::{Artefact, BuildSettings, Language, PackageManifest, Platform, PrecompiledHeader},
     deps,
     error::Error,
     exec::{Toolchain, fsutil},
 };
 use std::path::{Path, PathBuf};
-
 
 #[derive(Debug)]
 pub struct BuildInfo {
@@ -41,7 +40,6 @@ pub struct BuildInfo {
     pub comp_args: Vec<String>,
     pub link_args: Vec<String>,
 }
-
 
 impl BuildInfo {
     pub fn from_build_cfg(build: &PackageManifest, switches: &BuildSwitches) -> Result<BuildInfo, Error> {
@@ -104,7 +102,7 @@ impl BuildInfo {
             Artefact::Executable => outdir.join(toolchain.fmt_executable(&build.name)),
             Artefact::StaticLib => outdir.join(toolchain.fmt_static_lib(&build.name)),
             Artefact::SharedLib => outdir.join(Platform::current()?.fmt_shared_lib(&build.name)),
-            Artefact::Module    => outdir.join(Platform::current()?.fmt_module(&build.name)),
+            Artefact::Module => outdir.join(Platform::current()?.fmt_module(&build.name)),
         };
         let implib = if build.artefact == Artefact::SharedLib && Platform::current()? == Platform::Windows {
             Some(outdir.join(toolchain.fmt_static_lib(&build.name)))
@@ -161,7 +159,7 @@ impl BuildInfo {
             &["h".into(), "hpp".into()],
         )?;
 
-        let mut inherited = deps::libraries(&build, &profile.baseprof, switches)?;
+        let mut inherited = deps::libraries(build, &profile.baseprof, switches)?;
         inherited.defines.push("VANGO_TEST".to_string());
         if cfg!(windows) {
             inherited.defines.push("UNICODE".to_string());

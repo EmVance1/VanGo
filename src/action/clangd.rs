@@ -66,7 +66,9 @@ pub fn clangd(build: &PackageManifest, block_output: bool) -> Result<(), Error> 
                 incdirs.push(headers.clone());
                 continue;
             }
-            Dependency::System { .. } => continue,
+            Dependency::Linux { .. } => continue,
+            Dependency::Windows { .. } => continue,
+            Dependency::Macos { .. } => continue,
         };
 
         if !std::fs::exists(&path).unwrap() {

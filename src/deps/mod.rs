@@ -2,10 +2,7 @@ pub mod git;
 mod vcpkg;
 
 use crate::{
-    Error,
-    cli::BuildSwitches,
-    config::{Dependency, LibManifest, PackageManifest, Profile, VangoFile},
-    exec::Toolchain,
+    Error, cli::BuildSwitches, config::{Dependency, LibManifest, PackageManifest, Platform, Profile, VangoFile}, exec::Toolchain,
 };
 use std::path::{Path, PathBuf};
 
@@ -72,11 +69,21 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 deps.incdirs.push(headers.clone());
                 continue;
             }
-            Dependency::System { system } => {
-                if toolchain.is_msvc_compatible() {
-                    deps.archives.push(system.with_extension("lib"));
-                } else {
-                    deps.archives.push(system.clone());
+            Dependency::Linux { linux } => {
+                if let Platform::Linux = Platform::current()? {
+                    deps.archives.extend(linux.iter().map(ToOwned::to_owned));
+                }
+                continue;
+            }
+            Dependency::Windows { windows } => {
+                if let Platform::Windows = Platform::current()? {
+                    deps.archives.extend(windows.iter().map(|l| l.with_extension("lib")));
+                }
+                continue;
+            }
+            Dependency::Macos { macos } => {
+                if let Platform::Macos = Platform::current()? {
+                    deps.archives.extend(macos.iter().map(ToOwned::to_owned));
                 }
                 continue;
             }

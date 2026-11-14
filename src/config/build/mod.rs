@@ -47,7 +47,7 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
         let mut profiles = HashMap::new();
         profiles.insert(
             Profile::Debug,
-            BuildProfile::default_release().layer(value.package.defaults.clone()),
+            BuildProfile::default_debug().layer(value.package.defaults.clone()),
         );
         profiles.insert(
             Profile::Release,
@@ -113,8 +113,14 @@ pub enum Dependency {
         #[serde(default)]
         features: Vec<String>,
     },
-    System {
-        system: PathBuf,
+    Linux {
+        linux: Vec<PathBuf>
+    },
+    Windows {
+        windows: Vec<PathBuf>
+    },
+    Macos {
+        macos: Vec<PathBuf>
     },
 }
 

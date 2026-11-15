@@ -49,7 +49,7 @@ pub fn run_build(info: BuildInfo, verbose: bool, echo: bool, output_depth: u32) 
     // incremental build, compute outdated files
     match incremental::get_build_level(&info) {
         BuildLevel::UpToDate => {
-            if !output_depth == 0 {
+            if output_depth != 0 {
                 log_info_ln!("build up to date for project: {}", info.outfile.display());
             }
             return Ok(());

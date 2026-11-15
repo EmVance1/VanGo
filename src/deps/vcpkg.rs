@@ -20,13 +20,13 @@ pub fn pull_packages(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut D
     data.insert("dependencies".to_string(), packages);
     std::fs::write("vcpkg.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
 
-    // log_info_ln!("{:-<80}", "pulling vcpkg dependencies");
-    // std::process::Command::new("vcpkg")
-    //     .arg("install")
-    //     .arg("--triplet")
-    //     .arg(triplet)
-    //     .output()
-    //     .unwrap();
+    log_info_ln!("{:-<80}", "pulling vcpkg dependencies");
+    std::process::Command::new("vcpkg")
+        .arg("install")
+        .arg("--triplet")
+        .arg(triplet)
+        .output()
+        .unwrap();
 
     std::env::set_current_dir("..").unwrap();
 

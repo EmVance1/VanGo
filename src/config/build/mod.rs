@@ -45,10 +45,7 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
 
         let artefact = value.package.artefact.unwrap_or_default();
         let mut profiles = HashMap::new();
-        profiles.insert(
-            Profile::Debug,
-            BuildProfile::default_debug().layer(value.package.defaults.clone()),
-        );
+        profiles.insert(Profile::Debug, BuildProfile::default_debug().layer(value.package.defaults.clone()));
         profiles.insert(
             Profile::Release,
             BuildProfile::default_release().layer(value.package.defaults.clone()),
@@ -94,7 +91,6 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum Dependency {
@@ -114,7 +110,7 @@ pub enum Dependency {
         #[serde(default)]
         targets: Vec<PathBuf>,
         #[serde(default)]
-        #[serde(rename="pkg-config")]
+        #[serde(rename = "pkg-config")]
         pkg_config: Option<bool>,
     },
     Headers {
@@ -129,13 +125,13 @@ pub enum Dependency {
         features: Vec<String>,
     },
     Linux {
-        linux: Vec<PathBuf>
+        linux: Vec<PathBuf>,
     },
     Windows {
-        windows: Vec<PathBuf>
+        windows: Vec<PathBuf>,
     },
     Macos {
-        macos: Vec<PathBuf>
+        macos: Vec<PathBuf>,
     },
 }
 

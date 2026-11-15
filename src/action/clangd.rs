@@ -45,9 +45,7 @@ pub fn clangd(build: &PackageManifest, block_output: bool) -> Result<(), Error> 
 
     for lib in &build.dependencies {
         let path = match &lib.1 {
-            Dependency::Package { src, .. } => {
-                src.clone()
-            }
+            Dependency::Package { src, .. } => src.clone(),
             Dependency::Vcpkg { .. } => {
                 vcpkg = true;
                 continue;

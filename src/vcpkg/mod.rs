@@ -56,6 +56,8 @@ pub fn run_pkgconfig(packages: Vec<&PathBuf>, debug: bool) -> Vec<String> {
         .output()
         .unwrap();
 
-    String::from_utf8_lossy(&output.stdout).split(' ').map(|l| l.trim().strip_prefix("-l").unwrap_or(l).to_owned()).collect()
+    String::from_utf8_lossy(&output.stdout)
+        .split(' ')
+        .map(|l| l.trim().strip_prefix("-l").unwrap_or(l).to_owned())
+        .collect()
 }
-

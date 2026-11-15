@@ -47,10 +47,10 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 }
                 path
             }
-            Dependency::Package { src, targets, features } => {
+            Dependency::Package { src, .. } => {
                 src.clone()
             }
-            Dependency::Vcpkg { vcpkg, version, features, targets, pkg_config } => {
+            Dependency::Vcpkg { features, targets, pkg_config, .. } => {
                 vcpkg_pkgs.push(vcpkg::VcpkgDependency {
                     name: lib.0.to_ascii_lowercase(),
                     features: features.clone(),
@@ -146,7 +146,7 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
 
     vcpkg::pull_packages(vcpkg_pkgs, &info.vcpkg.triplet, &mut deps, profile.is_debug());
     let pkgs = vcpkg::run_pkgconfig(pkgconfig_pkgs, profile.is_debug());
-    deps.archives.extend(pkgs.into_iter().map(|p| PathBuf::from(p)));
+    deps.archives.extend(pkgs.into_iter().map(PathBuf::from));
 
     Ok(deps)
 }

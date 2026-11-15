@@ -1,7 +1,7 @@
 pub mod fsutil;
 mod incremental;
 mod pch;
-mod pool2;
+mod pool;
 pub mod toolchain;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     log_info_ln, log_warn_ln,
 };
 use incremental::BuildLevel;
-use pool2::ProcessPool;
+use pool::ProcessPool;
 use std::path::Path;
 pub use toolchain::Toolchain;
 

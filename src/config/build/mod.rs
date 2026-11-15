@@ -92,6 +92,7 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum Dependency {
@@ -101,6 +102,9 @@ pub enum Dependency {
         targets: Vec<PathBuf>,
         #[serde(default)]
         features: Vec<String>,
+        #[serde(default)]
+        #[serde(rename="pkg-config")]
+        pkg_config: Option<bool>,
     },
     Headers {
         headers: PathBuf,

@@ -74,6 +74,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 src: "../engine".into(),
                 targets: vec![],
                 features: vec![],
+                pkg_config: None,
             },
         ));
         dependencies.push((
@@ -82,6 +83,7 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 src: "../../NavMesh".into(),
                 targets: vec![],
                 features: vec![],
+                pkg_config: None,
             },
         ));
         dependencies.push((

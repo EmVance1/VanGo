@@ -34,6 +34,7 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
     let toolchain = switches.toolchain.or(info.toolchain).unwrap_or(Toolchain::user_default()?);
 
     let mut vcpkg = Vec::new();
+    let mut pkgconfig = Vec::new();
 
     for lib in &info.dependencies {
         // get path to library root, pull repo if necessary
@@ -47,17 +48,21 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 }
                 path
             }
-            Dependency::Package { src, targets, features } => {
+            Dependency::Package { src, targets, features, pkg_config } => {
                 if src == "vcpkg" {
                     vcpkg.push(vcpkg::VcpkgDependency {
                         name: lib.0.to_ascii_lowercase(),
                         features: features.clone(),
                     });
                     for tar in targets {
-                        if toolchain.is_msvc_compatible() {
-                            deps.archives.push(tar.with_extension("lib"));
+                        if let Some(false) = pkg_config {
+                            if toolchain.is_msvc_compatible() {
+                                deps.archives.push(tar.with_extension("lib"));
+                            } else {
+                                deps.archives.push(tar.clone());
+                            }
                         } else {
-                            deps.archives.push(tar.clone());
+                            pkgconfig.push(tar);
                         }
                     }
                     continue;
@@ -138,11 +143,16 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
         }
 
         // no vango generated definitions are propagated - all such defs are tailored to the project being built
-        deps.defines
-            .extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+        deps.defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 
-    vcpkg::pull_package(vcpkg, &info.vcpkg.triplet, &mut deps);
+    if !vcpkg.is_empty() {
+    vcpkg::pull_packages(vcpkg, &info.vcpkg.triplet, &mut deps, profile.is_debug());
+    }
+    if !pkgconfig.is_empty() {
+        let pkgs = vcpkg::run_pkgconfig(pkgconfig, profile.is_debug());
+        deps.archives.extend(pkgs.into_iter().map(|p| PathBuf::from(p)));
+    }
 
     Ok(deps)
 }

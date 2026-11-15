@@ -2,9 +2,9 @@ mod action;
 mod cli;
 mod config;
 mod deps;
-mod vcpkg;
 mod error;
 mod exec;
+mod vcpkg;
 
 use error::Error;
 use std::process::ExitCode;

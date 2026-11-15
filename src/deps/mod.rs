@@ -1,7 +1,11 @@
 pub mod git;
 
 use crate::{
-    Error, cli::BuildSwitches, config::{Dependency, LibManifest, PackageManifest, Platform, Profile, VangoFile}, exec::Toolchain, vcpkg
+    Error,
+    cli::BuildSwitches,
+    config::{Dependency, LibManifest, PackageManifest, Platform, Profile, VangoFile},
+    exec::Toolchain,
+    vcpkg,
 };
 use std::path::{Path, PathBuf};
 
@@ -47,10 +51,13 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 }
                 path
             }
-            Dependency::Package { src, .. } => {
-                src.clone()
-            }
-            Dependency::Vcpkg { features, targets, pkg_config, .. } => {
+            Dependency::Package { src, .. } => src.clone(),
+            Dependency::Vcpkg {
+                features,
+                targets,
+                pkg_config,
+                ..
+            } => {
                 vcpkg_pkgs.push(vcpkg::VcpkgDependency {
                     name: lib.0.to_ascii_lowercase(),
                     features: features.clone(),
@@ -141,7 +148,8 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
         }
 
         // no vango generated definitions are propagated - all such defs are tailored to the project being built
-        deps.defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
+        deps.defines
+            .extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 
     vcpkg::pull_packages(vcpkg_pkgs, &info.vcpkg.triplet, &mut deps, profile.is_debug());

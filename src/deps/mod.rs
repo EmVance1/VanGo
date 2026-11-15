@@ -1,8 +1,7 @@
 pub mod git;
-mod vcpkg;
 
 use crate::{
-    Error, cli::BuildSwitches, config::{Dependency, LibManifest, PackageManifest, Platform, Profile, VangoFile}, exec::Toolchain,
+    Error, cli::BuildSwitches, config::{Dependency, LibManifest, PackageManifest, Platform, Profile, VangoFile}, exec::Toolchain, vcpkg
 };
 use std::path::{Path, PathBuf};
 
@@ -33,8 +32,8 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
     // select toolchain in order of descending priority
     let toolchain = switches.toolchain.or(info.toolchain).unwrap_or(Toolchain::user_default()?);
 
-    let mut vcpkg = Vec::new();
-    let mut pkgconfig = Vec::new();
+    let mut vcpkg_pkgs = Vec::new();
+    let mut pkgconfig_pkgs = Vec::new();
 
     for lib in &info.dependencies {
         // get path to library root, pull repo if necessary
@@ -48,27 +47,26 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
                 }
                 path
             }
-            Dependency::Package { src, targets, features, pkg_config } => {
-                if src == "vcpkg" {
-                    vcpkg.push(vcpkg::VcpkgDependency {
-                        name: lib.0.to_ascii_lowercase(),
-                        features: features.clone(),
-                    });
-                    for tar in targets {
-                        if let Some(false) = pkg_config {
-                            if toolchain.is_msvc_compatible() {
-                                deps.archives.push(tar.with_extension("lib"));
-                            } else {
-                                deps.archives.push(tar.clone());
-                            }
+            Dependency::Package { src, targets, features } => {
+                src.clone()
+            }
+            Dependency::Vcpkg { vcpkg, version, features, targets, pkg_config } => {
+                vcpkg_pkgs.push(vcpkg::VcpkgDependency {
+                    name: lib.0.to_ascii_lowercase(),
+                    features: features.clone(),
+                });
+                for tar in targets {
+                    if let Some(false) = pkg_config {
+                        if toolchain.is_msvc_compatible() {
+                            deps.archives.push(tar.with_extension("lib"));
                         } else {
-                            pkgconfig.push(tar);
+                            deps.archives.push(tar.clone());
                         }
+                    } else {
+                        pkgconfig_pkgs.push(tar);
                     }
-                    continue;
-                } else {
-                    src.clone()
                 }
+                continue;
             }
             Dependency::Headers { headers, features: _ } => {
                 deps.incdirs.push(headers.clone());
@@ -146,13 +144,9 @@ pub fn libraries(info: &PackageManifest, profile: &Profile, switches: &BuildSwit
         deps.defines.extend(profile.defines.into_iter().filter(|d| !d.starts_with("VANGO_")));
     }
 
-    if !vcpkg.is_empty() {
-    vcpkg::pull_packages(vcpkg, &info.vcpkg.triplet, &mut deps, profile.is_debug());
-    }
-    if !pkgconfig.is_empty() {
-        let pkgs = vcpkg::run_pkgconfig(pkgconfig, profile.is_debug());
-        deps.archives.extend(pkgs.into_iter().map(|p| PathBuf::from(p)));
-    }
+    vcpkg::pull_packages(vcpkg_pkgs, &info.vcpkg.triplet, &mut deps, profile.is_debug());
+    let pkgs = vcpkg::run_pkgconfig(pkgconfig_pkgs, profile.is_debug());
+    deps.archives.extend(pkgs.into_iter().map(|p| PathBuf::from(p)));
 
     Ok(deps)
 }

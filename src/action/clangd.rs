@@ -46,12 +46,11 @@ pub fn clangd(build: &PackageManifest, block_output: bool) -> Result<(), Error> 
     for lib in &build.dependencies {
         let path = match &lib.1 {
             Dependency::Package { src, .. } => {
-                if src == "vcpkg" {
-                    vcpkg = true;
-                    continue;
-                } else {
-                    src.clone()
-                }
+                src.clone()
+            }
+            Dependency::Vcpkg { .. } => {
+                vcpkg = true;
+                continue;
             }
             Dependency::Git { git, tag, .. } => {
                 let git = std::path::Path::new(&git);

@@ -232,7 +232,9 @@ impl FromStr for Language {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VcpkgConfig {
+    pub baseline: String,
     pub triplet: String,
+    pub root: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

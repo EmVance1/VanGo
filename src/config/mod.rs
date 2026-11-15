@@ -74,7 +74,6 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 src: "../engine".into(),
                 targets: vec![],
                 features: vec![],
-                pkg_config: None,
             },
         ));
         dependencies.push((
@@ -83,7 +82,6 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 src: "../../NavMesh".into(),
                 targets: vec![],
                 features: vec![],
-                pkg_config: None,
             },
         ));
         dependencies.push((
@@ -132,7 +130,9 @@ LuaJIT  = { git="https://github.com/LuaJIT/LuaJIT.git", recipe="recipes/LuaJIT.b
                 interface: Language::Cpp(120),
                 runtime: None,
                 vcpkg: VcpkgConfig {
-                    triplet: "x64-linux".to_string()
+                    baseline: "x64-linux".to_string(),
+                    triplet: "x64-linux".to_string(),
+                    root: None,
                 },
                 dependencies,
                 profiles,

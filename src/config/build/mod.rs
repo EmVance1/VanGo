@@ -84,7 +84,9 @@ impl TryFrom<raw::PackageManifest> for PackageManifest {
             interface,
             runtime: value.package.runtime,
             vcpkg: value.vcpkg.unwrap_or(VcpkgConfig {
+                baseline: "x64-linux".to_string(),
                 triplet: "x64-linux".to_string(),
+                root: None,
             }),
             dependencies,
             profiles,
@@ -102,6 +104,15 @@ pub enum Dependency {
         targets: Vec<PathBuf>,
         #[serde(default)]
         features: Vec<String>,
+    },
+    Vcpkg {
+        vcpkg: PathBuf,
+        #[serde(default)]
+        version: Vec<PathBuf>,
+        #[serde(default)]
+        features: Vec<String>,
+        #[serde(default)]
+        targets: Vec<PathBuf>,
         #[serde(default)]
         #[serde(rename="pkg-config")]
         pkg_config: Option<bool>,

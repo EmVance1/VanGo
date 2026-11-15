@@ -1,5 +1,4 @@
-use super::Dependencies;
-use crate::log_info_ln;
+use crate::deps::Dependencies;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -20,13 +19,13 @@ pub fn pull_packages(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut D
     data.insert("dependencies".to_string(), packages);
     std::fs::write("vcpkg.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
 
-    log_info_ln!("{:-<80}", "pulling vcpkg dependencies");
-    std::process::Command::new("vcpkg")
-        .arg("install")
-        .arg("--triplet")
-        .arg(triplet)
-        .output()
-        .unwrap();
+    // log_info_ln!("{:-<80}", "pulling vcpkg dependencies");
+    // std::process::Command::new("vcpkg")
+    //     .arg("install")
+    //     .arg("--triplet")
+    //     .arg(triplet)
+    //     .output()
+    //     .unwrap();
 
     std::env::set_current_dir("..").unwrap();
 
@@ -41,6 +40,10 @@ pub fn pull_packages(packages: Vec<VcpkgDependency>, triplet: &str, deps: &mut D
 }
 
 pub fn run_pkgconfig(packages: Vec<&PathBuf>, debug: bool) -> Vec<String> {
+    if packages.is_empty() {
+        return vec![];
+    }
+
     let pkg_config_path = PathBuf::from("bin/vcpkg_installed/x64-linux/")
         .join(if debug { "debug/lib/pkgconfig" } else { "lib/pkgconfig" })
         .canonicalize()
